@@ -6,6 +6,7 @@ let emptyImg = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAA
 let templates = {
     "result": document.getElementById("result"),
 };
+let urlState = {};
 
 function createTemplate(name, fns) {
     let el = document.importNode(templates[name].content, true)
@@ -19,7 +20,12 @@ function connect() {
     ws = new WebSocket(document.querySelector("#ws-url").value);
 
     ws.onopen = function() {
-        console.log("Connected to WebSocket server");
+        const urlParams = new URLSearchParams(window.location.search);
+		const query = urlParams.get('q');
+        if(query) {
+            sendQuery(query);
+            input.value = query;
+        }
     };
 
     ws.onmessage = renderResults;
@@ -34,9 +40,17 @@ function connect() {
     };
 }
 
-function sendMessage() {
-    let message = {"text": input.value, "highlight": "HTML"};
+function sendQuery(q) {
+    let message = {"text": q, "highlight": "HTML"};
     ws.send(JSON.stringify(message));
+}
+
+function updateURL() {
+    if(input.value) {
+        history.replaceState(urlState, "", `${window.location.pathname}?q=${input.value}`);
+        return;
+    }
+    history.replaceState(urlState, "", `${window.location.pathname}`);
 }
 
 function renderResults(event) {
@@ -72,7 +86,8 @@ function renderResults(event) {
 connect();
 
 input.addEventListener("input", () => {
-    sendMessage();
+    updateURL();
+    sendQuery(input.value);
 });
 
 let highlightIdx = 0;
