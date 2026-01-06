@@ -105,7 +105,7 @@ let highlightIdx = 0;
 window.addEventListener("keydown", function(e) {
     if(e.key == "Enter") {
         let url = document.querySelectorAll(".result a")[highlightIdx].getAttribute("href");
-        window.open(url, "_blank");
+        window.open(url);
     }
     if(e.ctrlKey && (e.key == "j" || e.key == "k")) {
           e.preventDefault();
@@ -116,6 +116,6 @@ window.addEventListener("keydown", function(e) {
           results.children[highlightIdx].classList.add("highlight");
     }
     if(e.ctrlKey && e.key == "o") {
-        window.open(getSearchUrl(input.value), "_blank");
+        window.open(getSearchUrl(input.value));
     }
 });
