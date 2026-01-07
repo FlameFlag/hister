@@ -93,6 +93,9 @@ func createRouter(cfg *config.Config) func(w http.ResponseWriter, r *http.Reques
 		case "/help":
 			serveHelp(c)
 			return
+		case "/delete_alias":
+			serveDeleteAlias(c)
+			return
 		case "/favicon.ico":
 			i, err := static.FS.ReadFile("favicon.ico")
 			if err != nil {
@@ -242,6 +245,18 @@ func serveHelp(c *webContext) {
 	return
 }
 
+func serveDeleteAlias(c *webContext) {
+	a := c.Request.URL.Query().Get("alias")
+	if _, ok := c.Config.Rules.Aliases[a]; !ok {
+	}
+	delete(c.Config.Rules.Aliases, a)
+	if err := c.Config.SaveRules(); err != nil {
+		log.Error().Err(err).Msg("failed to save rules")
+		serve500(c)
+	}
+	c.Redirect("/rules")
+}
+
 func serve404(c *webContext) {
 	c.Response.WriteHeader(http.StatusNotFound)
 }
@@ -267,4 +282,8 @@ func (c *webContext) Render(tpl string, args tArgs) {
 		serve500(c)
 		return
 	}
+}
+
+func (c *webContext) Redirect(u string) {
+	http.Redirect(c.Response, c.Request, u, http.StatusFound)
 }

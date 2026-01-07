@@ -13,7 +13,7 @@
         <table class="mv-1">
             <tr><th>Keyword</th><th>Value</th><th>Delete</th></tr>
             {{ range $k, $v := .Config.Rules.Aliases }}
-            <tr><td>{{ $k }}</td><td>{{ $v }}</td><td>x</td></tr>
+            <tr><td>{{ $k }}</td><td>{{ $v }}</td><td><a href="/delete_alias?alias={{ $k }}">x</a></td></tr>
             {{ end }}
         </table>
         {{ else }}
