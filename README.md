@@ -19,7 +19,7 @@ Blazing fast lookup of previously visited websites.
  - Build with `go build`
  - Run `./hister help` to list the available commands
  - Execute `./hister listen` to start the web application
- - Install the extension: [chrome](https://chromewebstore.google.com/detail/hister/cciilamhchpmbdnniabclekddabkifhb)
+ - Install the extension: [Chrome](https://chromewebstore.google.com/detail/hister/cciilamhchpmbdnniabclekddabkifhb), [Firefox](https://addons.mozilla.org/en-US/firefox/addon/hister/)
 
 
 ## Configuration
