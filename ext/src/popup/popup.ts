@@ -1,6 +1,8 @@
 const urlInput = <HTMLInputElement>document.querySelector("#url");
 const msgBox = <HTMLElement>document.querySelector("#msg");
 
+const defaultURL = "http://127.0.0.1:4433/";
+
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     if(!request) {
         return;
@@ -22,7 +24,12 @@ document.querySelector("form").addEventListener("submit", (e) => {
 });
 
 chrome.storage.local.get(['histerURL'], (d) => {
-    urlInput.setAttribute('value', d['histerURL'] || "");
+    if(!d['histerURL']) {
+        chrome.storage.local.set({
+            histerURL: defaultURL,
+        });
+    }
+    urlInput.setAttribute('value', d['histerURL'] || defaultURL);
 });
 
 document.querySelector("#reindex").addEventListener("click", (e) => {
