@@ -211,7 +211,7 @@ func serveAdd(c *webContext) {
 		serve500(c)
 		return
 	}
-	if !c.Config.Rules.IsSkip(d.URL) {
+	if !c.Config.Rules.IsSkip(d.URL) && !strings.HasPrefix(d.URL, c.Config.BaseURL("/")) {
 		err := indexer.Add(d)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to create index")
