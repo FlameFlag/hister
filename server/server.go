@@ -108,6 +108,9 @@ func createRouter(cfg *config.Config) func(w http.ResponseWriter, r *http.Reques
 		case "/delete_alias":
 			serveDeleteAlias(c)
 			return
+		case "/add_alias":
+			serveAddAlias(c)
+			return
 		case "/about":
 			serveAbout(c)
 			return
@@ -271,11 +274,6 @@ func serveRules(c *webContext) {
 	f := c.Request.Form
 	c.Config.Rules.Skip.ReStrs = strings.Fields(f.Get("skip"))
 	c.Config.Rules.Priority.ReStrs = strings.Fields(f.Get("priority"))
-	if f.Get("alias-keyword") != "" && f.Get("alias-value") != "" {
-		c.Config.Rules.Aliases[f.Get("alias-keyword")] = f.Get("alias-value")
-	}
-	c.Config.Rules.Skip.ReStrs = strings.Fields(f.Get("skip"))
-	c.Config.Rules.Priority.ReStrs = strings.Fields(f.Get("priority"))
 	err = c.Config.SaveRules()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to save rules")
@@ -298,9 +296,35 @@ func serveAbout(c *webContext) {
 	return
 }
 
+func serveAddAlias(c *webContext) {
+	err := c.Request.ParseForm()
+	if err != nil {
+		serve500(c)
+		return
+	}
+	f := c.Request.Form
+	if f.Get("alias-keyword") != "" && f.Get("alias-value") != "" {
+		c.Config.Rules.Aliases[f.Get("alias-keyword")] = f.Get("alias-value")
+	}
+	err = c.Config.SaveRules()
+	if err != nil {
+		log.Error().Err(err).Msg("failed to save rules")
+		serve500(c)
+		return
+	}
+	c.Redirect("/rules")
+}
+
 func serveDeleteAlias(c *webContext) {
-	a := c.Request.URL.Query().Get("alias")
+	err := c.Request.ParseForm()
+	if err != nil {
+		serve500(c)
+		return
+	}
+	a := c.Request.Form.Get("alias")
 	if _, ok := c.Config.Rules.Aliases[a]; !ok {
+		serve500(c)
+		return
 	}
 	delete(c.Config.Rules.Aliases, a)
 	if err := c.Config.SaveRules(); err != nil {
