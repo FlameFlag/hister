@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -198,15 +199,13 @@ out:
 				break out
 			}
 			return errors.New("failed to parse html: " + err.Error())
-		case html.SelfClosingTagToken:
-		case html.StartTagToken:
+		case html.SelfClosingTagToken, html.StartTagToken:
 			tn, hasAttrs := doc.TagName()
 			currentTag = string(tn)
 			switch currentTag {
 			case "body":
 				inBody = true
-			case "style":
-			case "script":
+			case "script", "style":
 				skip = true
 			case "link":
 				var href string
@@ -219,7 +218,7 @@ out:
 					if bytes.Equal(aName, []byte("href")) {
 						href = string(aVal)
 					}
-					if bytes.Equal(aName, []byte("rel")) && bytes.Equal(aVal, []byte("icon")) {
+					if bytes.Equal(aName, []byte("rel")) && bytes.Contains(aVal, []byte("icon")) {
 						icon = true
 					}
 					if !moreAttr {
@@ -242,8 +241,7 @@ out:
 			switch string(tn) {
 			case "body":
 				inBody = false
-			case "style":
-			case "script":
+			case "script", "style":
 				skip = false
 			}
 		}
@@ -261,6 +259,10 @@ out:
 func (d *Document) DownloadFavicon() error {
 	if d.faviconURL == "" {
 		d.faviconURL = fullURL(d.URL, "/favicon.ico")
+	}
+	if strings.HasPrefix(d.faviconURL, "data:") {
+		d.Favicon = d.faviconURL
+		return nil
 	}
 	cli := &http.Client{
 		Timeout: 10 * time.Second,
@@ -285,7 +287,7 @@ func (d *Document) DownloadFavicon() error {
 		return err
 	}
 
-	d.Favicon = "data:image/x-icon;base64," + base64.StdEncoding.EncodeToString(data)
+	d.Favicon = fmt.Sprintf("data:%s;base64,%s", resp.Header.Get("Content-Type"), base64.StdEncoding.EncodeToString(data))
 	return nil
 }
 
@@ -408,6 +410,9 @@ func (q *Query) score(field string, term []byte, match bool) float64 {
 }
 
 func fullURL(base, u string) string {
+	if strings.HasPrefix(u, "data:") {
+		return u
+	}
 	pu, err := url.Parse(u)
 	if err != nil {
 		return ""
