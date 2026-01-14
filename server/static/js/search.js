@@ -118,7 +118,11 @@ function getSearchUrl(query) {
     return document.querySelector("#search-url").value.replace("{query}", escape(query));
 }
 
-function openUrl(u) {
+function openUrl(u, newWindow) {
+    if(newWindow) {
+        window.open(u, '_blank').focus();
+        return;
+    }
     window.location.href = u;
 }
 
@@ -127,7 +131,7 @@ function init() {
     connect();
 }
 
-function openResult(e) {
+function openResult(e, newWindow) {
     if(e.preventDefault) {
         e.preventDefault();
     }
@@ -138,7 +142,7 @@ function openResult(e) {
 		body: JSON.stringify({"url": url, "title": title, "query": input.value}),
 		headers: {"Content-type": "application/json; charset=UTF-8"},
 	}).then((r) => {
-		openUrl(url);
+		openUrl(url, newWindow);
 	});
     return false;
 }
@@ -153,7 +157,8 @@ window.addEventListener("keydown", function(e) {
     }
     if(e.key == "Enter") {
         let res = document.querySelectorAll(".result a")[highlightIdx];
-        openResult({'target': res});
+        let newWindow = e.ctrlKey ? true : false;
+        openResult({'target': res}, newWindow);
     }
     if(e.ctrlKey && (e.key == "j" || e.key == "k")) {
           e.preventDefault();
