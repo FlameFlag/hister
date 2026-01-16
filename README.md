@@ -15,7 +15,17 @@ Hister is a web history management tool that provides blazing fast, content-base
 - **Efficient retrieval**: Use keyword aliases to quickly find content
 - **Flexible content management**: Configure blacklist and priority rules for better control
 
+### Command line actions
+- **Index**: download and index any URL
+- **Import**: import and index existing Firefox/Chrome browser history
+
 ## Setup & run
+
+Grab a pre-built binary from the [latest release](https://github.com/asciimoo/hister/releases/latest).
+
+Execute `./hister` to see all available commands.
+
+### Build
 
  - Clone the repository
  - Build with `go build`
