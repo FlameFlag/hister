@@ -44,13 +44,15 @@ No privacy, AI suggestions, advertisements, sponsored results, indexed AI conten
 
 <h2>Technology</h2>
 
-<p>Hister is built with Go and uses the Bleve search engine for lightning-fast full-text search capabilities. The application consists of:
+<p>Hister is built with Go and uses the Bleve search engine for lightning-fast full-text search capabilities.<br />
+The application consists of:
+</p>
 
 <ul>
 	<li>A local web server for search interface</li>
 	<li>Browser extensions for <a href="https://chromewebstore.google.com/detail/hister/cciilamhchpmbdnniabclekddabkifhb">Chrome</a> and <a href="https://addons.mozilla.org/en-US/firefox/addon/hister/">Firefox</a> to automatically index visited pages</li>
+	<li>A command line utility to index/import/explore the contents of Hister</li>
 </ul>
-</p>
 
 <h2>License</h2>
 
