@@ -267,7 +267,7 @@ func serveHistory(c *webContext) {
 		serve500(c)
 		return
 	}
-	err = model.UpdateHistory(c.Config.Rules.ResolveAliases(h.Query), h.URL, h.Title)
+	err = model.UpdateHistory(h.Query, h.URL, h.Title)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to update history")
 		serve500(c)
