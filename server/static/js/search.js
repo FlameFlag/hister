@@ -129,7 +129,7 @@ function openResult(e, newWindow) {
     if(e.preventDefault) {
         e.preventDefault();
     }
-    let link = e.target.closest('a')
+    let link = e.target.closest('.result-title a')
     let url = link.getAttribute("href");
     let title = link.innerText;
     saveHistoryItem(url, title, input.value).then((r) => {
@@ -273,7 +273,7 @@ window.addEventListener("keydown", function(e) {
     }
     if(e.key == "Enter") {
         e.preventDefault();
-        let res = document.querySelectorAll(".result a")[highlightIdx];
+        let res = document.querySelectorAll(".result .result-title a")[highlightIdx];
         let newWindow = e.ctrlKey ? true : false;
         openResult({'target': res}, newWindow);
         return
