@@ -3,11 +3,6 @@
     <input type="text" autofocus placeholder="Search..." id="search" />
 </div>
 <div class="container">
-    <div id="results-header" class="hidden">
-        <div class="duration float-right"></div>
-        <div>Total number of results: <b class="results-num"></b></div>
-        <div class="expanded-query"></div>
-    </div>
     <div id="results"></div>
 </div>
 <template id="result">
@@ -15,6 +10,13 @@
         <div class="result-title"><img><a></a></div>
         <span class="result-url"></span><span class="action-button"><svg focusable="false" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path  fill="#95a5a6" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg></span>
         <p class="result-content"></p>
+    </div>
+</template>
+<template id="results-header">
+    <div class="results-header">
+        <div class="duration float-right"></div>
+        <div>Total number of results: <b class="results-num"></b></div>
+        <div class="expanded-query"></div>
     </div>
 </template>
 <template id="tips">

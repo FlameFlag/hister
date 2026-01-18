@@ -1,15 +1,13 @@
 let ws;
 let input = document.getElementById("search");
 let results = document.getElementById("results");
-let resultsHeader = document.getElementById("results-header");
 let emptyImg = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
-let templates = {
-    "result": document.getElementById("result"),
-    "tips": document.getElementById("tips"),
-    "result-actions": document.getElementById("result-actions"),
-    "success": document.getElementById("success"),
-};
 let urlState = {};
+let templates = {};
+for(let el of document.querySelectorAll("template")) {
+    let id = el.getAttribute("id")
+    templates[id] = el;
+}
 
 function createTemplate(name, fns) {
     let el = document.importNode(templates[name].content, true)
@@ -57,15 +55,7 @@ function updateURL() {
 }
 
 function renderResults(event) {
-    resultsHeader.classList.add("hidden");
     const res = JSON.parse(event.data);
-    results.replaceChildren();
-    if(res.search_duration) {
-        resultsHeader.querySelector(".duration").innerText = res.search_duration;
-    } else {
-        resultsHeader.querySelector(".duration").innerText = "";
-    }
-    resultsHeader.querySelector(".expanded-query").innerHTML = "";
     const d = res.documents;
     if(!d || !d.length) {
         if(!input.value) {
@@ -77,44 +67,21 @@ function renderResults(event) {
             "a": (e) => { e.setAttribute("href", u); e.innerHTML = "No results found - open query in web search engine"; e.classList.add("error"); },
             ".result-url": (e) => { e.textContent = u; },
         });
-        results.appendChild(n);
+        results.replaceChildren(n);
         return;
     }
+    let resultElements = [];
     highlightIdx = 0;
-    resultsHeader.querySelector(".results-num").innerText = res.total || d.length;
-    resultsHeader.classList.remove("hidden");
-    if(res.query && res.query.text != input.value) {
-        resultsHeader.querySelector(".expanded-query").innerHTML = `Expanded query: <code>"${res.query.text}"</code>`;
-    }
+    resultElements.push(createResultsHeader(res));
     if(res.history && res.history.length) {
         for(let r of res.history) {
-            results.appendChild(createTemplate("result", {
-                "a": (e) => {
-                    e.setAttribute("href", r.url);
-                    e.innerHTML = r.title || "*title*";
-                    // TODO handle middleclick (auxclick handler)
-                    e.addEventListener("click", openResult);
-                    e.classList.add("success");
-                },
-                ".result-url": (e) => { e.textContent = r.url; },
-            }));
+            resultElements.push(createPriorityResult(r))
         }
     }
     for(let r of d) {
-        let n = createTemplate("result", {
-            "a": (e) => {
-                e.setAttribute("href", r.url);
-                e.innerHTML = r.title || "*title*";
-                // TODO handle middleclick (auxclick handler)
-                e.addEventListener("click", openResult);
-            },
-            "img": (e) => { e.setAttribute("src", r.favicon || emptyImg); },
-            ".result-url": (e) => { e.textContent = r.url; },
-            ".action-button": (e) => { e.addEventListener("click", (ev) => toggleActions(ev, e.closest(".result"))) },
-            "p": (e) => { e.innerHTML = r.text || ""; },
-        });
-        results.appendChild(n);
+        resultElements.push(createResult(r));
     }
+    results.replaceChildren(...resultElements);
 };
 
 input.addEventListener("input", () => {
@@ -146,10 +113,52 @@ function openResult(e, newWindow) {
     }
     let url = e.target.getAttribute("href");
     let title = e.target.innerText;
-    addHistoryItem(url, title, input.value).then((r) => {
+    saveHistoryItem(url, title, input.value).then((r) => {
 		openUrl(url, newWindow);
 	});
     return false;
+}
+
+function createResultsHeader(res) {
+    const d = res.documents;
+    const header = createTemplate("results-header", {
+        ".duration": (e) => e.innerText = res.search_duration || "",
+        ".results-num": (e) => e.innerText = res.total || d.length,
+    });
+    if(res.query && res.query.text != input.value) {
+        header.querySelector(".expanded-query").innerHTML = `Expanded query: <code>"${res.query.text}"</code>`;
+    }
+    return header;
+}
+
+function createPriorityResult(r) {
+    let rn = createTemplate("result", {
+        "a": (e) => {
+            e.setAttribute("href", r.url);
+            e.innerHTML = r.title || "*title*";
+            // TODO handle middleclick (auxclick handler)
+            e.addEventListener("click", openResult);
+            e.classList.add("success");
+        },
+        ".result-url": (e) => { e.textContent = r.url; },
+    });
+    return rn;
+}
+
+function createResult(r) {
+    let rn = createTemplate("result", {
+        "a": (e) => {
+            e.setAttribute("href", r.url);
+            e.innerHTML = r.title || "*title*";
+            // TODO handle middleclick (auxclick handler)
+            e.addEventListener("click", openResult);
+        },
+        "img": (e) => { e.setAttribute("src", r.favicon || emptyImg); },
+        ".result-url": (e) => { e.textContent = r.url; },
+        ".action-button": (e) => { e.addEventListener("click", (ev) => toggleActions(ev, e.closest(".result"))) },
+        "p": (e) => { e.innerHTML = r.text || ""; },
+    });
+    return rn;
 }
 
 function toggleActions(ev, res) {
@@ -159,7 +168,7 @@ function toggleActions(ev, res) {
         return;
     }
     a = createTemplate("result-actions", {
-        ".save": (e) => e.addEventListener("click", () => addPriorityResult(e)),
+        ".save": (e) => e.addEventListener("click", () => savePriorityResult(e)),
         ".close": (e) => e.addEventListener("click", () => closeActions(e)),
     });
     for(let e of a.children) {
@@ -172,7 +181,7 @@ function closeActions(e) {
     e.closest(".actions").remove();
 }
 
-function addPriorityResult(e) {
+function savePriorityResult(e) {
     let result = e.closest(".result");
     let link = result.querySelector(".result-title a");
     let url = link.getAttribute("href");
@@ -181,15 +190,14 @@ function addPriorityResult(e) {
     if(!query) {
         return;
     }
-    addHistoryItem(url, title, query).then((r) => {
-        let s = createTemplate("success", {
+    saveHistoryItem(url, title, query).then((r) => {
+        result.querySelector(".actions").appendChild(createTemplate("success", {
             ".message": (e) => e.innerText = "Priority result added.",
-        });
-        result.querySelector(".actions").appendChild(s);
+        }));
     });
 }
 
-function addHistoryItem(url, title, query) {
+function saveHistoryItem(url, title, query) {
 	return fetch("/history", {
 		method: "POST",
 		body: JSON.stringify({"url": url, "title": title, "query": query}),
