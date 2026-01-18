@@ -129,8 +129,9 @@ function openResult(e, newWindow) {
     if(e.preventDefault) {
         e.preventDefault();
     }
-    let url = e.target.getAttribute("href");
-    let title = e.target.innerText;
+    let link = e.target.closest('a')
+    let url = link.getAttribute("href");
+    let title = link.innerText;
     saveHistoryItem(url, title, input.value).then((r) => {
 		openUrl(url, newWindow);
 	});
@@ -158,6 +159,7 @@ function createPriorityResult(r) {
             e.addEventListener("click", openResult);
             e.classList.add("success");
         },
+        ".readable": e => createReadable(e, r.url),
         ".result-url": (e) => { e.textContent = r.url; },
     });
     return rn;
@@ -165,18 +167,55 @@ function createPriorityResult(r) {
 
 function createResult(r) {
     let rn = createTemplate("result", {
-        "a": (e) => {
+        ".result-title a": e => {
             e.setAttribute("href", r.url);
             e.innerHTML = r.title || "*title*";
             // TODO handle middleclick (auxclick handler)
             e.addEventListener("click", openResult);
         },
-        "img": (e) => { e.setAttribute("src", r.favicon || emptyImg); },
-        ".result-url": (e) => { e.textContent = r.url; },
-        ".action-button": (e) => { e.addEventListener("click", (ev) => toggleActions(ev, e.closest(".result"))) },
-        "p": (e) => { e.innerHTML = r.text || ""; },
+        ".readable": e => createReadable(e, r.url),
+        "img": e => e.setAttribute("src", r.favicon || emptyImg),
+        ".result-url": e => e.textContent = r.url,
+        ".action-button": e => e.addEventListener("click", (ev) => toggleActions(ev, e.closest(".result"))),
+        "p": e => e.innerHTML = r.text || "",
     });
     return rn;
+}
+
+function createReadable(e, u) {
+    e.setAttribute("data-href", "/readable?url="+encodeURIComponent(u));
+    e.addEventListener("click", openReadable);
+}
+
+function openReadable(e) {
+    let result = e.target.closest(".result");
+    let link = result.querySelector(".result-title a");
+    let url = link.getAttribute("href");
+    let title = link.innerText;
+    let h = `<h1><a href="${url}">${title}</a></h1>`;
+    fetch(e.target.getAttribute("data-href")).then(resp => resp.text()).then(t => openPopup(h, t));
+    return false;
+}
+
+function openPopup(header, content) {
+    let p = document.querySelector(".popup-wrapper");
+    if(p) {
+        p.remove();
+    }
+    let closePopup = e => e.addEventListener("click", ev => {
+        console.log(ev.target);
+        if(ev.target.classList.contains("popup-close") || ev.target.classList.contains("popup-wrapper")) {
+            document.querySelector(".popup-wrapper").remove();
+        }
+    });
+    p = createTemplate("popup", {
+        ".popup-wrapper": closePopup,
+        ".popup-close": closePopup,
+        ".popup": e => e.addEventListener("click", ev => false),
+        ".popup-header": e => e.innerHTML = header,
+        ".popup-content": e => e.innerHTML = content,
+    });
+    document.body.appendChild(p);
 }
 
 function toggleActions(ev, res) {

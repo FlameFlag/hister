@@ -70,6 +70,9 @@ func GetOrCreateHistory(q string) *History {
 }
 
 func UpdateHistory(query, url, title string) error {
+	if query == "" || url == "" || title == "" {
+		return errors.New("missing data")
+	}
 	l := GetOrCreateLink(url, title)
 	h := GetOrCreateHistory(query)
 	if l == nil || h == nil {

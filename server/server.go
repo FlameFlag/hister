@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/asciimoo/hister/server/static"
 	"github.com/asciimoo/hister/server/templates"
 
+	readability "codeberg.org/readeck/go-readability/v2"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
 )
@@ -116,6 +118,9 @@ func createRouter(cfg *config.Config) func(w http.ResponseWriter, r *http.Reques
 		case "/about":
 			serveAbout(c)
 			return
+		case "/readable":
+			serveReadable(c)
+			return
 		case "/favicon.ico":
 			i, err := static.FS.ReadFile("favicon.ico")
 			if err != nil {
@@ -164,11 +169,11 @@ func serveSearch(c *webContext) {
 		if err != nil {
 			log.Error().Err(err).Msg("failed to get indexer results")
 		}
+		if res == nil {
+			res = &indexer.Results{}
+		}
 		hr, err := model.GetURLsByQuery(query.Text)
 		if err == nil && len(hr) > 0 {
-			if res == nil {
-				res = &indexer.Results{}
-			}
 			res.History = hr
 		}
 		if oq != "" {
@@ -298,6 +303,26 @@ func serveRules(c *webContext) {
 		"Success": "Rules saved",
 	})
 	return
+}
+
+func serveReadable(c *webContext) {
+	u := c.Request.URL.Query().Get("url")
+	doc := indexer.GetByURL(u)
+	if doc == nil {
+		serve500(c)
+		return
+	}
+	pu, err := url.Parse(u)
+	if err != nil {
+		serve500(c)
+		return
+	}
+	r, err := readability.FromReader(strings.NewReader(doc.HTML), pu)
+	if err != nil {
+		serve500(c)
+		return
+	}
+	r.RenderHTML(c.Response)
 }
 
 func serveHelp(c *webContext) {
