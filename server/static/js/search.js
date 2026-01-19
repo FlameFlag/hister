@@ -213,24 +213,29 @@ function openReadable(e) {
 }
 
 function openPopup(header, content) {
-    let p = document.querySelector(".popup-wrapper");
-    if(p) {
-        p.remove();
-    }
-    let closePopup = e => e.addEventListener("click", ev => {
-        console.log(ev.target);
+    closePopup();
+    let close = e => e.addEventListener("click", ev => {
         if(ev.target.classList.contains("popup-close") || ev.target.classList.contains("popup-wrapper")) {
-            document.querySelector(".popup-wrapper").remove();
+            closePopup();
         }
     });
-    p = createTemplate("popup", {
-        ".popup-wrapper": closePopup,
-        ".popup-close": closePopup,
+    let p = createTemplate("popup", {
+        ".popup-wrapper": close,
+        ".popup-close": close,
         ".popup": e => e.addEventListener("click", ev => false),
         ".popup-header": e => e.innerHTML = header,
         ".popup-content": e => e.innerHTML = content,
     });
     document.body.appendChild(p);
+}
+
+function closePopup() {
+    let p = document.querySelector(".popup-wrapper");
+    if(p) {
+        p.remove();
+        return true;
+    }
+    return false;
 }
 
 function toggleActions(ev, res) {
@@ -298,6 +303,7 @@ window.addEventListener("keydown", function(e) {
             input.value = autocomplete.value;
             handleInput();
             e.preventDefault();
+            return;
         }
     }
     if(e.ctrlKey && (e.key == "j" || e.key == "k")) {
@@ -309,10 +315,18 @@ window.addEventListener("keydown", function(e) {
         }
         highlightIdx = (highlightIdx+(e.key=="j"?1:-1)+res.length) % res.length;
         res[highlightIdx].classList.add("highlight");
+        return;
     }
     if(e.ctrlKey && e.key == "o") {
         e.preventDefault();
         openUrl(getSearchUrl(input.value));
+        return
+    }
+    if(e.key == 'Escape') {
+        if(closePopup()) {
+            e.preventDefault();
+            return;
+        }
     }
 });
 
