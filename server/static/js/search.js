@@ -18,6 +18,7 @@ const tips = [
     'Press <code>alt+o</code> to open current search query in your configured search engine.',
     'Use <code>url:</code> prefix to search only in the URL field. E.g.: <code>url:*github* hister</code>.',
     'Set hister to your default search engine in your browser to access it with ease.',
+    'Start search query with <code>!!</code> to open the query in your configured search engine',
 ];
 
 function createTemplate(name, fns) {
@@ -314,9 +315,13 @@ window.addEventListener("keydown", function(e) {
         }
     }
     if(e.key == "Enter") {
+        let newWindow = e.altKey ? true : false;
+        if(input.value.startsWith("!!")) {
+            openUrl(getSearchUrl(input.value.substring(2)), newWindow);
+            return;
+        }
         e.preventDefault();
         let res = document.querySelectorAll(".result .result-title a")[highlightIdx];
-        let newWindow = e.altKey ? true : false;
         openResult({'target': res}, newWindow);
         return
     }

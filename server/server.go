@@ -161,6 +161,10 @@ func createRouter(cfg *config.Config) func(w http.ResponseWriter, r *http.Reques
 }
 
 func serveIndex(c *webContext) {
+	q := c.Request.URL.Query().Get("q")
+	if strings.HasPrefix(q, "!!") {
+		c.Redirect(strings.Replace(c.Config.App.SearchURL, "{query}", q[2:], 1))
+	}
 	c.Render("index", nil)
 }
 

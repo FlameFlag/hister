@@ -110,7 +110,7 @@ func GetURLsByQuery(q string) ([]*URLCount, error) {
 		Joins("JOIN links ON history_links.link_id = links.id").
 		Joins("JOIN histories ON history_links.history_id = histories.id").
 		Where("histories.query = ?", q).
-		Order("history_links.count DESC").
+		Order("history_links.count DESC, history_links.updated_at DESC").
 		Limit(20).Find(&us).Error
 	return us, err
 }
