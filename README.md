@@ -21,7 +21,7 @@ Hister is a web history management tool that provides blazing fast, content-base
 
 ## Setup & run
 
-Grab a pre-built binary from the [latest release](https://github.com/asciimoo/hister/releases/latest). (Don't forget t `chmod +x`)
+Grab a pre-built binary from the [latest release](https://github.com/asciimoo/hister/releases/latest). (Don't forget to `chmod +x`)
 
 Execute `./hister` to see all available commands.
 
