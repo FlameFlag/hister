@@ -265,10 +265,10 @@ func (r *Rules) IsSkip(s string) bool {
 }
 
 func (r *Rule) Match(s string) bool {
+	if len(r.ReStrs) == 0 {
+		return false
+	}
 	if r.re == nil {
-		if len(r.ReStrs) == 0 {
-			return false
-		}
 		if err := r.Compile(); err != nil {
 			log.Debug().Err(err).Msg("Failed to compile rule regexp")
 			return false
