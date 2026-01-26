@@ -16,6 +16,7 @@ import (
 	"github.com/asciimoo/hister/server/model"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/idna"
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/custom"
@@ -44,6 +45,7 @@ type Query struct {
 
 type Document struct {
 	URL        string  `json:"url"`
+	Domain     string  `json:"domain"`
 	HTML       string  `json:"html"`
 	Title      string  `json:"title"`
 	Text       string  `json:"text"`
@@ -62,7 +64,7 @@ type Results struct {
 }
 
 var i *indexer
-var allFields []string = []string{"url", "title", "text", "favicon", "html"}
+var allFields []string = []string{"url", "title", "text", "favicon", "html", "domain"}
 
 func Init(idxPath string) error {
 	idx, err := bleve.Open(idxPath)
@@ -86,7 +88,7 @@ func Add(d *Document) error {
 func Search(cfg *config.Config, q *Query) (*Results, error) {
 	q.cfg = cfg
 	req := bleve.NewSearchRequest(q.create())
-	req.Fields = append(q.Fields, "favicon")
+	req.Fields = q.Fields
 	if q.Highlight == "HTML" {
 		req.Highlight = bleve.NewHighlight()
 	}
@@ -127,7 +129,7 @@ func GetByURL(u string) *Document {
 	q := query.NewTermQuery(strings.ToLower(u))
 	q.SetField("url")
 	req := bleve.NewSearchRequest(q)
-	req.Fields = append(allFields, "favicon")
+	req.Fields = allFields
 	res, err := i.idx.Search(req)
 	if err != nil || len(res.Hits) < 1 {
 		return nil
@@ -146,6 +148,7 @@ func (d *Document) Process() error {
 	if pu.Scheme == "" || pu.Host == "" {
 		return errors.New("invalid URL: missing scheme/host")
 	}
+	d.Domain = pu.Host
 	if d.Text == "" || d.Title == "" {
 		if err := d.extractHTML(); err != nil {
 			return err
@@ -197,6 +200,9 @@ func docFromHit(h *search.DocumentMatch) *Document {
 	}
 	if s, ok := h.Fields["favicon"].(string); ok {
 		d.Favicon = s
+	}
+	if s, ok := h.Fields["domain"].(string); ok {
+		d.Domain = s
 	}
 	return d
 }
@@ -312,11 +318,19 @@ func (d *Document) DownloadFavicon() error {
 
 func (q *Query) create() query.Query {
 	if q.Fields == nil || len(q.Fields) == 0 {
-		q.Fields = []string{"url", "title", "text"}
+		q.Fields = allFields
 	}
 
 	// add + to phrases to force matching phrases
 	qp := strings.Fields(q.Text)
+
+	if len(qp) == 0 {
+		q.base = query.NewMatchNoneQuery()
+		return q
+	}
+
+	domainCandidate := qp[0]
+
 	inQuote := false
 	for i, s := range qp {
 		if len(s) == 0 {
@@ -334,9 +348,33 @@ func (q *Query) create() query.Query {
 		}
 	}
 
-	sq := strings.Join(qp, " ")
+	sqs := strings.Join(qp, " ")
+	var sq query.Query
+	sq = bleve.NewQueryStringQuery(sqs)
 
-	q.base = bleve.NewQueryStringQuery(sq)
+	if d, err := idna.Lookup.ToASCII(domainCandidate); err == nil {
+		dq := bleve.NewRegexpQuery(fmt.Sprintf(".*%s.*", d))
+		dq.SetField("domain")
+		dq.SetBoost(100)
+		if len(qp) == 1 {
+			// match domain part or QueryString in title/text
+			sq = bleve.NewDisjunctionQuery(
+				sq,
+				dq,
+			)
+		} else {
+			// match QueryString in title/text OR (first word as domain part AND the rest of the query as QueryString in title/text)
+			sq = bleve.NewDisjunctionQuery(
+				sq,
+				bleve.NewConjunctionQuery(
+					dq,
+					bleve.NewQueryStringQuery(strings.Join(qp[1:], "")),
+				),
+			)
+		}
+	}
+
+	q.base = sq
 
 	return q
 }
@@ -367,6 +405,7 @@ func createMapping() mapping.IndexMapping {
 	docMapping := bleve.NewDocumentMapping()
 	docMapping.AddFieldMappingsAt("title", fm)
 	docMapping.AddFieldMappingsAt("url", um)
+	docMapping.AddFieldMappingsAt("domain", um)
 	docMapping.AddFieldMappingsAt("text", fm)
 	docMapping.AddFieldMappingsAt("favicon", noIdxMap)
 	docMapping.AddFieldMappingsAt("html", noIdxMap)
