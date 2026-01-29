@@ -1,6 +1,6 @@
 let ws;
 let input = document.getElementById("search");
-let autocomplete = document.getElementById("autocomplete");
+let autocompleteEl = document.getElementById("autocomplete");
 let results = document.getElementById("results");
 let emptyImg = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 let urlState = {};
@@ -8,6 +8,19 @@ let templates = {};
 for(let el of document.querySelectorAll("template")) {
     let id = el.getAttribute("id")
     templates[id] = el;
+}
+
+const hotkeys = JSON.parse(document.getElementById("hotkey-data").text);
+
+const hotkeyActions = {
+    "open_result": openSelectedResult,
+    "open_result_in_new_tab": e => openSelectedResult(e, true),
+    "select_next_result": selectNextResult,
+    "select_previous_result": selectPreviousResult,
+    "open_query_in_search_engine": openQueryInSearchEngine,
+    "focus_search_input": focusSearchInput,
+    "view_result_popup": viewResultPopup,
+    "autocomplete": autocomplete,
 }
 
 const tips = [
@@ -126,14 +139,14 @@ function getSearchUrl(query) {
 
 function updateAutocomplete(suggestion) {
     if(!input.value) {
-        autocomplete.value = "Search...";
+        autocompleteEl.value = "Search...";
         return;
     }
     if(!suggestion) {
-        autocomplete.value = "";
+        autocompleteEl.value = "";
         return;
     }
-    autocomplete.value = suggestion.replaceAt(0, input.value);
+    autocompleteEl.value = suggestion.replaceAt(0, input.value);
 }
 
 function openUrl(u, newWindow) {
@@ -330,53 +343,23 @@ function saveHistoryItem(url, title, query, remove) {
 
 let highlightIdx = 0;
 window.addEventListener("keydown", function(e) {
-    if(e.key == "/") {
-        if(document.activeElement != input) {
-            e.preventDefault();
-            input.focus();
-            return;
-        }
-    }
-    if(e.key == "Enter") {
-        let newWindow = e.altKey ? true : false;
-        if(input.value.startsWith("!!")) {
-            openUrl(getSearchUrl(input.value.substring(2)), newWindow);
-            return;
-        }
-        e.preventDefault();
-        let res = document.querySelectorAll(".result .result-title a")[highlightIdx];
-        openResult({'target': res}, newWindow);
-        return
-    }
-    if(e.key == "Tab") {
-        if(document.activeElement == input && input.value != autocomplete.value) {
-            input.value = autocomplete.value;
-            handleInput();
-            e.preventDefault();
-            return;
-        }
-    }
-    if(e.altKey && (e.key == "j" || e.key == "k")) {
-        e.preventDefault();
-
-        let res = document.querySelectorAll(".result");
-        if(res.length > highlightIdx) {
-            res[highlightIdx].classList.remove("highlight");
-        }
-        highlightIdx = (highlightIdx+(e.key=="j"?1:-1)+res.length) % res.length;
-        res[highlightIdx].classList.add("highlight");
+    if(!e.key) {
         return;
     }
-    if(e.altKey && e.key == "o") {
-        e.preventDefault();
-        openUrl(getSearchUrl(input.value));
-        return
+    let modifier;
+    if(e.altKey) {
+        modifier = "alt";
+    } else if(e.ctrlKey) {
+        modifier = "ctrl";
+    } else if(e.metaKey) {
+        modifier = "meta";
     }
-    if(e.altKey && e.key == "v") {
-        e.preventDefault();
-        if(!closePopup()) {
-            openReadable({'target': document.querySelectorAll(".result .readable")[highlightIdx]});
-        }
+    let key = e.key.toLowerCase();
+    if(modifier) {
+        key = modifier + "+" + key;
+    }
+    if(hotkeys[key]) {
+        hotkeyActions[hotkeys[key]](e);
         return
     }
     if(e.key == 'Escape') {
@@ -386,6 +369,63 @@ window.addEventListener("keydown", function(e) {
         }
     }
 });
+
+function autocomplete(e) {
+    if(document.activeElement == input && input.value != autocompleteEl.value) {
+        input.value = autocompleteEl.value;
+        handleInput();
+        e.preventDefault();
+        return;
+    }
+}
+
+function viewResultPopup(e) {
+    e.preventDefault();
+    if(!closePopup()) {
+        openReadable({'target': document.querySelectorAll(".result .readable")[highlightIdx]});
+    }
+}
+
+function openSelectedResult(e, newWindow) {
+    if(input.value.startsWith("!!")) {
+        openUrl(getSearchUrl(input.value.substring(2)), newWindow);
+        return;
+    }
+    e.preventDefault();
+    let res = document.querySelectorAll(".result .result-title a")[highlightIdx];
+    openResult({'target': res}, newWindow);
+}
+
+function selectNextResult(e) {
+    selectNthResult(e, 1);
+}
+
+function selectPreviousResult(e) {
+    selectNthResult(e, -1);
+}
+
+function selectNthResult(e, n) {
+        e.preventDefault();
+        let res = document.querySelectorAll(".result");
+        if(res.length > highlightIdx) {
+            res[highlightIdx].classList.remove("highlight");
+        }
+        highlightIdx = (highlightIdx+n+res.length) % res.length;
+        res[highlightIdx].classList.add("highlight");
+}
+
+function openQueryInSearchEngine(e) {
+    e.preventDefault();
+    openUrl(getSearchUrl(input.value));
+}
+
+function focusSearchInput(e) {
+    if(document.activeElement != input) {
+        e.preventDefault();
+        input.focus();
+        return;
+    }
+}
 
 String.prototype.replaceAt = function(index, replacement) {
     return this.substring(0, index) + replacement + this.substring(index + replacement.length);
