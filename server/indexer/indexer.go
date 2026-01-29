@@ -157,6 +157,18 @@ func (d *Document) Process() error {
 	if pu.Scheme == "" || pu.Host == "" {
 		return errors.New("invalid URL: missing scheme/host")
 	}
+	q := pu.Query()
+	qChange := false
+	for k := range q {
+		if k == "utm" || strings.HasPrefix(k, "utm_") {
+			qChange = true
+			q.Del(k)
+		}
+	}
+	if qChange {
+		pu.RawQuery = q.Encode()
+		d.URL = pu.String()
+	}
 	d.Domain = pu.Host
 	if d.Text == "" || d.Title == "" {
 		if err := d.extractHTML(); err != nil {
