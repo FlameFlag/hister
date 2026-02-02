@@ -15,10 +15,10 @@ import (
 	"strings"
 
 	"github.com/asciimoo/hister/config"
-	//	"github.com/asciimoo/hister/gui"
 	"github.com/asciimoo/hister/server"
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/server/model"
+	"github.com/asciimoo/hister/ui"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog"
@@ -99,6 +99,17 @@ The Chrome/Chromium URL database fiel is usually located at /home/[USER]/.config
 	Run:  importHistory,
 }
 
+var searchCmd = &cobra.Command{
+	Use:   "search",
+	Short: "command line search interface",
+	Long:  "",
+	Run: func(_ *cobra.Command, _ []string) {
+		if err := ui.SearchTUI(cfg); err != nil {
+			exit(1, err.Error())
+		}
+	},
+}
+
 var indexCmd = &cobra.Command{
 	Use:   "index URL",
 	Short: "index URL",
@@ -131,6 +142,7 @@ func init() {
 	rootCmd.AddCommand(listURLsCmd)
 	rootCmd.AddCommand(indexCmd)
 	rootCmd.AddCommand(importCmd)
+	rootCmd.AddCommand(searchCmd)
 
 	dcfg := config.CreateDefaultConfig()
 	listenCmd.Flags().StringP("address", "a", dcfg.Server.Address, "Listen address")
@@ -316,7 +328,7 @@ func indexURL(u string) error {
 	defer r.Body.Close()
 	contentType := r.Header.Get("Content-type")
 	if !strings.Contains(contentType, "html") {
-		errors.New("onvalid content type: " + contentType)
+		errors.New("invalid content type: " + contentType)
 	}
 	buf := bytes.NewBuffer(nil)
 	io.Copy(buf, r.Body)

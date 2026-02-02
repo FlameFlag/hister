@@ -22,7 +22,12 @@ import (
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/custom"
 	"github.com/blevesearch/bleve/v2/analysis/tokenizer/single"
 	"github.com/blevesearch/bleve/v2/mapping"
+	"github.com/blevesearch/bleve/v2/registry"
 	"github.com/blevesearch/bleve/v2/search"
+	"github.com/blevesearch/bleve/v2/search/highlight"
+	"github.com/blevesearch/bleve/v2/search/highlight/format/ansi"
+	simpleFragmenter "github.com/blevesearch/bleve/v2/search/highlight/fragmenter/simple"
+	simpleHighlighter "github.com/blevesearch/bleve/v2/search/highlight/highlighter/simple"
 	"github.com/blevesearch/bleve/v2/search/query"
 	"github.com/blevesearch/bleve/v2/search/searcher"
 	index "github.com/blevesearch/bleve_index_api"
@@ -79,6 +84,7 @@ func Init(idxPath string) error {
 	i = &indexer{
 		idx: idx,
 	}
+	registry.RegisterHighlighter("ansi", invertedAnsiHighlighter)
 	return nil
 }
 
@@ -95,8 +101,11 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	q.cfg = cfg
 	req := bleve.NewSearchRequest(q.create())
 	req.Fields = q.Fields
-	if q.Highlight == "HTML" {
+	switch q.Highlight {
+	case "HTML":
 		req.Highlight = bleve.NewHighlight()
+	case "text":
+		req.Highlight = bleve.NewHighlightWithStyle("ansi")
 	}
 	res, err := i.idx.Search(req)
 	if err != nil {
@@ -502,4 +511,19 @@ func fullURL(base, u string) string {
 		return ""
 	}
 	return pb.ResolveReference(pu).String()
+}
+
+func invertedAnsiHighlighter(config map[string]interface{}, cache *registry.Cache) (highlight.Highlighter, error) {
+	// Get the simple fragmenter
+	fragmenter, err := cache.FragmenterNamed(simpleFragmenter.Name)
+	if err != nil {
+		return nil, fmt.Errorf("error building fragmenter: %v", err)
+	}
+
+	formatter := ansi.NewFragmentFormatter(ansi.Reverse)
+	return simpleHighlighter.NewHighlighter(
+		fragmenter,
+		formatter,
+		simpleHighlighter.DefaultSeparator,
+	), nil
 }
