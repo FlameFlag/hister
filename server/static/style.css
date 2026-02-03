@@ -239,7 +239,7 @@ code, kbd {
             display: inline-block;
         }
     }
-    .result-url, .readable {
+    .result-url, .readable, .added {
         display: inline-block;
         overflow: hidden;
         height: 1.2em;
@@ -249,7 +249,7 @@ code, kbd {
         margin: 0;
         word-break: break-all;
     }
-    .result-url {
+    .result-url, .added {
         color: var(--color-semilight);
     }
     .action-button {

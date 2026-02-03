@@ -98,7 +98,10 @@ function renderResults(event) {
     }
     results.replaceChildren(...resultElements);
     if(resultElements.length > 0) {
-        document.querySelector(".result").classList.add("highlight");
+        let r = document.querySelector(".result");
+        if(r) {
+            r.classList.add("highlight");
+        }
     }
 };
 
@@ -203,6 +206,7 @@ function createResult(r) {
         ".readable": e => createReadable(e, r.url),
         "img": e => e.setAttribute("src", r.favicon || emptyImg),
         ".result-url": e => e.textContent = r.url,
+        ".added": e => e.textContent = r.added,
         ".action-button": e => e.addEventListener("click", (ev) => toggleActions(ev, e.closest(".result"))),
         "p": e => e.innerHTML = r.text || "",
     });

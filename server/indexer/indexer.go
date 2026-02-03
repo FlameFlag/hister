@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -56,6 +57,7 @@ type Document struct {
 	Text       string  `json:"text"`
 	Favicon    string  `json:"favicon"`
 	Score      float64 `json:"score"`
+	Added      string  `json:"added"`
 	faviconURL string
 	processed  bool
 }
@@ -70,7 +72,7 @@ type Results struct {
 }
 
 var i *indexer
-var allFields []string = []string{"url", "title", "text", "favicon", "html", "domain"}
+var allFields []string = []string{"url", "title", "text", "favicon", "html", "domain", "added"}
 
 func Init(idxPath string) error {
 	idx, err := bleve.Open(idxPath)
@@ -86,6 +88,52 @@ func Init(idxPath string) error {
 	}
 	registry.RegisterHighlighter("ansi", invertedAnsiHighlighter)
 	return nil
+}
+
+func Reindex(idxPath, tmpIdxPath string) error {
+	idx, err := bleve.Open(idxPath)
+	if err != nil {
+		return err
+	}
+	mapping := createMapping()
+	tmpIdx, err := bleve.New(tmpIdxPath, mapping)
+	if err != nil {
+		return err
+	}
+	q := query.NewMatchAllQuery()
+	resultNum := 20
+	page := 0
+	for {
+		req := bleve.NewSearchRequest(q)
+		req.Size = resultNum
+		req.From = page * resultNum
+		req.Fields = allFields
+		res, err := idx.Search(req)
+		if err != nil || len(res.Hits) < 1 {
+			break
+		}
+		for _, h := range res.Hits {
+			d := docFromHit(h)
+			if err := d.Process(); err != nil {
+				tmpIdx.Close()
+				os.RemoveAll(tmpIdxPath)
+				return err
+			}
+			if err := tmpIdx.Index(d.URL, d); err != nil {
+				tmpIdx.Close()
+				os.RemoveAll(tmpIdxPath)
+				return err
+			}
+		}
+		page += 1
+		log.Debug().Int("Page", page).Msg("Reindexed")
+	}
+	idx.Close()
+	tmpIdx.Close()
+	if err := os.RemoveAll(idxPath); err != nil {
+		return nil
+	}
+	return os.Rename(tmpIdxPath, idxPath)
 }
 
 func Add(d *Document) error {
@@ -130,6 +178,9 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 		if i, ok := v.Fields["favicon"].(string); ok {
 			d.Favicon = i
 		}
+		if s, ok := v.Fields["added"].(string); ok {
+			d.Added = s
+		}
 		matches[j] = d
 	}
 	r := &Results{
@@ -166,6 +217,7 @@ func (d *Document) Process() error {
 	if pu.Scheme == "" || pu.Host == "" {
 		return errors.New("invalid URL: missing scheme/host")
 	}
+	d.Added = time.Now().Format("2006.01.02 15:04")
 	q := pu.Query()
 	qChange := false
 	for k := range q {
@@ -234,6 +286,9 @@ func docFromHit(h *search.DocumentMatch) *Document {
 	}
 	if s, ok := h.Fields["domain"].(string); ok {
 		d.Domain = s
+	}
+	if s, ok := h.Fields["added"].(string); ok {
+		d.Added = s
 	}
 	return d
 }
@@ -440,6 +495,7 @@ func createMapping() mapping.IndexMapping {
 	docMapping.AddFieldMappingsAt("text", fm)
 	docMapping.AddFieldMappingsAt("favicon", noIdxMap)
 	docMapping.AddFieldMappingsAt("html", noIdxMap)
+	docMapping.AddFieldMappingsAt("added", noIdxMap)
 
 	im.DefaultMapping = docMapping
 

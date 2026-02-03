@@ -78,7 +78,7 @@ var createConfigCmd = &cobra.Command{
 var listURLsCmd = &cobra.Command{
 	Use:   "list-urls",
 	Short: "list indexed URLs",
-	Long:  ``,
+	Long:  `list indexed URLs - server should be stopped`,
 	PreRun: func(_ *cobra.Command, _ []string) {
 		initIndex()
 	},
@@ -125,6 +125,18 @@ var indexCmd = &cobra.Command{
 	},
 }
 
+var reindexCmd = &cobra.Command{
+	Use:   "reindex",
+	Short: "reindex",
+	Long:  `Recreate index - server should be stopped`,
+	Run: func(cmd *cobra.Command, args []string) {
+		err := indexer.Reindex(cfg.IndexPath(), cfg.FullPath("tmp_index.db"))
+		if err != nil {
+			exit(1, err.Error())
+		}
+	},
+}
+
 func exit(errno int, msg string) {
 	if errno != 0 {
 		fmt.Println("Error!")
@@ -144,6 +156,7 @@ func init() {
 	rootCmd.AddCommand(indexCmd)
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(searchCmd)
+	rootCmd.AddCommand(reindexCmd)
 
 	dcfg := config.CreateDefaultConfig()
 	listenCmd.Flags().StringP("address", "a", dcfg.Server.Address, "Listen address")
