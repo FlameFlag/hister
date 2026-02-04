@@ -57,7 +57,7 @@ type Document struct {
 	Text       string  `json:"text"`
 	Favicon    string  `json:"favicon"`
 	Score      float64 `json:"score"`
-	Added      string  `json:"added"`
+	Added      int64   `json:"added"`
 	faviconURL string
 	processed  bool
 }
@@ -178,8 +178,8 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 		if i, ok := v.Fields["favicon"].(string); ok {
 			d.Favicon = i
 		}
-		if s, ok := v.Fields["added"].(string); ok {
-			d.Added = s
+		if t, ok := v.Fields["added"].(float64); ok {
+			d.Added = int64(t)
 		}
 		matches[j] = d
 	}
@@ -217,7 +217,7 @@ func (d *Document) Process() error {
 	if pu.Scheme == "" || pu.Host == "" {
 		return errors.New("invalid URL: missing scheme/host")
 	}
-	d.Added = time.Now().Format("2006.01.02 15:04")
+	d.Added = time.Now().Unix()
 	q := pu.Query()
 	qChange := false
 	for k := range q {
@@ -287,8 +287,8 @@ func docFromHit(h *search.DocumentMatch) *Document {
 	if s, ok := h.Fields["domain"].(string); ok {
 		d.Domain = s
 	}
-	if s, ok := h.Fields["added"].(string); ok {
-		d.Added = s
+	if t, ok := h.Fields["added"].(float64); ok {
+		d.Added = int64(t)
 	}
 	return d
 }
@@ -495,7 +495,7 @@ func createMapping() mapping.IndexMapping {
 	docMapping.AddFieldMappingsAt("text", fm)
 	docMapping.AddFieldMappingsAt("favicon", noIdxMap)
 	docMapping.AddFieldMappingsAt("html", noIdxMap)
-	docMapping.AddFieldMappingsAt("added", noIdxMap)
+	docMapping.AddFieldMappingsAt("added", bleve.NewNumericFieldMapping())
 
 	im.DefaultMapping = docMapping
 

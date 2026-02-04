@@ -171,6 +171,56 @@ function openUrl(u, newWindow) {
     window.location.href = u;
 }
 
+function formatTimestamp(unixTimestamp) {
+    return new Date(unixTimestamp * 1000).toISOString().replace("T", " ").split(".")[0];
+}
+
+function formatRelativeTime(unixTimestamp) {
+    if(!unixTimestamp) {
+        return '';
+    }
+
+    const now = Date.now();
+    const timestamp = unixTimestamp * 1000;
+    const secondsAgo = Math.floor((now - timestamp) / 1000);
+
+    if(secondsAgo < 0) {
+        return 'just now';
+    }
+
+    if(secondsAgo < 60) {
+        return 'just now';
+    }
+
+    const minutesAgo = Math.floor(secondsAgo / 60);
+    if(minutesAgo < 60) {
+        return minutesAgo === 1 ? '1 minute ago' : `${minutesAgo} minutes ago`;
+    }
+
+    const hoursAgo = Math.floor(minutesAgo / 60);
+    if(hoursAgo < 24) {
+        return hoursAgo === 1 ? '1 hour ago' : `${hoursAgo} hours ago`;
+    }
+
+    const daysAgo = Math.floor(hoursAgo / 24);
+    if(daysAgo < 7) {
+        return daysAgo === 1 ? 'yesterday' : `${daysAgo} days ago`;
+    }
+
+    const weeksAgo = Math.floor(daysAgo / 7);
+    if(weeksAgo < 4) {
+        return weeksAgo === 1 ? '1 week ago' : `${weeksAgo} weeks ago`;
+    }
+
+    const monthsAgo = Math.floor(daysAgo / 30);
+    if(monthsAgo < 12) {
+        return monthsAgo === 1 ? '1 month ago' : `${monthsAgo} months ago`;
+    }
+
+    const yearsAgo = Math.floor(daysAgo / 365);
+    return yearsAgo === 1 ? '1 year ago' : `${yearsAgo} years ago`;
+}
+
 function init() {
     results.replaceChildren(createTips());
     connect();
@@ -240,7 +290,10 @@ function createResult(r) {
         ".readable": e => createReadable(e, r.url),
         "img": e => e.setAttribute("src", r.favicon || emptyImg),
         ".result-url": e => e.textContent = r.url,
-        ".added": e => e.textContent = r.added,
+        ".added": e => {
+            e.textContent = formatRelativeTime(r.added);
+            e.title = formatTimestamp(r.added);
+        },
         ".action-button": e => e.addEventListener("click", (ev) => toggleActions(ev, e.closest(".result"))),
         "p": e => e.innerHTML = r.text || "",
     });
