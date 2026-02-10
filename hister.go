@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -124,6 +125,29 @@ var indexCmd = &cobra.Command{
 	},
 }
 
+var deleteCmd = &cobra.Command{
+	Use:   "delete URL",
+	Short: "remove page from the index",
+	Long:  ``,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		formData := url.Values{
+			"url": {args[0]},
+		}
+		client := &http.Client{}
+		req, err := http.NewRequest("POST", cfg.BaseURL("/delete"), strings.NewReader(formData.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		resp, err := client.Do(req)
+		if err != nil {
+			exit(1, "Failed to send request to hister: "+err.Error())
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			exit(1, fmt.Sprintf("failed to delete url: Invalid status code (%d)", resp.StatusCode))
+		}
+	},
+}
+
 var reindexCmd = &cobra.Command{
 	Use:   "reindex",
 	Short: "Reindex",
@@ -156,6 +180,7 @@ func init() {
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(searchCmd)
 	rootCmd.AddCommand(reindexCmd)
+	rootCmd.AddCommand(deleteCmd)
 
 	dcfg := config.CreateDefaultConfig()
 	listenCmd.Flags().StringP("address", "a", dcfg.Server.Address, "Listen address")
@@ -362,10 +387,10 @@ func indexURL(u string) error {
 	if err != nil {
 		return errors.New(`failed to send page to hister: ` + err.Error())
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		return errors.New(fmt.Sprintf("failed to send page to hister: Invalid status code (%d)", resp.StatusCode))
 	}
-	defer resp.Body.Close()
 	return nil
 }
 

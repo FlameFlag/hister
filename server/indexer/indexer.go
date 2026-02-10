@@ -145,6 +145,10 @@ func Add(d *Document) error {
 	return i.idx.Index(d.URL, d)
 }
 
+func Delete(u string) error {
+	return i.idx.Delete(u)
+}
+
 func Search(cfg *config.Config, q *Query) (*Results, error) {
 	q.cfg = cfg
 	req := bleve.NewSearchRequest(q.create())

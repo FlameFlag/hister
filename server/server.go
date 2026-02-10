@@ -127,6 +127,9 @@ func createRouter(cfg *config.Config) func(w http.ResponseWriter, r *http.Reques
 		case "/history":
 			serveHistory(c)
 			return
+		case "/delete":
+			serveDeleteDocument(c)
+			return
 		case "/delete_alias":
 			serveDeleteAlias(c)
 			return
@@ -430,6 +433,23 @@ func serveDeleteAlias(c *webContext) {
 		serve500(c)
 	}
 	c.Redirect("/rules")
+}
+
+func serveDeleteDocument(c *webContext) {
+	err := c.Request.ParseForm()
+	if err != nil {
+		serve500(c)
+		return
+	}
+	u := c.Request.Form.Get("url")
+	if err := indexer.Delete(u); err != nil {
+		log.Error().Err(err).Str("URL", u).Msg("failed to delete URL")
+	}
+	serve200(c)
+}
+
+func serve200(c *webContext) {
+	c.Response.WriteHeader(http.StatusOK)
 }
 
 func serve404(c *webContext) {
