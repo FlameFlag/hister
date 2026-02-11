@@ -103,7 +103,7 @@ const addon = {
                         content['version'] = process.env.npm_package_version;
                         content['background']['scripts'] = ['background.js'];
                         content['content_security_policy'] = {
-                            "extension_pages": "default-src 'self'"
+                            "extension_pages": "script-src 'self'"
                         };
                         let ff_settings = {
                             "id": "{f0bda7ce-0cda-42dc-9ea8-126b20fed280}",
