@@ -86,20 +86,20 @@ const addon = {
                 {
                     from: 'src/manifest.json',
                     transform: function (content, path) {
-						// generates the manifest file using the package.json informations
-						content = JSON.parse(content.toString());
+                        // generates the manifest file using the package.json informations
+                        content = JSON.parse(content.toString());
                         content['version'] = process.env.npm_package_version;
                         content['background']['service_worker'] = 'background.js';
-						return Buffer.from(JSON.stringify(content));
-					},
+                        return Buffer.from(JSON.stringify(content));
+                    },
                     to: 'manifest.json'
                 },
                 // create ff manifest.json
                 {
                     from: 'src/manifest.json',
                     transform: function (content, path) {
-						// generates the manifest file using the package.json informations
-						content = JSON.parse(content.toString());
+                        // generates the manifest file using the package.json informations
+                        content = JSON.parse(content.toString());
                         content['version'] = process.env.npm_package_version;
                         content['background']['scripts'] = ['background.js'];
                         let ff_settings = {
@@ -112,12 +112,12 @@ const addon = {
                                 "extension_pages": "default-src 'self'"
                             },
                         };
-						content['browser_specific_settings'] = {
-							"gecko": ff_settings,
-							"gecko_android": ff_settings,
-						};
-						return Buffer.from(JSON.stringify(content));
-					},
+                        content['browser_specific_settings'] = {
+                            "gecko": ff_settings,
+                            "gecko_android": ff_settings,
+                        };
+                        return Buffer.from(JSON.stringify(content));
+                    },
                     to: 'manifest_ff.json'
                 },
                 {
@@ -201,5 +201,5 @@ const addon = {
 
 module.exports = [
     addon,
-//    greasemonkey
+    //    greasemonkey
 ];
