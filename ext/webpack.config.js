@@ -102,14 +102,14 @@ const addon = {
                         content = JSON.parse(content.toString());
                         content['version'] = process.env.npm_package_version;
                         content['background']['scripts'] = ['background.js'];
+                        content['content_security_policy'] = {
+                            "extension_pages": "default-src 'self'"
+                        };
                         let ff_settings = {
                             "id": "{f0bda7ce-0cda-42dc-9ea8-126b20fed280}",
                             "strict_min_version": "110.0",
                             "data_collection_permissions": {
                                 "required": ["browsingActivity", "websiteContent"],
-                            },
-                            "content_security_policy": {
-                                "extension_pages": "default-src 'self'"
                             },
                         };
                         content['browser_specific_settings'] = {
