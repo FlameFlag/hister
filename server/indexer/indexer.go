@@ -98,10 +98,10 @@ var sensitiveContentPatterns = []string{
 	`-----BEGIN PGP PRIVATE KEY BLOCK-----`,
 	// JWT Token
 	`eyJ[a-zA-Z0-9\/_-]{10,}\.[a-zA-Z0-9\/_-]{10,}\.[a-zA-Z0-9\/_-]{10,}`,
-	// Credit Card Number
-	`\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12}|(?:2131|1800|35\d{3})\d{11})\b`,
-	// Basic Auth Credentials
-	`(?i)basic [a-z0-9=:_\+\/-]{5,100}`,
+	// Credit Card Number - disabled, too many false positives - TODO refine regexp
+	//`\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|6(?:011|5[0-9]{2})[0-9]{12}|(?:2131|1800|35\d{3})\d{11})\b`,
+	// Basic Auth Credentials - disabled, too many false positives
+	//`(?i)basic [a-z0-9=:_\+\/-]{5,100}`,
 	// Docker Registry Auth
 	`"auth"\s*:\s*"[a-z0-9=:_\+\/-]{5,100}"`,
 	// Azure Storage Key
