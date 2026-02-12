@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -220,6 +219,23 @@ func serveIndex(c *webContext) {
 }
 
 func serveSearch(c *webContext) {
+	q := c.Request.URL.Query().Get("q")
+	if q != "" {
+		r, err := doSearch(&indexer.Query{Text: q}, c.Config)
+		if err != nil {
+			fmt.Println(err)
+			serve500(c)
+			return
+		}
+		jr, err := json.Marshal(r)
+		if err != nil {
+			serve500(c)
+			return
+		}
+		c.Response.Header().Add("Content-Type", "application/xml")
+		c.Response.Write(jr)
+		return
+	}
 	conn, err := ws.Upgrade(c.Response, c.Request, nil)
 	if err != nil {
 		serve500(c)
@@ -232,7 +248,13 @@ func serveSearch(c *webContext) {
 			log.Error().Err(err).Msg("failed to read websocket message")
 			break
 		}
-		res, err := doSearch(q, c.Config)
+		var query *indexer.Query
+		err = json.Unmarshal(q, &query)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to parse query")
+			continue
+		}
+		res, err := doSearch(query, c.Config)
 		if err != nil {
 			log.Error().Err(err).Msg("search error")
 			continue
@@ -248,13 +270,8 @@ func serveSearch(c *webContext) {
 	}
 }
 
-func doSearch(q []byte, cfg *config.Config) (*indexer.Results, error) {
+func doSearch(query *indexer.Query, cfg *config.Config) (*indexer.Results, error) {
 	start := time.Now()
-	var query *indexer.Query
-	err := json.Unmarshal(q, &query)
-	if err != nil {
-		return nil, errors.New("failed to parse query")
-	}
 	oq := query.Text
 	query.Text = cfg.Rules.ResolveAliases(query.Text)
 	res, err := indexer.Search(cfg, query)
