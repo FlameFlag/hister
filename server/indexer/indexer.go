@@ -264,6 +264,7 @@ func (d *Document) Process() error {
 		return nil
 	}
 	if sensitiveContentRe.MatchString(d.HTML) {
+		log.Debug().Msg("Matching sensitive content: " + strings.Join(sensitiveContentRe.FindAllString(d.HTML, -1), ","))
 		return ErrSensitiveContent
 	}
 	if d.URL == "" {
