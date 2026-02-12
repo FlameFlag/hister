@@ -228,6 +228,13 @@ func initialize() {
 
 func initConfig() {
 	var err error
+
+	if !rootCmd.PersistentFlags().Changed("config") {
+		if envConfig := os.Getenv("HISTER_CONFIG"); envConfig != "" {
+			cfgFile = envConfig
+		}
+	}
+
 	cfg, err = config.Load(cfgFile)
 	if err != nil {
 		exit(1, "Failed to initialize config: "+err.Error())

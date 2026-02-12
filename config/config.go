@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"net"
 	"net/url"
 	"os"
 	"os/user"
@@ -153,6 +154,18 @@ func parseConfig(rawConfig []byte) (*Config, error) {
 }
 
 func (c *Config) init() error {
+	if dataDir := os.Getenv("HISTER_DATA_DIR"); dataDir != "" {
+		c.App.Directory = dataDir
+	}
+
+	if envPort := os.Getenv("HISTER_PORT"); envPort != "" {
+		host, _, err := net.SplitHostPort(c.Server.Address)
+		if err != nil || host == "" {
+			host = c.Server.Address
+		}
+		c.Server.Address = net.JoinHostPort(host, envPort)
+	}
+
 	if c.Server.BaseURL == "" {
 		c.Server.BaseURL = fmt.Sprintf("http://%s", c.Server.Address)
 	}

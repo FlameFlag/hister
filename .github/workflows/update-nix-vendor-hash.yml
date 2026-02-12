@@ -1,0 +1,49 @@
+name: Update Nix vendorHash
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - go.mod
+      - go.sum
+      - nix/package.nix
+      - .github/workflows/update-nix-vendor-hash.yml
+  workflow_dispatch:
+
+jobs:
+  update-vendor-hash:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6.0.2
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.9.0
+
+      - name: Update vendorHash
+        run: ./nix/update-nix-vendor-hash.sh
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          if git diff --quiet nix/package.nix; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.git-check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v8.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: update-nix-vendor-hash
+          commit-message: "chore: update vendorHash for Go module changes"
+          title: "Update Nix vendorHash"
+          body: |
+            [chore] update nix/package.nix vendorHash
+            
+            Triggered by: ${{ github.repository }}@${{ github.sha }}
+          delete-branch: true

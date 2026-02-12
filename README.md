@@ -40,13 +40,177 @@ Execute `./hister` to see all available commands.
  - Run `./hister help` to list the available commands
  - Execute `./hister listen` to start the web application
 
-
 ## Configuration
 
 Settings can be configured in `~/.config/hister/config.yml` config file - don't forget to restart webapp after updating.
 
 Execute `./hister create-config config.yml` to generate a configuration file with the default configuration values.
 
+
+### Nix
+
+#### Quick usage
+
+Run directly from the repository:
+
+```bash
+nix run github:asciimoo/hister
+```
+
+Add to your current shell session:
+
+```bash
+nix shell github:asciimoo/hister
+```
+
+Install permanently to your user profile:
+
+```bash
+nix profile install github:asciimoo/hister
+```
+
+#### NixOS
+
+Add the following to your `flake.nix`:
+
+```nix
+{
+  inputs.hister.url = "github:asciimoo/hister";
+
+  outputs = { self, nixpkgs, hister, ... }: {
+    nixosConfigurations.yourHostname = nixpkgs.lib.nixosSystem {
+      modules = [
+        ./configuration.nix
+        hister.nixosModules.default
+      ];
+    };
+  };
+}
+```
+
+Then enable the service:
+
+```nix
+services.hister = {
+  enable = true;
+  port = 4433;
+  dataDir = "/var/lib/hister";
+  configPath = /path/to/config.yml; # optional, use existing YAML file
+  config = {  # optional, or use Nix attrset (automatically converted to YAML)
+    app = {
+      directory = "~/.config/hister/";
+      search_url = "https://google.com/search?q={query}";
+    };
+    server = {
+      address = "127.0.0.1:4433";
+    };
+  };
+};
+```
+
+**Note**: Only one of `configPath` or `config` can be set at a time.
+
+#### Add to system packages
+
+If you don't want to use the system module, you can add the package directly to `environment.systemPackages` in your `configuration.nix`:
+
+**NixOS & Darwin (macOS):**
+
+```nix
+{ inputs, ... }: {
+  environment.systemPackages = [ inputs.hister.packages.${pkgs.system}.default ];
+}
+```
+
+#### Add to user packages (Home-Manager)
+
+If you don't want to use the Home-Manager module, you can add the package directly to `home.packages` in your `home.nix`:
+
+```nix
+{ inputs, ... }: {
+  home.packages = [ inputs.hister.packages.${pkgs.system}.default ];
+}
+```
+
+#### Home-Manager
+
+Add the following to your `flake.nix`:
+
+```nix
+{
+  inputs.hister.url = "github:asciimoo/hister";
+
+  outputs = { self, nixpkgs, home-manager, hister, ... }: {
+    homeConfigurations."yourUsername" = home-manager.lib.homeManagerConfiguration {
+      modules = [
+        ./home.nix
+        hister.homeModules.default
+      ];
+    };
+  };
+}
+```
+
+Then enable the service:
+
+```nix
+services.hister = {
+  enable = true;
+  port = 4433;
+  dataDir = "/home/yourUsername/.local/share/hister";
+  configPath = /path/to/config.yml; # optional, use existing YAML file
+  config = {  # optional, or use Nix attrset (automatically converted to YAML)
+    app = {
+      directory = "~/.config/hister/";
+      search_url = "https://google.com/search?q={query}";
+    };
+    server = {
+      address = "127.0.0.1:4433";
+    };
+  };
+};
+```
+
+**Note**: Only one of `configPath` or `config` can be set at a time.
+
+#### Darwin (macOS)
+
+Add the following to your `flake.nix`:
+
+```nix
+{
+  inputs.hister.url = "github:asciimoo/hister";
+
+  outputs = { self, darwin, hister, ... }: {
+    darwinConfigurations."yourHostname" = darwin.lib.darwinSystem {
+      modules = [
+        ./configuration.nix
+        hister.darwinModules.default
+      ];
+    };
+  };
+}
+```
+
+Then enable the service:
+
+```nix
+services.hister = {
+  enable = true;
+  port = 4433;
+  dataDir = "/Users/yourUsername/Library/Application Support/hister";
+  configPath = /path/to/config.yml; # optional
+  config = {  # optional, or use Nix attrset (automatically converted to YAML)
+    app = {
+      directory = "~/.config/hister/";
+      search_url = "https://google.com/search?q={query}";
+    };
+    server = {
+      address = "127.0.0.1:4433";
+    };
+  };
+};
+```
 
 ## Bugs
 
