@@ -102,12 +102,37 @@ The Chrome/Chromium URL database fiel is usually located at /home/[USER]/.config
 }
 
 var searchCmd = &cobra.Command{
-	Use:   "search",
+	Use:   "search [search terms]",
 	Short: "Command line search interface",
-	Long:  "",
-	Run: func(_ *cobra.Command, _ []string) {
-		if err := ui.SearchTUI(cfg); err != nil {
+	Long:  "Command line search interface.\nRun it without arguments to use the TUI interface or pass search terms as arguments to get results on the STDOUT.",
+	Args:  cobra.MinimumNArgs(0),
+	Run: func(_ *cobra.Command, args []string) {
+		if len(args) == 0 {
+			if err := ui.SearchTUI(cfg); err != nil {
+				exit(1, err.Error())
+			}
+			return
+		}
+		qs := strings.Join(args, " ")
+		client := &http.Client{Timeout: 5 * time.Second}
+		req, err := http.NewRequest("GET", cfg.BaseURL("/search?q="+url.QueryEscape(qs)), nil)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		resp, err := client.Do(req)
+		if err != nil {
+			exit(1, "Failed to send request to hister: "+err.Error())
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
 			exit(1, err.Error())
+		}
+		var res *indexer.Results
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			exit(1, err.Error())
+		}
+		for _, r := range res.Documents {
+			fmt.Printf("%s\n%s\n\n", r.Title, r.URL)
 		}
 	},
 }
