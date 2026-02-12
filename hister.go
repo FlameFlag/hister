@@ -113,38 +113,45 @@ var searchCmd = &cobra.Command{
 }
 
 var indexCmd = &cobra.Command{
-	Use:   "index URL",
-	Short: "Index URL",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+	Use:   "index URL [URL...]",
+	Short: "Index URL [URL...]",
+	Long:  "Index one or more URLs",
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		setStrArg(cmd, "server-url", &cfg.Server.BaseURL)
-		u := args[0]
-		if err := indexURL(u); err != nil {
-			exit(1, "Failed to index URL: "+err.Error())
+		for _, u := range args {
+			if err := indexURL(u); err != nil {
+				exit(1, "Failed to index URL: "+err.Error())
+			}
 		}
 	},
 }
 
 var deleteCmd = &cobra.Command{
-	Use:   "delete URL",
-	Short: "remove page from the index",
-	Long:  ``,
-	Args:  cobra.ExactArgs(1),
+	Use:   "delete URL [URL...]",
+	Short: "Remove page from the index",
+	Long:  "Remove one or more pages from the index",
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		formData := url.Values{
-			"url": {args[0]},
-		}
-		client := &http.Client{}
-		req, err := http.NewRequest("POST", cfg.BaseURL("/delete"), strings.NewReader(formData.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		resp, err := client.Do(req)
-		if err != nil {
-			exit(1, "Failed to send request to hister: "+err.Error())
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			exit(1, fmt.Sprintf("failed to delete url: Invalid status code (%d)", resp.StatusCode))
+		for _, u := range args {
+			if u == "" {
+				log.Warn().Msg("URL must not be empty")
+				continue
+			}
+			formData := url.Values{
+				"url": {u},
+			}
+			client := &http.Client{Timeout: 5 * time.Second}
+			req, err := http.NewRequest("POST", cfg.BaseURL("/delete"), strings.NewReader(formData.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			resp, err := client.Do(req)
+			if err != nil {
+				exit(1, "Failed to send request to hister: "+err.Error())
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				exit(1, fmt.Sprintf("failed to delete url: Invalid status code (%d)", resp.StatusCode))
+			}
 		}
 	},
 }
@@ -357,6 +364,10 @@ func indexURL(u string) error {
 	client := &http.Client{
 		// Websites can be slow or unreachable, we don't want to wait too long for each of them, especially if we are indexing a lot of URLs during import.
 		Timeout: 5 * time.Second,
+	}
+	if u == "" {
+		log.Warn().Msg("URL must not be empty")
+		return nil
 	}
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
