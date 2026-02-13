@@ -369,10 +369,11 @@ func serveAdd(c *webContext) {
 			serve500(c)
 			return
 		}
+		c.Response.WriteHeader(http.StatusCreated)
 	} else {
 		log.Debug().Str("url", d.URL).Msg("skip indexing")
+		c.Response.WriteHeader(http.StatusNotAcceptable)
 	}
-	c.Response.WriteHeader(http.StatusCreated)
 	if jsonData {
 		return
 	}

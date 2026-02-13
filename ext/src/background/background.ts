@@ -16,11 +16,11 @@ function cjsMsgHandler(request, sender, sendResponse) {
             u += '/';
         }
         if(request.pageData) {
-            sendPageData(u+"add", request.pageData).then((r) => sendResponse({"status": "ok"})).catch(err => sendResponse({"error": err.message}));
+            sendPageData(u+"add", request.pageData).then((r) => sendResponse({"status": "ok", "status_code": r.status})).catch(err => sendResponse({"error": err.message}));
             return true;
         }
         if(request.resultData) {
-            sendResult(u+"history", request.resultData).then((r) => sendResponse({"status": "ok"})).catch(err => sendResponse({"error": err.message}));
+            sendResult(u+"history", request.resultData).then((r) => sendResponse({"status": "ok", "status_code": r.status})).catch(err => sendResponse({"error": err.message}));
             return true;
         }
     }).catch(error => {

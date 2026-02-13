@@ -21,8 +21,19 @@ function extract(sendResponse) {
         console.log("failed to extract page data:", e);
         return;
     }
-    chrome.runtime.sendMessage({pageData:  d}, resp => { if(typeof sendResponse === 'function') sendResponse(resp) });
-    setTimeout(update, sleepTime);
+    chrome.runtime.sendMessage(
+        {pageData:  d},
+        resp => {
+            if(typeof sendResponse === 'function') {
+                sendResponse(resp);
+            }
+            if(!resp || (resp.error || resp.status_code != 201)) {
+                console.log("failed to submit page data, stopping extraction", resp);
+                return;
+            }
+            setTimeout(update, sleepTime);
+        }
+    );
 }
 
 function update() {
