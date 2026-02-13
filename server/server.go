@@ -220,7 +220,7 @@ func withLogging(h http.Handler) http.Handler {
 		start := time.Now()
 		lrw := &loggingResponseWriter{w, http.StatusOK}
 		h.ServeHTTP(lrw, r)
-		log.Info().Str("Method", r.Method).Int("Status", lrw.statusCode).Dur("LoadTimeMS", time.Since(start)*1000).Str("URL", r.RequestURI).Msg("WEB")
+		log.Info().Str("Method", r.Method).Int("Status", lrw.statusCode).Dur("LoadTimeMS", time.Since(start)).Str("URL", r.RequestURI).Msg("WEB")
 	})
 }
 
