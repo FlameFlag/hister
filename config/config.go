@@ -167,6 +167,9 @@ func (c *Config) init() error {
 	}
 
 	if c.Server.BaseURL == "" {
+		if strings.HasPrefix(c.Server.Address, "0.0.0.0") {
+			return errors.New("server: base_url must be specified when listening on 0.0.0.0")
+		}
 		c.Server.BaseURL = fmt.Sprintf("http://%s", c.Server.Address)
 	}
 	if strings.HasPrefix(c.App.Directory, "~/") {
