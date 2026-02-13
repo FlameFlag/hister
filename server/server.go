@@ -1,9 +1,12 @@
 package server
 
 import (
+	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -35,6 +38,32 @@ type historyItem struct {
 type csrfExceptionHandler struct {
 	origHandler http.Handler
 	csrfHandler http.Handler
+}
+
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (lrw *loggingResponseWriter) WriteHeader(code int) {
+	lrw.statusCode = code
+	lrw.ResponseWriter.WriteHeader(code)
+}
+
+func (lrw *loggingResponseWriter) Header() http.Header {
+	return lrw.ResponseWriter.Header()
+}
+
+func (lrw *loggingResponseWriter) Write(d []byte) (int, error) {
+	return lrw.ResponseWriter.Write(d)
+}
+
+func (lrw *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := lrw.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("hijacking not supported")
+	}
+	return hj.Hijack()
 }
 
 func (c *csrfExceptionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -83,10 +112,10 @@ func init() {
 }
 
 func Listen(cfg *config.Config) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", createRouter(cfg))
+	handler := createRouter(cfg)
 
-	handler := csrfMiddleware(mux, cfg)
+	handler = withCSRF(handler, cfg)
+	handler = withLogging(handler)
 
 	log.Info().Str("Address", cfg.Server.Address).Str("URL", cfg.BaseURL("/")).Msg("Starting webserver")
 	http.ListenAndServe(cfg.Server.Address, handler)
@@ -100,10 +129,8 @@ func addTemplate(name string, paths ...string) {
 	tpls[name] = t
 }
 
-func createRouter(cfg *config.Config) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		defer log.Info().Str("Method", r.Method).Dur("LoadTimeMS", time.Since(start)*1000).Str("URL", r.RequestURI).Msg("WEB")
+func createRouter(cfg *config.Config) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c := &webContext{
 			Request:  r,
 			Response: w,
@@ -161,10 +188,10 @@ func createRouter(cfg *config.Config) func(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		serve404(c)
-	}
+	})
 }
 
-func csrfMiddleware(h http.Handler, cfg *config.Config) http.Handler {
+func withCSRF(h http.Handler, cfg *config.Config) http.Handler {
 	protection := csrf.New()
 	trustedOrigins := []string{
 		strings.TrimSuffix(cfg.BaseURL("/"), "/"),
@@ -187,6 +214,14 @@ func csrfMiddleware(h http.Handler, cfg *config.Config) http.Handler {
 		csrfHandler: ch,
 	}
 	return handler
+}
+func withLogging(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		lrw := &loggingResponseWriter{w, http.StatusOK}
+		h.ServeHTTP(lrw, r)
+		log.Info().Str("Method", r.Method).Int("Status", lrw.statusCode).Dur("LoadTimeMS", time.Since(start)*1000).Str("URL", r.RequestURI).Msg("WEB")
+	})
 }
 
 func serveIndex(c *webContext) {
@@ -238,7 +273,7 @@ func serveSearch(c *webContext) {
 	}
 	conn, err := ws.Upgrade(c.Response, c.Request, nil)
 	if err != nil {
-		serve500(c)
+		log.Error().Err(err).Msg("failed to upgrade websocket request")
 		return
 	}
 	defer conn.Close()
