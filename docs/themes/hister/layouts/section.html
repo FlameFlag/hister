@@ -1,0 +1,11 @@
+{{ define "main" }}
+<main>
+  <h1>{{ .Title }}</h1>
+  {{ .Content }}
+  {{ range .Pages }}
+    <section>
+        <h2><a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a> <span class="grey small">({{ .Date | time.Format ":date_long" }})</span></h2>
+    </section>
+  {{ end }}
+</main>
+{{ end }}
