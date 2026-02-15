@@ -269,12 +269,6 @@ func (d *Document) Process() error {
 			return err
 		}
 	}
-	if d.Favicon == "" {
-		err := d.DownloadFavicon()
-		if err != nil {
-			log.Warn().Err(err).Str("URL", d.faviconURL).Msg("failed to download favicon")
-		}
-	}
 	d.processed = true
 	return nil
 }

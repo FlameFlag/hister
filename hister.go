@@ -437,6 +437,12 @@ func indexURL(u string) error {
 	if err := d.Process(); err != nil {
 		return errors.New(`failed to process document: ` + err.Error())
 	}
+	if d.Favicon == "" {
+		err := d.DownloadFavicon()
+		if err != nil {
+			log.Warn().Err(err).Str("URL", d.URL).Msg("failed to download favicon")
+		}
+	}
 	dj, err := json.Marshal(d)
 	if err != nil {
 		errors.New(`failed to encode document to JSON: ` + err.Error())
