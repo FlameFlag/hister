@@ -11,6 +11,10 @@ on:
       - .github/workflows/update-nix-vendor-hash.yml
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   update-vendor-hash:
     runs-on: ubuntu-latest
