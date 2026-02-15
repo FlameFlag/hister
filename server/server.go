@@ -201,6 +201,12 @@ func withCSRF(h http.Handler, cfg *config.Config) http.Handler {
 		strings.TrimSuffix(cfg.BaseURL("/"), "/"),
 		"chrome-extension://cciilamhchpmbdnniabclekddabkifhb",
 	}
+	if strings.HasPrefix(cfg.BaseURL("/"), "http://127.0.0.1") {
+		trustedOrigins = append(trustedOrigins, "http://localhost")
+	}
+	if strings.HasPrefix(cfg.BaseURL("/"), "http://localhost") {
+		trustedOrigins = append(trustedOrigins, "http://127.0.0.1")
+	}
 	for _, o := range trustedOrigins {
 		if err := protection.AddTrustedOrigin(o); err != nil {
 			panic(err)
