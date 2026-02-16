@@ -94,11 +94,7 @@ func (e singleLineEditor) deleteWord(v *gocui.View) {
 	}
 
 	ox, _ := v.Origin()
-	pos := ox + cx
-
-	if pos > len(line) {
-		pos = len(line)
-	}
+	pos := min(ox+cx, len(line))
 
 	start := pos - 1
 	for start > 0 && line[start] == ' ' {
@@ -252,7 +248,7 @@ func (t *tui) renderHistoryItem(d *model.URLCount) {
 }
 
 func (t *tui) renderResult(d *indexer.Document) {
-	//t.ResultsView.FgColor = gocui.ColorDefault | gocui.AttrBold
+	// t.ResultsView.FgColor = gocui.ColorDefault | gocui.AttrBold
 	fmt.Fprintf(t.ResultsView, "\033[1m%s\033[0m\n", consolidateSpaces(d.Title))
 	fmt.Fprintf(t.ResultsView, "\033[34m%s\033[0m\n", d.URL)
 	if d.Text != "" {

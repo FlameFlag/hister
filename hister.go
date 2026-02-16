@@ -29,8 +29,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var cfgFile string
-var cfg *config.Config
+var (
+	cfgFile string
+	cfg     *config.Config
+)
 
 var rootCmd = &cobra.Command{
 	Use:     "hister",
@@ -70,7 +72,7 @@ var createConfigCmd = &cobra.Command{
 			if _, err := os.Stat(fname); err == nil {
 				exit(1, fmt.Sprintf(`File "%s" already exists`, fname))
 			}
-			if err := os.WriteFile(fname, cb, 0600); err != nil {
+			if err := os.WriteFile(fname, cb, 0o600); err != nil {
 				exit(1, `Failed to create config file: `+err.Error())
 			}
 			fmt.Println("Config file created")
@@ -120,6 +122,9 @@ var searchCmd = &cobra.Command{
 		qs := strings.Join(args, " ")
 		client := &http.Client{Timeout: 5 * time.Second}
 		req, err := http.NewRequest("GET", cfg.BaseURL("/search?q="+url.QueryEscape(qs)), nil)
+		if err != nil {
+			exit(1, "Failed to create request: "+err.Error())
+		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
 		if err != nil {
@@ -172,6 +177,9 @@ var deleteCmd = &cobra.Command{
 			}
 			client := &http.Client{Timeout: 5 * time.Second}
 			req, err := http.NewRequest("POST", cfg.BaseURL("/delete"), strings.NewReader(formData.Encode()))
+			if err != nil {
+				exit(1, "Failed to create request: "+err.Error())
+			}
 			req.Header.Set("Origin", "hister://")
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			resp, err := client.Do(req)
@@ -329,7 +337,7 @@ func yesNoPrompt(label string, def bool) bool {
 		choices = "y/N"
 	}
 
-	prompt := []byte(fmt.Sprintf("%s [%s] ", label, choices))
+	prompt := fmt.Appendf(nil, "%s [%s] ", label, choices)
 	r := bufio.NewReader(os.Stdin)
 	var s string
 
@@ -430,10 +438,14 @@ func indexURL(u string) error {
 		return errors.New("invalid content type: " + contentType)
 	}
 	buf := bytes.NewBuffer(nil)
-	io.Copy(buf, r.Body)
+	_, err = io.Copy(buf, r.Body)
+	if err != nil {
+		return errors.New(`failed to read response body: ` + err.Error())
+	}
+
 	d := &indexer.Document{
 		URL:  u,
-		HTML: string(buf.Bytes()),
+		HTML: buf.String(),
 	}
 	if err := d.Process(); err != nil {
 		return errors.New(`failed to process document: ` + err.Error())
@@ -446,10 +458,13 @@ func indexURL(u string) error {
 	}
 	dj, err := json.Marshal(d)
 	if err != nil {
-		errors.New(`failed to encode document to JSON: ` + err.Error())
+		return errors.New(`failed to encode document to JSON: ` + err.Error())
 	}
 	histerClient := &http.Client{}
 	req, err = http.NewRequest("POST", cfg.BaseURL("/add"), bytes.NewBuffer(dj))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
 	req.Header.Set("Origin", "hister://")
 	req.Header.Set("content-Type", "application/json")
 	resp, err := histerClient.Do(req)
@@ -458,7 +473,7 @@ func indexURL(u string) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
-		return errors.New(fmt.Sprintf("failed to send page to hister: Invalid status code (%d)", resp.StatusCode))
+		return fmt.Errorf("failed to send page to hister: Invalid status code (%d)", resp.StatusCode)
 	}
 	return nil
 }

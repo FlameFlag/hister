@@ -25,12 +25,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var tpls map[string]*template.Template
-var fs http.Handler
-var sessionStore *sessions.CookieStore
-var errCSRFMismatch = errors.New("CSRF token mismatch")
-var storeName = "hister"
-var tokName = "csrf_token"
+var (
+	tpls            map[string]*template.Template
+	fs              http.Handler
+	sessionStore    *sessions.CookieStore
+	errCSRFMismatch = errors.New("CSRF token mismatch")
+	storeName       = "hister"
+	tokName         = "csrf_token"
+)
 
 type tArgs map[string]any
 
@@ -244,6 +246,7 @@ func withCSRF(c *webContext, handler func(*webContext)) {
 	c.Response.Header().Add("X-CSRF-Token", tok)
 	handler(c)
 }
+
 func withLogging(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -408,7 +411,6 @@ func serveAdd(c *webContext) {
 		return
 	}
 	c.Render("add", nil)
-	return
 }
 
 func serveHistory(c *webContext) {
@@ -475,7 +477,6 @@ func serveRules(c *webContext) {
 	c.Render("rules", tArgs{
 		"Success": "Rules saved",
 	})
-	return
 }
 
 func serveReadable(c *webContext) {
@@ -500,18 +501,15 @@ func serveReadable(c *webContext) {
 
 func serveHelp(c *webContext) {
 	c.Render("help", nil)
-	return
 }
 
 func serveAbout(c *webContext) {
 	c.Render("about", nil)
-	return
 }
 
 func serveOpensearch(c *webContext) {
 	c.Response.Header().Add("Content-Type", "application/xml")
 	c.Render("opensearch", nil)
-	return
 }
 
 func serveAddAlias(c *webContext) {

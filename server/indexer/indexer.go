@@ -38,8 +38,7 @@ import (
 )
 
 type indexer struct {
-	idx         bleve.Index
-	initialized bool
+	idx bleve.Index
 }
 
 type Query struct {
@@ -74,10 +73,12 @@ type Results struct {
 	QuerySuggestion string            `json:"query_suggestion"`
 }
 
-var i *indexer
-var allFields []string = []string{"url", "title", "text", "favicon", "html", "domain", "added"}
-var ErrSensitiveContent = errors.New("document contains sensitive data")
-var sensitiveContentRe *regexp.Regexp
+var (
+	i                   *indexer
+	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added"}
+	ErrSensitiveContent          = errors.New("document contains sensitive data")
+	sensitiveContentRe  *regexp.Regexp
+)
 
 func Init(cfg *config.Config) error {
 	sp := make([]string, 0, len(cfg.SensitiveContentPatterns))
@@ -430,7 +431,7 @@ func (d *Document) DownloadFavicon() error {
 }
 
 func (q *Query) create() query.Query {
-	if q.Fields == nil || len(q.Fields) == 0 {
+	if len(q.Fields) == 0 {
 		q.Fields = allFields
 	}
 
@@ -494,7 +495,7 @@ func (q *Query) create() query.Query {
 
 func createMapping() mapping.IndexMapping {
 	im := bleve.NewIndexMapping()
-	im.AddCustomAnalyzer("url", map[string]interface{}{
+	im.AddCustomAnalyzer("url", map[string]any{
 		"type":         custom.Name,
 		"char_filters": []string{},
 		"tokenizer":    single.Name,
@@ -601,7 +602,7 @@ func fullURL(base, u string) string {
 	return pb.ResolveReference(pu).String()
 }
 
-func invertedAnsiHighlighter(config map[string]interface{}, cache *registry.Cache) (highlight.Highlighter, error) {
+func invertedAnsiHighlighter(config map[string]any, cache *registry.Cache) (highlight.Highlighter, error) {
 	// Get the simple fragmenter
 	fragmenter, err := cache.FragmenterNamed(simpleFragmenter.Name)
 	if err != nil {
