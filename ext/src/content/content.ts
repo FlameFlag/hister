@@ -14,7 +14,11 @@ const sleepIncrementRatio = 2;
 var isFirefox = typeof InstallTrigger !== 'undefined';
 
 if(isFirefox) {
-	window.addEventListener("pageshow", extract);
+    if (document.readyState === "complete") {
+        extract(null);
+    } else {
+        window.addEventListener("load", extract);
+    }
 } else {
 	window.addEventListener("load", extract);
 }
