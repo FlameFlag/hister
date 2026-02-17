@@ -406,7 +406,7 @@ func (m *tuiModel) renderStatusBar() string {
 	modeStr := lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true).Render(mode)
 	count := 0
 	if m.results != nil {
-		count = len(m.results.History) + len(m.results.Documents)
+		count = int(m.results.Total)
 	}
 	left := " " + cs + modeStr + "  " + fmt.Sprintf("%d results", count)
 	right := "Press ? for help "
