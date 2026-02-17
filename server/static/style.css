@@ -518,16 +518,16 @@ mark {
     color: var(--color-semilight);
 }
 
-.sort-buttons a {
+.sort-buttons a.sort-btn {
     cursor: pointer;
     color: var(--color-blue);
 }
 
-.sort-buttons a:hover {
+.sort-buttons a.sort-btn:hover {
     text-decoration: underline;
 }
 
-.sort-buttons a.active {
+.sort-buttons a.sort-btn.active {
     color: var(--color-light);
     font-weight: bold;
 }

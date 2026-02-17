@@ -10,6 +10,11 @@ let urlState = {};
 let lastResults = null;
 let currentSort = "";
 let templates = {};
+
+const SORT_OPTIONS = [
+    { id: "", label: "Relevance" },
+    { id: "domain", label: "Domain" }
+];
 for(let el of document.querySelectorAll("template")) {
     let id = el.getAttribute("id")
     templates[id] = el;
@@ -163,25 +168,13 @@ function handleInput() {
     sendQuery(input.value);
 }
 
-function setSort(sort) {
-    if(currentSort === sort) {
+function setSort(sortId) {
+    if(currentSort === sortId) {
         return;
     }
-    currentSort = sort;
-    updateSortButtons();
+    currentSort = sortId;
     if(input.value) {
         sendQuery(input.value);
-    }
-}
-
-function updateSortButtons() {
-    document.querySelectorAll(".sort-relevance, .sort-domain").forEach(btn => {
-        btn.classList.remove("active");
-    });
-    if(currentSort === "") {
-        document.querySelector(".sort-relevance")?.classList.add("active");
-    } else if(currentSort === "domain") {
-        document.querySelector(".sort-domain")?.classList.add("active");
     }
 }
 
@@ -305,23 +298,27 @@ function createResultsHeader(res) {
         ".export-json": (e) => e.addEventListener("click", () => exportJSON()),
         ".export-csv": (e) => e.addEventListener("click", () => exportCSV()),
         ".export-rss": (e) => e.addEventListener("click", () => exportRSS()),
-        ".sort-relevance": (e) => {
-            e.addEventListener("click", () => {
-                setSort("");
+        ".sort-options-container": (container) => {
+            SORT_OPTIONS.forEach((opt, index) => {
+                let btnNode = createTemplate("sort-option", {
+                    ".sort-btn": (e) => {
+                        e.innerText = opt.label;
+                        e.dataset.sortId = opt.id;
+                        
+                        if (currentSort === opt.id) {
+                            e.classList.add("active");
+                        }
+                        
+                        e.addEventListener("click", () => setSort(opt.id));
+                    },
+                    ".sort-separator": (e) => {
+                        if (index === SORT_OPTIONS.length - 1) {
+                            e.remove(); 
+                        }
+                    }
+                });
+                container.appendChild(btnNode);
             });
-            e.classList.remove("active");
-            if(currentSort === "") {
-                e.classList.add("active");
-            }
-        },
-        ".sort-domain": (e) => {
-            e.addEventListener("click", () => {
-                setSort("domain");
-            });
-            e.classList.remove("active");
-            if(currentSort === "domain") {
-                e.classList.add("active");
-            }
         },
         "#external-search-link": (e) => {
             if(input.value.trim()) {
