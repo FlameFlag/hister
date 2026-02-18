@@ -37,6 +37,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var Version = 0
+
 type indexer struct {
 	idx bleve.Index
 }

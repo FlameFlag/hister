@@ -48,7 +48,6 @@ var listenCmd = &cobra.Command{
 	Short: "Start server",
 	Long:  ``,
 	PreRun: func(_ *cobra.Command, _ []string) {
-		initDB()
 		initIndex()
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
@@ -207,6 +206,9 @@ var reindexCmd = &cobra.Command{
 		if err != nil {
 			exit(1, err.Error())
 		}
+		if err := model.SetIndexerVersion(indexer.Version); err != nil {
+			exit(1, "Failed to update indexer version: "+err.Error())
+		}
 	},
 }
 
@@ -324,9 +326,16 @@ func initDB() {
 }
 
 func initIndex() {
-	err := indexer.Init(cfg)
-	if err != nil {
+	initDB()
+	if err := indexer.Init(cfg); err != nil {
 		exit(1, err.Error())
+	}
+	v, err := model.GetIndexerVersion()
+	if err != nil {
+		exit(1, "Failed to retrieve indexer version: "+err.Error())
+	}
+	if indexer.Version < v {
+		log.Warn().Msg("There is a new indexer version. Run `hister reindex` to update your index.")
 	}
 	log.Debug().Msg("Indexer initialization complete")
 }

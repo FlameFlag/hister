@@ -79,6 +79,7 @@ func automigrate() error {
 		&History{},
 		&Link{},
 		&HistoryLink{},
+		&IndexerVersion{},
 	)
 }
 
@@ -94,4 +95,28 @@ type CommonFields struct {
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at"`
+}
+
+type IndexerVersion struct {
+	Version int `json:"version"`
+}
+
+func GetIndexerVersion() (int, error) {
+	var r IndexerVersion
+	if err := DB.Model(&IndexerVersion{}).First(&r).Error; err != nil {
+		r = IndexerVersion{0}
+		if err := DB.Create(&r).Error; err != nil {
+			return 0, err
+		}
+	}
+	return r.Version, nil
+}
+
+func SetIndexerVersion(v int) error {
+	var r IndexerVersion
+	if err := DB.Model(&IndexerVersion{}).First(&r).Error; err != nil {
+		return err
+	}
+	r.Version = v
+	return DB.Save(&r).Error
 }
