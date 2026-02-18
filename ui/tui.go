@@ -137,13 +137,18 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		bannerH := 5
-		if m.height < 15 {
-			bannerH = 0
+
+		// Exact fixed heights:
+		// Input(3) + ViewportBorders(2) + Status(1) = 6
+		fixedH := 6
+		if m.height >= 15 {
+			// Banner text(3) = 3 extra lines
+			fixedH += 3
 		}
-		vpH := max(0, m.height-bannerH-8)
-		vpW := max(1, m.width-6)
-		m.textInput.Width = m.width - 6
+
+		vpH := max(0, m.height-fixedH)
+		vpW := max(1, m.width-4)
+		m.textInput.Width = max(1, m.width-4)
 
 		if !m.ready {
 			m.viewport = viewport.New(vpW, vpH)
@@ -154,7 +159,7 @@ func (m *tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.SetContent(m.renderResults())
 			m.scrollToSelected()
 		}
-		return m, nil
+		return m, tea.ClearScreen
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
@@ -307,16 +312,32 @@ func (m *tuiModel) View() string {
 	if !m.ready {
 		return "Loading..."
 	}
+	if m.width < 20 || m.height < 10 {
+		return "Terminal too small"
+	}
+
 	var sections []string
 	if m.height >= 15 {
-		sections = append(sections, bannerStyle.Width(m.width).Render(Banner))
+		sections = append(sections, bannerStyle.Width(m.width-1).Render(strings.TrimSpace(Banner)))
 	}
+
 	is := blurStyle
 	if m.state == stateInput {
 		is = focusStyle
 	}
-	sections = append(sections, is.Width(m.width-4).Render(m.textInput.View()))
+	sections = append(sections, is.Width(max(1, m.width-2)).Render(m.textInput.View()))
+
 	vp := m.viewport.View()
+
+	vpLines := strings.Split(vp, "\n")
+	if len(vpLines) > m.viewport.Height {
+		vpLines = vpLines[:m.viewport.Height]
+	}
+	for len(vpLines) < m.viewport.Height {
+		vpLines = append(vpLines, "")
+	}
+	vp = strings.Join(vpLines, "\n")
+
 	if m.totalLines > m.viewport.Height && m.viewport.Height > 0 {
 		maxScroll := m.totalLines - m.viewport.Height
 		pct := 0.0
@@ -330,22 +351,25 @@ func (m *tuiModel) View() string {
 			strings.Repeat(trackStyle.Render("│")+"\n", m.viewport.Height-thumbPos-1)
 		vp = lipgloss.JoinHorizontal(lipgloss.Top, vp, " ", strings.TrimSuffix(track, "\n"))
 	}
+
 	vs := blurStyle
 	if m.state == stateResults {
 		vs = focusStyle
 	}
-	vpWrapped := vs.Width(m.width - 4).Render(vp)
+	vpWrapped := vs.Width(max(1, m.width-2)).Render(vp)
 
 	sections = append(sections, vpWrapped, m.renderStatusBar())
 	result := strings.Join(sections, "\n")
+
 	if m.state == stateHelp {
 		help := helpStyle.Render(generateHelpText(m.cfg))
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, help)
+		return lipgloss.Place(m.width-1, m.height, lipgloss.Center, lipgloss.Center, help)
 	}
 	if m.state == stateDialog {
 		dialog := dialogStyle.Render(m.dialogMsg + "\n\n[y/n]")
-		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, dialog)
+		return lipgloss.Place(m.width-1, m.height, lipgloss.Center, lipgloss.Center, dialog)
 	}
+
 	return result
 }
 
@@ -410,10 +434,13 @@ func (m *tuiModel) renderStatusBar() string {
 	}
 	left := " " + cs + modeStr + "  " + fmt.Sprintf("%d results", count)
 	right := "Press ? for help "
-	pad := max(0, m.width-lipgloss.Width(left)-lipgloss.Width(right))
+
+	targetW := max(1, m.width-1)
+	pad := max(0, targetW-lipgloss.Width(left)-lipgloss.Width(right))
 	sb := left + strings.Repeat(" ", pad) + right
-	if lipgloss.Width(sb) > m.width {
-		return statusStyle.MaxWidth(m.width).Render(sb)
+
+	if lipgloss.Width(sb) > targetW {
+		return statusStyle.MaxWidth(targetW).MaxHeight(1).Render(sb)
 	}
 	return statusStyle.Render(sb)
 }
@@ -429,7 +456,8 @@ func (m *tuiModel) renderResults() string {
 	var items []string
 	var lineOffsets []int
 	currentLine, currentIdx := 0, 0
-	w := max(80, m.viewport.Width-2)
+
+	w := max(1, m.viewport.Width-2)
 	style := lipgloss.NewStyle().MaxWidth(w)
 	for _, h := range m.results.History {
 		if currentIdx >= m.limit {
