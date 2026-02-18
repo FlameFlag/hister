@@ -27,28 +27,46 @@ const Banner = `
 `
 
 var (
-	blue  = lipgloss.Color("12")
-	white = lipgloss.Color("15")
-	gray  = lipgloss.Color("245")
-	red   = lipgloss.Color("9")
-	green = lipgloss.Color("10")
+	blue       = lipgloss.Color("12")
+	white      = lipgloss.Color("15")
+	gray       = lipgloss.Color("245")
+	red        = lipgloss.Color("9")
+	green      = lipgloss.Color("10")
+	cyan       = lipgloss.Color("14")
+	magenta    = lipgloss.Color("205")
+	darkGray   = lipgloss.Color("240")
+	yellow     = lipgloss.Color("11")
+	lightGray  = lipgloss.Color("244")
+	bgSelected = lipgloss.Color("236")
 
-	bannerStyle  = lipgloss.NewStyle().Foreground(blue).Align(lipgloss.Center)
+	bannerStyle = lipgloss.NewStyle().
+			Foreground(blue).
+			Bold(true).
+			Align(lipgloss.Center)
+
 	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(white)
 	urlStyle     = lipgloss.NewStyle().Foreground(blue)
-	histStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
+	histStyle    = lipgloss.NewStyle().Foreground(yellow)
 	selTitle     = lipgloss.NewStyle().Bold(true).Foreground(blue)
 	grayStyle    = lipgloss.NewStyle().Foreground(gray)
-	secTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Faint(true).Italic(true)
+	secTextStyle = lipgloss.NewStyle().Foreground(lightGray).Faint(true).Italic(true)
 	dialogStyle  = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(red).Padding(1, 2)
 	helpStyle    = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(blue).Padding(1, 2)
 	statusStyle  = lipgloss.NewStyle().Foreground(white)
 	connStyle    = lipgloss.NewStyle().Foreground(green).Bold(true)
 	discStyle    = lipgloss.NewStyle().Foreground(red).Bold(true)
 	focusStyle   = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(blue)
-	blurStyle    = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("240"))
-	thumbStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-	trackStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	blurStyle    = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(darkGray)
+
+	thumbStyle = lipgloss.NewStyle().Foreground(magenta).Bold(true)
+	trackStyle = lipgloss.NewStyle().Foreground(darkGray)
+
+	modeStyles = map[viewState]lipgloss.Style{
+		stateInput:   lipgloss.NewStyle().Foreground(yellow).Bold(true),
+		stateResults: lipgloss.NewStyle().Foreground(blue).Bold(true),
+		stateHelp:    lipgloss.NewStyle().Foreground(cyan).Bold(true),
+		stateDialog:  lipgloss.NewStyle().Foreground(red).Bold(true),
+	}
 
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(2)
 	selectedItemStyle = lipgloss.NewStyle().
@@ -56,6 +74,12 @@ var (
 				BorderLeft(true).
 				BorderForeground(blue).
 				PaddingLeft(1)
+
+	loadMoreStyle         = lipgloss.NewStyle().Foreground(yellow).Bold(true)
+	loadMoreSelectedStyle = lipgloss.NewStyle().
+				Foreground(yellow).
+				Bold(true).
+				Background(bgSelected)
 )
 
 type viewState int
@@ -66,6 +90,10 @@ const (
 	stateDialog
 	stateHelp
 )
+
+func (s viewState) String() string {
+	return []string{"INPUT", "RESULTS", "DIALOG", "HELP"}[s]
+}
 
 type searchQuery struct {
 	Text      string `json:"text"`
@@ -318,7 +346,8 @@ func (m *tuiModel) View() string {
 
 	var sections []string
 	if m.height >= 15 {
-		sections = append(sections, bannerStyle.Width(m.width-1).Render(strings.TrimSpace(Banner)))
+		bannerText := bannerStyle.Width(m.width - 1).Render(strings.TrimSpace(Banner))
+		sections = append(sections, bannerText)
 	}
 
 	is := blurStyle
@@ -339,17 +368,7 @@ func (m *tuiModel) View() string {
 	vp = strings.Join(vpLines, "\n")
 
 	if m.totalLines > m.viewport.Height && m.viewport.Height > 0 {
-		maxScroll := m.totalLines - m.viewport.Height
-		pct := 0.0
-		if maxScroll > 0 {
-			pct = float64(m.viewport.YOffset) / float64(maxScroll)
-		}
-		pct = max(0, min(1, pct))
-		thumbPos := int(pct * float64(m.viewport.Height-1))
-		track := strings.Repeat(trackStyle.Render("│")+"\n", thumbPos) +
-			thumbStyle.Render("█") + "\n" +
-			strings.Repeat(trackStyle.Render("│")+"\n", m.viewport.Height-thumbPos-1)
-		vp = lipgloss.JoinHorizontal(lipgloss.Top, vp, " ", strings.TrimSuffix(track, "\n"))
+		vp = lipgloss.JoinHorizontal(lipgloss.Top, vp, " ", m.renderScrollbar())
 	}
 
 	vs := blurStyle
@@ -415,24 +434,12 @@ func (m *tuiModel) renderStatusBar() string {
 	if m.wsReady {
 		cs = connStyle.Render("● connected")
 	}
-	mode := ""
-	switch m.state {
-	case stateInput:
-		mode = " [INPUT] "
-	case stateResults:
-		mode = " [RESULTS] "
-	// for the future
-	case stateHelp:
-		mode = " [HELP] "
-	case stateDialog:
-		mode = " [DIALOG] "
-	}
-	modeStr := lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true).Render(mode)
+	mode := modeStyles[m.state].Render(fmt.Sprintf(" [%s] ", strings.ToUpper(m.state.String())))
 	count := 0
 	if m.results != nil {
 		count = int(m.results.Total)
 	}
-	left := " " + cs + modeStr + "  " + fmt.Sprintf("%d results", count)
+	left := " " + cs + mode + "  " + fmt.Sprintf("%d results", count)
 	right := "Press ? for help "
 
 	targetW := max(1, m.width-1)
@@ -482,12 +489,13 @@ func (m *tuiModel) renderResults() string {
 	totalItems := len(m.results.History) + len(m.results.Documents)
 	if totalItems > m.limit {
 		lineOffsets = append(lineOffsets, currentLine)
-		bs := lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)
-		if currentIdx == m.selectedIdx {
-			bs = bs.Background(lipgloss.Color("236"))
-		}
 		rem := max(0, int(m.results.Total)+len(m.results.History)-m.limit)
-		content := bs.Render(fmt.Sprintf("[ ▼ Load 10 more results (%d remaining in index) ]", rem))
+		var content string
+		if currentIdx == m.selectedIdx {
+			content = loadMoreSelectedStyle.Render(fmt.Sprintf("[ ▼ Load 10 more results (%d remaining in index) ]", rem))
+		} else {
+			content = loadMoreStyle.Render(fmt.Sprintf("[ ▼ Load 10 more results (%d remaining in index) ]", rem))
+		}
 		var item string
 		if currentIdx == m.selectedIdx {
 			item = style.Render(selectedItemStyle.Render(content))
@@ -526,13 +534,36 @@ func (m *tuiModel) renderDocument(d *indexer.Document, sel bool) string {
 	if d.Text != "" {
 		sb.WriteString("\n")
 		sb.WriteString(secTextStyle.Render("└ "))
-		sb.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Faint(true).Render(strings.Join(strings.Fields(d.Text), " ")))
+		sb.WriteString(secTextStyle.Render(strings.Join(strings.Fields(d.Text), " ")))
 	}
 
 	if sel {
 		return selectedItemStyle.Render(sb.String())
 	}
 	return itemStyle.Render(sb.String())
+}
+
+func (m *tuiModel) renderScrollbar() string {
+	maxScroll := m.totalLines - m.viewport.Height
+	pct := 0.0
+	if maxScroll > 0 {
+		pct = float64(m.viewport.YOffset) / float64(maxScroll)
+	}
+	pct = max(0, min(1, pct))
+	thumbPos := int(pct * float64(m.viewport.Height-1))
+
+	thumbChar := thumbStyle.Render("█")
+	trackChar := trackStyle.Render("│")
+
+	var sb strings.Builder
+	for i := 0; i < m.viewport.Height; i++ {
+		sb.WriteString(map[bool]string{true: thumbChar, false: trackChar}[i == thumbPos])
+		if i < m.viewport.Height-1 {
+			sb.WriteString("\n")
+		}
+	}
+
+	return sb.String()
 }
 
 func (m *tuiModel) scrollToSelected() {

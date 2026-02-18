@@ -27,12 +27,12 @@ import (
 	"github.com/blevesearch/bleve/v2/registry"
 	"github.com/blevesearch/bleve/v2/search"
 	"github.com/blevesearch/bleve/v2/search/highlight"
-	"github.com/blevesearch/bleve/v2/search/highlight/format/ansi"
 	simpleFragmenter "github.com/blevesearch/bleve/v2/search/highlight/fragmenter/simple"
 	simpleHighlighter "github.com/blevesearch/bleve/v2/search/highlight/highlighter/simple"
 	"github.com/blevesearch/bleve/v2/search/query"
 	"github.com/blevesearch/bleve/v2/search/searcher"
 	index "github.com/blevesearch/bleve_index_api"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/rs/zerolog/log"
 )
 
@@ -574,13 +574,40 @@ func fullURL(base, u string) string {
 	return pb.ResolveReference(pu).String()
 }
 
+type lipglossFormatter struct {
+	style lipgloss.Style
+}
+
+func newLipglossFormatter(style lipgloss.Style) *lipglossFormatter {
+	return &lipglossFormatter{style: style}
+}
+
+func (f *lipglossFormatter) Format(fragment *highlight.Fragment, orderedTermLocations highlight.TermLocations) string {
+	var sb strings.Builder
+	curr := fragment.Start
+
+	for _, tl := range orderedTermLocations {
+		if tl == nil || !tl.ArrayPositions.Equals(fragment.ArrayPositions) || tl.Start < curr || tl.End > fragment.End {
+			continue
+		}
+		sb.WriteString(string(fragment.Orig[curr:tl.Start]))
+		sb.WriteString(f.style.Render(string(fragment.Orig[tl.Start:tl.End])))
+		curr = tl.End
+	}
+	sb.WriteString(string(fragment.Orig[curr:fragment.End]))
+
+	return sb.String()
+}
+
 func invertedAnsiHighlighter(config map[string]any, cache *registry.Cache) (highlight.Highlighter, error) {
 	fragmenter, err := cache.FragmenterNamed(simpleFragmenter.Name)
 	if err != nil {
 		return nil, fmt.Errorf("error building fragmenter: %v", err)
 	}
 
-	formatter := ansi.NewFragmentFormatter(ansi.Reverse)
+	style := lipgloss.NewStyle().Reverse(true)
+	formatter := newLipglossFormatter(style)
+
 	return simpleHighlighter.NewHighlighter(
 		fragmenter,
 		formatter,
@@ -594,12 +621,11 @@ func tuiHighlighter(config map[string]any, cache *registry.Cache) (highlight.Hig
 		return nil, fmt.Errorf("error building fragmenter: %v", err)
 	}
 
-	// Explicitly split the color (\x1b[38;5;205m) and bold (\x1b[1m) codes
-	// this prevents Lipgloss's ANSI parser from choking and dropping the ESC
-	// when it attempts to re-apply the Underline style on hover
-	seq := "\x1b[38;5;205m\x1b[1m"
+	style := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("205")).
+		Bold(true)
+	formatter := newLipglossFormatter(style)
 
-	formatter := ansi.NewFragmentFormatter(seq)
 	return simpleHighlighter.NewHighlighter(
 		fragmenter,
 		formatter,

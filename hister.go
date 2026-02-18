@@ -22,11 +22,20 @@ import (
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/ui"
 
+	"github.com/charmbracelet/lipgloss"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	cliErrorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true)
+	cliSuccessStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true)
+	cliInfoStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("12"))
+	cliWarningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
+	cliBoldStyle    = lipgloss.NewStyle().Bold(true)
 )
 
 var (
@@ -74,7 +83,7 @@ var createConfigCmd = &cobra.Command{
 			if err := os.WriteFile(fname, cb, 0o600); err != nil {
 				exit(1, `Failed to create config file: `+err.Error())
 			}
-			fmt.Println("Config file created")
+			fmt.Println(cliSuccessStyle.Render("✓") + " Config file created: " + cliInfoStyle.Render(fname))
 		} else {
 			fmt.Print(string(cb))
 		}
@@ -214,9 +223,10 @@ var reindexCmd = &cobra.Command{
 
 func exit(errno int, msg string) {
 	if errno != 0 {
-		fmt.Println("Error!")
+		fmt.Println(cliErrorStyle.Render("Error!") + " " + msg)
+	} else {
+		fmt.Println(msg)
 	}
-	fmt.Println(msg)
 	os.Exit(errno)
 }
 
@@ -335,7 +345,7 @@ func initIndex() {
 		exit(1, "Failed to retrieve indexer version: "+err.Error())
 	}
 	if indexer.Version < v {
-		log.Warn().Msg("There is a new indexer version. Run `hister reindex` to update your index.")
+		log.Warn().Msg(cliWarningStyle.Render("There is a new indexer version. Run `hister reindex` to update your index."))
 	}
 	log.Debug().Msg("Indexer initialization complete")
 }
@@ -525,7 +535,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 
 	q += " ORDER BY visit_count DESC"
 
-	fmt.Println("IMPORTING")
+	fmt.Println(cliBoldStyle.Render("IMPORTING"))
 
 	rows, err := db.Query(q)
 	if err != nil {
