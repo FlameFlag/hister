@@ -1,11 +1,29 @@
 {
   lib,
   buildGoModule,
+  buildNpmPackage,
+  importNpmLock,
   sqlite,
   histerRev ? "unknown",
 }:
 let
   packageJson = builtins.fromJSON (builtins.readFile ../ext/package.json);
+  frontend = buildNpmPackage {
+    pname = "hister-frontend";
+    version = packageJson.version;
+    src = ../server/web;
+    npmDeps = importNpmLock {
+      npmRoot = ../server/web;
+    };
+    npmConfigHook = importNpmLock.npmConfigHook;
+    dontNpmInstall = true;
+    installPhase = ''
+      runHook preInstall
+      mkdir -p "$out"
+      cp -r dist/* "$out"
+      runHook postInstall
+    '';
+  };
 in
 buildGoModule (finalAttrs: {
   pname = "hister";
@@ -13,13 +31,19 @@ buildGoModule (finalAttrs: {
 
   src = ../.;
 
-  vendorHash = "sha256-BoM5CN57UuuxCaf1myyQxUyT2N1uGy+IjpCvDJmfvAU=";
+  vendorHash = "sha256-JwLV+rXRKF5ynJ6P3EYkzKecnAekDn2QkSJudPA0eQ0=";
+
+  proxyVendor = true;
 
   buildInputs = [ sqlite ];
+
+  env.CGO_ENABLED = "1";
 
   preBuild = ''
     export CGO_CFLAGS="-I${sqlite.dev}/include"
     export CGO_LDFLAGS="-L${sqlite.out}/lib -lsqlite3"
+    mkdir -p server/web
+    cp -r ${frontend} server/web/dist
   '';
 
   ldflags = [
@@ -28,8 +52,6 @@ buildGoModule (finalAttrs: {
     "-X main.version=${finalAttrs.version}"
     "-X main.commit=${histerRev}"
   ];
-
-  subPackages = [ "." ];
 
   doCheck = false;
 

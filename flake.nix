@@ -27,14 +27,25 @@
           ...
         }:
         let
-          histerPackage = pkgs.callPackage ./nix/package.nix { histerRev = inputs.self.rev or "unknown"; };
+          histerPackage = pkgs.callPackage ./nix/package.nix {
+            buildNpmPackage = pkgs.buildNpmPackage;
+            importNpmLock = pkgs.importNpmLock;
+            histerRev = inputs.self.rev or "unknown";
+          };
         in
         {
           packages.default = histerPackage;
           packages.hister = histerPackage;
 
           devShells.default = pkgs.mkShell {
-            packages = builtins.attrValues { inherit (pkgs) go gopls gotools; };
+            packages = builtins.attrValues {
+              inherit (pkgs)
+                go
+                gopls
+                gotools
+                nodejs
+                ;
+            };
           };
         };
 

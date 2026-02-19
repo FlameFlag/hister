@@ -39,7 +39,10 @@ import (
 var Version = 0
 
 type indexer struct {
-	idx bleve.Index
+	idx             bleve.Index
+	dateMin         int64
+	dateMax         int64
+	dateRangeLoaded bool
 }
 
 type Query struct {
@@ -100,7 +103,10 @@ func Init(cfg *config.Config) error {
 		}
 	}
 	i = &indexer{
-		idx: idx,
+		idx:             idx,
+		dateMin:         0,
+		dateMax:         0,
+		dateRangeLoaded: false,
 	}
 	registry.RegisterHighlighter("ansi", invertedAnsiHighlighter)
 	registry.RegisterHighlighter("tui", tuiHighlighter)
@@ -146,7 +152,6 @@ func Reindex(idxPath, tmpIdxPath string, rules *config.Rules, skipSensitiveCheck
 				log.Info().Str("URL", d.URL).Msg("Dropping URL that has since been added to skip rules.")
 				continue
 			}
-			// priority/score are updated implicitly by bleve
 			if err := tmpIdx.Index(d.URL, d); err != nil {
 				tmpIdx.Close()
 				os.RemoveAll(tmpIdxPath)
@@ -170,11 +175,32 @@ func Add(d *Document) error {
 			return err
 		}
 	}
-	return i.idx.Index(d.URL, d)
+	err := i.idx.Index(d.URL, d)
+	if err == nil {
+		// Update date range cache
+		if !i.dateRangeLoaded {
+			i.dateMin = d.Added
+			i.dateMax = d.Added
+			i.dateRangeLoaded = true
+		} else {
+			if d.Added < i.dateMin {
+				i.dateMin = d.Added
+			}
+			if d.Added > i.dateMax {
+				i.dateMax = d.Added
+			}
+		}
+	}
+	return err
 }
 
 func Delete(u string) error {
-	return i.idx.Delete(u)
+	err := i.idx.Delete(u)
+	if err == nil {
+		// invalidate date range cache since we don't know if the deleted
+		i.dateRangeLoaded = false
+	}
+	return err
 }
 
 func Search(cfg *config.Config, q *Query) (*Results, error) {
@@ -233,19 +259,29 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 		Total:     res.Total,
 		Query:     q,
 		Documents: matches,
+		History:   []*model.URLCount{},
 	}
 	return r, nil
 }
 
 func GetByURL(u string) *Document {
-	q := query.NewTermQuery(strings.ToLower(u))
+	q := query.NewMatchQuery(u)
 	q.SetField("url")
 	req := bleve.NewSearchRequest(q)
 	req.Fields = allFields
+	req.Size = 10
 	res, err := i.idx.Search(req)
 	if err != nil || len(res.Hits) < 1 {
 		return nil
 	}
+
+	for _, h := range res.Hits {
+		d := docFromHit(h)
+		if d.URL == u {
+			return d
+		}
+	}
+
 	return docFromHit(res.Hits[0])
 }
 
@@ -253,10 +289,10 @@ func (d *Document) Process() error {
 	if d.processed {
 		return nil
 	}
-	if !d.skipSensitiveCheck && sensitiveContentRe != nil && sensitiveContentRe.MatchString(d.HTML) {
-		log.Debug().Msg("Matching sensitive content: " + strings.Join(sensitiveContentRe.FindAllString(d.HTML, -1), ","))
-		return ErrSensitiveContent
-	}
+	return d.ProcessURL(false)
+}
+
+func (d *Document) NormalizeURL() error {
 	if d.URL == "" {
 		return errors.New("missing URL")
 	}
@@ -285,8 +321,24 @@ func (d *Document) Process() error {
 		d.URL = pu.String()
 	}
 	d.Domain = pu.Host
-	if err := d.extractHTML(); err != nil {
+	return nil
+}
+
+func (d *Document) ProcessURL(fetchHTML bool) error {
+	if d.processed {
+		return nil
+	}
+	if !d.skipSensitiveCheck && sensitiveContentRe != nil && d.HTML != "" && sensitiveContentRe.MatchString(d.HTML) {
+		log.Debug().Msg("Matching sensitive content: " + strings.Join(sensitiveContentRe.FindAllString(d.HTML, -1), ","))
+		return ErrSensitiveContent
+	}
+	if err := d.NormalizeURL(); err != nil {
 		return err
+	}
+	if fetchHTML {
+		if err := d.extractHTML(); err != nil {
+			return err
+		}
 	}
 	d.Title = html.EscapeString(d.Title)
 	d.processed = true
@@ -312,6 +364,60 @@ func Iterate(fn func(*Document)) {
 		}
 		page += 1
 	}
+}
+
+func Stats() (total uint64, domains int) {
+	req := bleve.NewSearchRequest(bleve.NewMatchAllQuery())
+	req.Size = 0
+	res, err := i.idx.Search(req)
+	if err != nil {
+		return 0, 0
+	}
+
+	domainSet := make(map[string]struct{})
+	Iterate(func(d *Document) {
+		if d.Domain != "" {
+			domainSet[d.Domain] = struct{}{}
+		}
+	})
+
+	return res.Total, len(domainSet)
+}
+
+func DateRange() (minDate, maxDate int64) {
+	if i.dateRangeLoaded {
+		return i.dateMin, i.dateMax
+	}
+
+	// use sorted search to find min and max dates more efficiently
+	minReq := bleve.NewSearchRequest(bleve.NewMatchAllQuery())
+	minReq.Size = 1
+	minReq.SortBy([]string{"added"})
+	minReq.Fields = []string{"added"}
+	minRes, err := i.idx.Search(minReq)
+	if err == nil && len(minRes.Hits) > 0 {
+		if t, ok := minRes.Hits[0].Fields["added"].(float64); ok {
+			minDate = int64(t)
+		}
+	}
+
+	maxReq := bleve.NewSearchRequest(bleve.NewMatchAllQuery())
+	maxReq.Size = 1
+	maxReq.SortBy([]string{"-added"})
+	maxReq.Fields = []string{"added"}
+	maxRes, err := i.idx.Search(maxReq)
+	if err == nil && len(maxRes.Hits) > 0 {
+		if t, ok := maxRes.Hits[0].Fields["added"].(float64); ok {
+			maxDate = int64(t)
+		}
+	}
+
+	// cache it
+	i.dateMin = minDate
+	i.dateMax = maxDate
+	i.dateRangeLoaded = true
+
+	return
 }
 
 func docFromHit(h *search.DocumentMatch) *Document {
@@ -389,7 +495,6 @@ func (q *Query) create() query.Query {
 		q.Fields = allFields
 	}
 
-	// add + to phrases to force matching phrases
 	qp := strings.Fields(q.Text)
 
 	if len(qp) == 0 {
@@ -425,13 +530,11 @@ func (q *Query) create() query.Query {
 		dq.SetField("domain")
 		dq.SetBoost(100)
 		if len(qp) == 1 {
-			// match domain part or QueryString in title/text
 			sq = bleve.NewDisjunctionQuery(
 				sq,
 				dq,
 			)
 		} else {
-			// match QueryString in title/text OR (first word as domain part AND the rest of the query as QueryString in title/text)
 			sq = bleve.NewDisjunctionQuery(
 				sq,
 				bleve.NewConjunctionQuery(

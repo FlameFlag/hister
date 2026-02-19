@@ -30,6 +30,7 @@ run_unit_tests       - Run unit tests
 
 Build
 -----
+build                - Build Go binary
 build_addon          - Build addon
 build_addon_artifact - Build addon artifacts to distribute to addon stores
 
@@ -50,6 +51,13 @@ install_js_deps() {
 
 run_unit_tests() {
     go test ./...
+}
+
+build() {
+    echo "Generating Go code..."
+    go generate ./...
+    echo "Building Go binary..."
+    go build -o hister .
 }
 
 build_addon() {

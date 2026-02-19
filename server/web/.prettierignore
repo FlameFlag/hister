@@ -1,0 +1,16 @@
+# dependencies
+node_modules
+
+# build outputs
+.svelte-kit
+dist
+build
+
+# OS files
+.DS_Store
+*.log
+
+# lock files
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

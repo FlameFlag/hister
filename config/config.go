@@ -430,9 +430,28 @@ func (r *Rule) Match(s string) bool {
 	return r.re.MatchString(s)
 }
 
+func globToRegex(glob string) string {
+	escaped := regexp.QuoteMeta(glob)
+	escaped = strings.ReplaceAll(escaped, `\*`, `.*`)
+	return escaped
+}
+
 func (r *Rule) Compile() error {
+	validPatterns := make([]string, 0, len(r.ReStrs))
+	for _, pattern := range r.ReStrs {
+		regexPattern := globToRegex(pattern)
+		if _, err := regexp.Compile(regexPattern); err != nil {
+			log.Warn().Err(err).Str("pattern", pattern).Msg("Skipping invalid regex pattern in rules")
+			continue
+		}
+		validPatterns = append(validPatterns, regexPattern)
+	}
+	if len(validPatterns) == 0 {
+		r.re = nil
+		return nil
+	}
+	rs := fmt.Sprintf("(%s)", strings.Join(validPatterns, ")|("))
 	var err error
-	rs := fmt.Sprintf("(%s)", strings.Join(r.ReStrs, ")|("))
 	r.re, err = regexp.Compile(rs)
 	return err
 }

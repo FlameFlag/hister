@@ -35,8 +35,8 @@ class GoogleExtractor implements ResultExtractor {
             }
             let result = {
                 'url': res.getAttribute('href'),
-                'title': el.innerText,
-                'query': d.querySelector("textarea[name='q']").value,
+                'title': el?.innerText || '',
+                'query': d.querySelector("textarea[name='q']")?.value || '',
 
             }
             cb(result);
@@ -60,8 +60,8 @@ class DuckDuckGoExtractor implements ResultExtractor {
             }
             let result = {
                 'url': res.getAttribute('href'),
-                'title': el.innerText,
-                'query': d.querySelector("input[name='q']").value,
+                'title': el?.innerText || '',
+                'query': d.querySelector("input[name='q']")?.value || '',
 
             }
             cb(result);
@@ -82,11 +82,12 @@ function getURL() {
 }
 
 function extractPageData() : PageData{
+    const titleEl = document.querySelector("title");
     let d : PageData = {
-        text: document.body.innerText,
-        title: document.querySelector("title").innerText,
+        text: document.body?.innerText || "",
+        title: titleEl?.innerText || "",
         url: getURL(),
-        html: document.documentElement.innerHTML,
+        html: document.documentElement?.innerHTML || "",
         faviconURL: new URL("/favicon.ico", getURL()).href,
     };
 	let link = document.querySelector("link[rel~='icon']");

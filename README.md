@@ -36,6 +36,26 @@ Execute `./hister` to see all available commands.
  - Run `./hister help` to list the available commands
  - Execute `./hister listen` to start the web application
 
+### Docker
+
+Build and run with Docker Compose:
+
+```bash
+# Build and start the container
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the container
+docker-compose down
+
+# Stop and remove volumes (delete database)
+docker-compose down -v
+```
+
+The database and configuration will be stored in a Docker volume and persist across container restarts. Access the web interface at http://localhost:4433/
+
 ## Configuration
 
 Settings can be configured in `~/.config/hister/config.yml` config file - don't forget to restart webapp after updating.

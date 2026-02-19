@@ -37,9 +37,10 @@ type URLCount struct {
 }
 
 type HistoryItem struct {
-	Query string `json:"query"`
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	Query   string `json:"query"`
+	Title   string `json:"title"`
+	URL     string `json:"url"`
+	Favicon string `json:"favicon,omitempty"`
 }
 
 func GetOrCreateLink(u, title string) *Link {
