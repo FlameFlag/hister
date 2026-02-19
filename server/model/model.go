@@ -115,8 +115,8 @@ func GetIndexerVersion() (int, error) {
 func SetIndexerVersion(v int) error {
 	var r IndexerVersion
 	if err := DB.Model(&IndexerVersion{}).First(&r).Error; err != nil {
-		return err
+		r = IndexerVersion{v}
+		return DB.Create(&r).Error
 	}
-	r.Version = v
-	return DB.Save(&r).Error
+	return DB.Model(&IndexerVersion{}).Where("version != ?", v).Update("version", v).Error
 }
