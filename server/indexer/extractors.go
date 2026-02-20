@@ -13,6 +13,7 @@ import (
 )
 
 type Extractor interface {
+	Name() string
 	Match(*Document) bool
 	Extract(*Document) error
 }
@@ -22,6 +23,8 @@ var extractors []Extractor = []Extractor{
 	&defaultExtractor{},
 }
 
+var ErrNoExtractor = errors.New("no extractor found")
+
 type defaultExtractor struct{}
 
 type readabilityExtractor struct{}
@@ -30,13 +33,17 @@ func Extract(d *Document) error {
 	for _, e := range extractors {
 		if e.Match(d) {
 			if err := e.Extract(d); err != nil {
-				log.Warn().Err(err).Msg("Failed to extract content")
+				log.Warn().Err(err).Str("URL", d.URL).Str("Extractor", e.Name()).Msg("Failed to extract content")
 			} else {
 				return nil
 			}
 		}
 	}
-	return errors.New("no extractor found")
+	return ErrNoExtractor
+}
+
+func (e *defaultExtractor) Name() string {
+	return "Default"
 }
 
 func (e *defaultExtractor) Match(_ *Document) bool {
@@ -88,13 +95,14 @@ out:
 		}
 	}
 	d.Text = strings.TrimSpace(text.String())
-	if d.Text == "" {
-		return errors.New("no text found")
-	}
-	if d.Title == "" {
-		return errors.New("no title found")
+	if d.Text == "" && d.Title == "" {
+		return errors.New("no content found")
 	}
 	return nil
+}
+
+func (e *readabilityExtractor) Name() string {
+	return "Readability"
 }
 
 func (e *readabilityExtractor) Match(_ *Document) bool {

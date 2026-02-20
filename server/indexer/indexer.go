@@ -127,7 +127,10 @@ func Reindex(idxPath, tmpIdxPath string, rules *config.Rules, skipSensitiveCheck
 			d.skipSensitiveCheck = skipSensitiveChecks
 			if err := d.Process(); err != nil {
 				if errors.Is(err, ErrSensitiveContent) {
-					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document")
+					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document, sensitive content")
+					continue
+				} else if errors.Is(err, ErrNoExtractor) {
+					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document, can't extract content")
 					continue
 				} else {
 					tmpIdx.Close()
