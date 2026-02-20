@@ -1,7 +1,29 @@
-FROM gcr.io/distroless/static-debian13:nonroot
+FROM golang:1.24
 
-ARG TARGETPLATFORM
-ENTRYPOINT ["/usr/bin/hister"]
-COPY $TARGETPLATFORM/hister /
+# Switch workdir do build directory
+WORKDIR /hister/build
 
-CMD ["/hister", "listen"]
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build
+
+# Switch workdir to final destination
+WORKDIR /hister
+
+# Copy binary, remove build dir
+RUN cp ./build/hister .
+RUN rm -rf ./build
+
+# Install required utilities for user/group management
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
+
+
+#VOLUME $HOME/.config/hister/
+
+EXPOSE 4433
+
+CMD ["/hister/hister", "listen"]
