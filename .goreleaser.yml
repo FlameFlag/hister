@@ -45,11 +45,3 @@ builds:
 
 archives:
   - formats: ["binary"]
-
-dockers_v2:
-  - images:
-      - ghcr.io/asciimoo/hister
-
-    tags:
-      - "v{{.Version}}"
-      - "{{ if not .IsNightly }}latest{{ end }}"
