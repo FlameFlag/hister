@@ -13,7 +13,7 @@
   let text = $state('');
   let submitting = $state(false);
   let success = $state(false);
-  let error = $state<string | null>(null);
+  let error = $state<string | null>();
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
@@ -25,11 +25,7 @@
     success = false;
 
     try {
-      await addEntry({
-        url: url.trim(),
-        title: title.trim(),
-        text: text.trim(),
-      });
+      await addEntry(url.trim(), title.trim(), text.trim());
 
       success = true;
 
@@ -82,11 +78,11 @@
     <CardContent class="pt-6">
       <form onsubmit={handleSubmit} class="flex flex-col gap-6">
         <div class="flex flex-col gap-2">
-          <div class="flex items-center gap-2">
+          <Label for="url" class="flex items-center gap-2">
             <Link class="size-4 text-muted-foreground" />
-            <Label for="url">URL</Label>
+            URL
             <span class="text-destructive">*</span>
-          </div>
+          </Label>
           <Input
             id="url"
             type="url"
@@ -99,10 +95,10 @@
         </div>
 
         <div class="flex flex-col gap-2">
-          <div class="flex items-center gap-2">
+          <Label for="title" class="flex items-center gap-2">
             <Type class="size-4 text-muted-foreground" />
-            <Label for="title">Title</Label>
-          </div>
+            Title
+          </Label>
           <Input
             id="title"
             type="text"
@@ -114,10 +110,10 @@
         </div>
 
         <div class="flex flex-col gap-2">
-          <div class="flex items-center gap-2">
+          <Label for="text" class="flex items-center gap-2">
             <FileText class="size-4 text-muted-foreground" />
-            <Label for="text">Text</Label>
-          </div>
+            Text
+          </Label>
           <Textarea
             id="text"
             placeholder="Additional text or notes..."

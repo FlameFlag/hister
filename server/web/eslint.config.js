@@ -93,9 +93,8 @@ export default [
         },
       ],
 
-      // Warn when class strings exceed reasonable line length
-      // Automatically wraps long class strings across multiple lines for readability
-      'better-tailwindcss/enforce-consistent-line-wrapping': 'warn',
+      // Prettier with prettier-plugin-tailwindcss handles line wrapping
+      'better-tailwindcss/enforce-consistent-line-wrapping': 'off',
 
       // Sort Tailwind classes in a consistent order
       // Makes classes easier to scan and reduces merge conflicts

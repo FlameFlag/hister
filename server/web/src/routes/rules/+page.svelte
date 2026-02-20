@@ -12,8 +12,8 @@
   import { Textarea } from '$lib/components/ui/textarea';
   import { Input } from '$lib/components/ui/input';
   import { Button } from '$lib/components/ui/button';
-  import { Alert, AlertDescription } from '$lib/components/ui/alert';
   import { Badge } from '$lib/components/ui/badge';
+  import { Alert } from '$lib/components/ui/alert';
 
   let rules = $state<Rules>({
     skip: [],
@@ -114,13 +114,14 @@
 
   {#if saveMessage}
     <Alert
-      class="
-        mb-6 w-full max-w-248
-        {saveMessage.includes('Failed')
+      variant={saveMessage.includes('Failed') ? 'destructive' : 'default'}
+      class="mb-6 w-full max-w-248 border-primary/50 bg-primary/10 text-primary {saveMessage.includes(
+        'Failed'
+      )
         ? 'border-destructive/50 bg-destructive/10 text-destructive'
-        : 'border-primary/50 bg-primary/10 text-primary'}"
+        : ''}"
     >
-      <AlertDescription>{saveMessage}</AlertDescription>
+      {saveMessage}
     </Alert>
   {/if}
 
@@ -202,7 +203,9 @@ docs.python.org/*"
               <div class="flex items-center gap-3 rounded-lg bg-muted p-3">
                 <Badge
                   variant="secondary"
-                  class="min-w-30 justify-center font-mono text-sm"
+                  class="
+                  min-w-30 justify-center font-mono text-sm
+                "
                 >
                   {key}
                 </Badge>
@@ -223,7 +226,13 @@ docs.python.org/*"
           <p class="mb-6 text-sm text-muted-foreground italic">No aliases defined yet.</p>
         {/if}
 
-        <div class="flex gap-2">
+        <form
+          onsubmit={(e) => {
+            e.preventDefault();
+            handleAddAlias();
+          }}
+          class="flex gap-2"
+        >
           <Input
             type="text"
             placeholder="Keyword (e.g., 'gh')"
@@ -238,11 +247,11 @@ docs.python.org/*"
             onkeydown={(e: KeyboardEvent) => e.key === 'Enter' && handleAddAlias()}
             class="bg-background"
           />
-          <Button onclick={handleAddAlias} disabled={!newAliasKey.trim() || !newAliasValue.trim()}>
+          <Button type="submit" disabled={!newAliasKey.trim() || !newAliasValue.trim()}>
             <Plus class="size-4" />
             Add
           </Button>
-        </div>
+        </form>
       </CardContent>
     </Card>
   {/if}

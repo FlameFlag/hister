@@ -1,21 +1,15 @@
 export function sanitizeHtml(html: string): string {
   if (!html) return '';
 
-  const allowedTags = ['mark', 'b', 'strong', 'em', 'i'];
-
   const temp = document.createElement('div');
-  temp.textContent = html; // First escape everything
+  temp.textContent = html;
   const escaped = temp.innerHTML;
 
-  let result = escaped;
-  for (const tag of allowedTags) {
+  return ['mark', 'b', 'strong', 'em', 'i'].reduce((result, tag) => {
     const openRegex = new RegExp(`&lt;${tag}&gt;`, 'gi');
     const closeRegex = new RegExp(`&lt;/${tag}&gt;`, 'gi');
-    result = result.replace(openRegex, `<${tag}>`);
-    result = result.replace(closeRegex, `</${tag}>`);
-  }
-
-  return result;
+    return result.replace(closeRegex, `</${tag}>`).replace(openRegex, `<${tag}>`);
+  }, escaped);
 }
 
 export function stripHtml(html: string): string {

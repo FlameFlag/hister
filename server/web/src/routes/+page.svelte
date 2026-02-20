@@ -1,14 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Search, Clock, Trash2 } from 'lucide-svelte';
+  import { Clock, Trash2 } from 'lucide-svelte';
+  import SearchInput from '$lib/features/search/components/SearchInput.svelte';
   import { fetchStats, fetchHistory, deleteHistoryItem, type HistoryItem } from '$lib/api';
-  import { goto } from '$app/navigation';
-  import * as ContextMenu from '$lib/components/ui/context-menu';
   import * as Tooltip from '$lib/components/ui/tooltip';
-  import { Input } from '$lib/components/ui/input';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
-  import { Card } from '$lib/components/ui/card';
+  import { goto } from '$app/navigation';
 
   let searchQuery = $state('');
   let recentSearches = $state<string[]>([]);
@@ -22,13 +20,16 @@
   let tooltipShown = $state(false);
 
   const STATS_CACHE_KEY = 'hister_stats_cache';
-  const STATS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const STATS_CACHE_DURATION = 5 * 60 * 1000;
 
   function getCachedStats(): { data: unknown; timestamp: number } | null {
     try {
       const cached = localStorage.getItem(STATS_CACHE_KEY);
       if (cached) {
-        const parsed = JSON.parse(cached) as { data: unknown; timestamp: number };
+        const parsed = JSON.parse(cached) as {
+          data: unknown;
+          timestamp: number;
+        };
         if (Date.now() - parsed.timestamp < STATS_CACHE_DURATION) {
           return parsed;
         }
@@ -71,7 +72,7 @@
       historyItems = historyData;
       const queries = historyData
         .map((h: HistoryItem) => h.query)
-        .filter((q: string) => q && q.trim() !== '');
+        .filter((q: string): q is string => q != null && q.trim() !== '') as string[];
       recentSearches = [...new Set(queries)].slice(0, 5);
     } catch (err) {
       console.error('Failed to load home data:', err);
@@ -111,7 +112,6 @@
       historyItems = historyItems.filter((h) => h.query !== term);
     } catch (err) {
       console.error('Failed to delete search:', err);
-      alert('Failed to delete search');
     }
   }
 
@@ -126,7 +126,6 @@
       historyItems = [];
     } catch (err) {
       console.error('Failed to delete all searches:', err);
-      alert('Failed to delete all searches');
     }
   }
 </script>
@@ -136,48 +135,32 @@
 </svelte:head>
 
 <main class="flex flex-1 flex-col items-center justify-center p-12">
-  <div class="mb-8 flex items-center gap-3">
-    <span
-      class="
-        font-display text-[32px] font-extrabold tracking-[-1px] text-foreground
-      ">hister</span
-    >
-  </div>
+  <h1
+    class="mb-8 flex items-center gap-3 font-display text-[32px] font-extrabold tracking-[-1px] text-foreground"
+  >
+    hister
+  </h1>
 
   <div class="w-full max-w-200">
-    <Card
-      class="
-        flex h-18 flex-row items-center gap-4 rounded-[36px] bg-muted px-6
-        shadow-none
-      "
-    >
-      <Search class="size-6 shrink-0 self-center text-muted-foreground" />
-      <Input
-        type="text"
-        bind:value={searchQuery}
-        oninput={handleInput}
-        onkeydown={handleKeyDown}
-        placeholder="Search your browsing history..."
-        class="
-          h-full flex-1 self-center border-0! bg-transparent! py-0! text-lg
-          shadow-none!
-          focus-visible:ring-0! focus-visible:ring-offset-0!
-        "
-      />
-    </Card>
+    <SearchInput
+      bind:value={searchQuery}
+      placeholder="Search your browsing history..."
+      oninput={handleInput}
+      onkeydown={handleKeyDown}
+    />
   </div>
 
   {#if recentSearches.length > 0}
-    <div class="mt-8 w-full max-w-200">
-      <div class="mb-3 flex items-center justify-center gap-2">
-        <p
+    <section class="mt-8 w-full max-w-200">
+      <header class="mb-3 flex items-center justify-center gap-2">
+        <h2
           class="
             text-center text-xs font-medium tracking-[0.5px]
             text-muted-foreground uppercase
           "
         >
           Recent Searches
-        </p>
+        </h2>
         <Button
           variant="ghost"
           size="sm"
@@ -190,48 +173,37 @@
           <Trash2 class="size-3" />
           Clear All
         </Button>
-      </div>
+      </header>
       <div class="flex flex-wrap justify-center gap-2">
         {#each recentSearches as term (term)}
-          <ContextMenu.Root>
-            <ContextMenu.Trigger>
-              <Tooltip.Root
-                onOpenChange={(isOpen) => {
-                  if (isOpen) tooltipShown = true;
-                }}
+          <Tooltip.Root
+            open={tooltipShown ? false : undefined}
+            onOpenChange={(isOpen) => {
+              if (isOpen) tooltipShown = true;
+            }}
+          >
+            <Tooltip.Trigger>
+              <Button
+                variant="outline"
+                size="sm"
+                class="
+                  cursor-pointer rounded-[24px] border-border bg-card
+                  text-muted-foreground
+                  hover:bg-secondary hover:text-foreground
+                "
+                onclick={() => setSearchQuery(term)}
               >
-                <Tooltip.Trigger>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="
-                      cursor-pointer rounded-[24px] border-border bg-card
-                      text-muted-foreground
-                      hover:bg-secondary hover:text-foreground
-                    "
-                    onclick={() => setSearchQuery(term)}
-                  >
-                    <Clock class="mr-2 size-3.5" />
-                    {term}
-                  </Button>
-                </Tooltip.Trigger>
-                {#if !tooltipShown}
-                  <Tooltip.Content>
-                    <p class="text-xs">Right-click to delete</p>
-                  </Tooltip.Content>
-                {/if}
-              </Tooltip.Root>
-            </ContextMenu.Trigger>
-            <ContextMenu.Content>
-              <ContextMenu.Item class="cursor-pointer" onclick={() => handleDeleteSearch(term)}>
-                <Trash2 class="mr-2 size-4" />
-                Delete
-              </ContextMenu.Item>
-            </ContextMenu.Content>
-          </ContextMenu.Root>
+                <Clock class="mr-2 size-3.5" />
+                {term}
+              </Button>
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p class="text-xs">Right-click to delete</p>
+            </Tooltip.Content>
+          </Tooltip.Root>
         {/each}
       </div>
-    </div>
+    </section>
   {/if}
 </main>
 
@@ -244,18 +216,18 @@
   {#if loading}
     <span class="text-muted-foreground">Loading stats…</span>
   {:else}
-    <div class="flex items-center gap-2">
+    <span class="flex items-center gap-2">
       <Badge variant="secondary" class="font-display text-base font-semibold"
         >{formatNumber(stats.pagesIndexed)}</Badge
       >
       <span class="text-muted-foreground">pages indexed</span>
-    </div>
-    <div class="flex items-center gap-2">
+    </span>
+    <span class="flex items-center gap-2">
       <Badge variant="secondary" class="font-display text-base font-semibold"
         >{formatNumber(stats.domains)}</Badge
       >
       <span class="text-muted-foreground">domains</span>
-    </div>
+    </span>
     <span class="font-medium text-muted-foreground">{stats.dateRange}</span>
   {/if}
 </footer>

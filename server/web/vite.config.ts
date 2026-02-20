@@ -13,21 +13,19 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          return 'bundle.js';
-        }
-      }
+        manualChunks: () => 'bundle.js',
+      },
     },
     chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
     rolldownOptions: {
-      exclude: []
-    }
+      exclude: [],
+    },
   },
   kit: {
     output: {
-      inlineStyleThreshold: Infinity
-    }
-  }
+      inlineStyleThreshold: Infinity,
+    },
+  },
 });

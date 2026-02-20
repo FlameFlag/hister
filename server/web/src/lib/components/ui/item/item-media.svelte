@@ -28,7 +28,9 @@
     children,
     variant = 'default',
     ...restProps
-  }: WithElementRef<HTMLAttributes<HTMLDivElement>> & { variant?: ItemMediaVariant } = $props();
+  }: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
+    variant?: ItemMediaVariant;
+  } = $props();
 </script>
 
 <div

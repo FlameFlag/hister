@@ -6,7 +6,7 @@ const config = {
   preprocess: vitePreprocess(),
   kit: {
     output: {
-      bundleStrategy: 'single'
+      bundleStrategy: 'single',
     },
     adapter: adapter({
       pages: 'dist',
