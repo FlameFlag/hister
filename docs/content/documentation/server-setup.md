@@ -27,7 +27,7 @@ Create or edit your configuration file at `~/.config/hister/config.yml`:
 
 ```yaml
 server:
-  address: "0.0.0.0:4433" # or the traget interface's address
+  address: "0.0.0.0:4433" # or the target interface's address
   base_url: "http://192.168.1.100:4433"  # Use your actual server IP or hostname
 ```
 
@@ -108,8 +108,7 @@ services:
     container_name: hister
     restart: unless-stopped
     volumes:
-      - ./config:/root/.config/hister  # For root-based images
-      # - ./config:/hister/data        # For non-root images (master)
+      - ./config:/hister/data
     ports:
       - 4433:4433
 ```
