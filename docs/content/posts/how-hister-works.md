@@ -5,8 +5,6 @@ title = 'How Hister Works'
 description = 'High level explaination about how Hister works by breaking down its four main components'
 +++
 
-# How Hister Works
-
 Hister is made up of four main parts:
 
 1. **The Browser Extension** - Captures web pages as you browse

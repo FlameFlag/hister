@@ -5,8 +5,6 @@ title = 'Firefox Extension IDs: The Bad and the Ugly'
 description = 'Firefox extensions use unique internal UUIDs per installation instead of static IDs in the Origin HTTP header thatcreates privacy nightmare and makes CSRF protection harder to implement for extension-to-server communication'
 +++
 
-# Firefox Extension IDs: The Bad and the Ugly
-
 If you've ever developed a web application that communicates with a browser extension, you've probably encountered the subtle but significant differences between how Chrome and Firefox handle extension identifiers. While both browsers allow developers to specify static extension IDs, their implementation approaches diverge in ways that create real problems for security, privacy, user and developer experience.
 
 This post explores an issue I discovered while building [Hister](https://github.com/asciimoo/hister). What started as a straightforward CSRF protection implementation turned into a deep dive into Firefox's extension architecture decisions.
