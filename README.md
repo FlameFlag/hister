@@ -36,6 +36,8 @@ Execute `./hister` to see all available commands.
  - Run `./hister help` to list the available commands
  - Execute `./hister listen` to start the web application
 
+### Use pre-built [Docker container](https://github.com/asciimoo/hister/pkgs/container/hister)
+
 ## Configuration
 
 Settings can be configured in `~/.config/hister/config.yml` config file - don't forget to restart webapp after updating.
