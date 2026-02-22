@@ -43,5 +43,8 @@ builds:
         env:
           - CC=oa64-clang
 
+release:
+  replace_existing_artifacts: true
+
 archives:
   - formats: ["binary"]
