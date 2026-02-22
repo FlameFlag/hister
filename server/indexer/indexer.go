@@ -124,6 +124,7 @@ func Reindex(idxPath, tmpIdxPath string, rules *config.Rules, skipSensitiveCheck
 		}
 		for _, h := range res.Hits {
 			d := docFromHit(h)
+			log.Debug().Str("URL", d.URL).Msg("Indexing")
 			d.skipSensitiveCheck = skipSensitiveChecks
 			if err := d.Process(); err != nil {
 				if errors.Is(err, ErrSensitiveContent) {
@@ -150,7 +151,7 @@ func Reindex(idxPath, tmpIdxPath string, rules *config.Rules, skipSensitiveCheck
 			}
 		}
 		page += 1
-		log.Debug().Int("Page", page).Msg("Reindexed")
+		log.Info().Int("Page", page).Msg("Reindexed")
 	}
 	idx.Close()
 	tmpIdx.Close()
