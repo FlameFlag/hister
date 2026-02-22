@@ -115,7 +115,7 @@ func Listen(cfg *config.Config) {
 		MaxAge:   60 * 60 * 24 * 365,
 		HttpOnly: true,
 	}
-	handler := createRouter(cfg)
+	handler := registerEndpoints(cfg)
 
 	handler = withLogging(handler)
 
@@ -131,8 +131,21 @@ func addTemplate(name string, paths ...string) {
 	tpls[name] = t
 }
 
-func createRouter(cfg *config.Config) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func registerEndpoints(cfg *config.Config) http.Handler {
+	mux := http.NewServeMux()
+	for _, e := range Endpoints {
+		log.Debug().Str("Endpoint", e.Pattern()).Msg("Registering endpoint")
+		h := e.Handler
+		if e.CSRFRequired {
+			h = withCSRF(h)
+		}
+		mux.HandleFunc(e.Pattern(), createHandler(cfg, h))
+	}
+	return mux
+}
+
+func createHandler(cfg *config.Config, h func(*webContext)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		c := &webContext{
 			Request:  r,
 			Response: w,
@@ -140,111 +153,62 @@ func createRouter(cfg *config.Config) http.Handler {
 			nonce:    rand.Text(),
 		}
 		c.Response.Header().Add("Content-Security-Policy", fmt.Sprintf("script-src 'nonce-%s'", c.nonce))
-		switch r.URL.Path {
-		case "/":
-			withCSRF(c, serveIndex)
-			return
-		case "/search":
-			serveSearch(c)
-			return
-		case "/add":
-			withCSRF(c, serveAdd)
-			return
-		case "/rules":
-			withCSRF(c, serveRules)
-			return
-		case "/help":
-			serveHelp(c)
-			return
-		case "/history":
-			withCSRF(c, serveHistory)
-			return
-		case "/delete":
-			withCSRF(c, serveDeleteDocument)
-			return
-		case "/delete_alias":
-			withCSRF(c, serveDeleteAlias)
-			return
-		case "/add_alias":
-			withCSRF(c, serveAddAlias)
-			return
-		case "/about":
-			serveAbout(c)
-			return
-		case "/readable":
-			serveReadable(c)
-			return
-		case "/opensearch.xml":
-			serveOpensearch(c)
-			return
-		case "/favicon.ico":
-			i, err := static.FS.ReadFile("favicon.ico")
-			if err != nil {
-				serve500(c)
-				return
-			}
-			w.Header().Add("Content-Type", "image/vnd.microsoft.icon")
-			w.Write(i)
-			return
-		}
-		if strings.HasPrefix(r.URL.Path, "/static/") {
-			fs.ServeHTTP(w, r)
-			return
-		}
-		serve404(c)
-	})
+		h(c)
+	}
 }
 
-func withCSRF(c *webContext, handler func(*webContext)) {
-	// Allow requests coming from the command line
-	if c.Request.Header.Get("Origin") == "hister://" {
-		handler(c)
-		return
-	}
-	// Allow /add requests from the addons
-	if c.Request.URL.Path == "/add" {
-		if strings.HasPrefix(c.Request.Header.Get("Origin"), "moz-extension://") {
+func withCSRF(handler endpointHandler) endpointHandler {
+	return func(c *webContext) {
+		// Allow requests coming from the command line
+		if c.Request.Header.Get("Origin") == "hister://" {
 			handler(c)
 			return
 		}
-		if c.Request.Header.Get("Origin") == "chrome-extension://cciilamhchpmbdnniabclekddabkifhb" {
-			handler(c)
-			return
+		// Allow /add requests from the addons
+		if c.Request.URL.Path == "/add" {
+			if strings.HasPrefix(c.Request.Header.Get("Origin"), "moz-extension://") {
+				handler(c)
+				return
+			}
+			if c.Request.Header.Get("Origin") == "chrome-extension://cciilamhchpmbdnniabclekddabkifhb" {
+				handler(c)
+				return
+			}
 		}
-	}
 
-	session, err := sessionStore.Get(c.Request, storeName)
-	if err != nil {
-		http.Error(c.Response, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	method := c.Request.Method
-	safeRequest := strings.HasPrefix(c.Request.Header.Get("Origin"), c.Config.BaseURL("/")) || c.Request.Header.Get("Origin") == "same-origin"
-	if method != http.MethodGet && method != http.MethodHead && !safeRequest {
-		sToken, ok := session.Values[tokName].(string)
-		if !ok {
-			http.Error(c.Response, errCSRFMismatch.Error(), http.StatusInternalServerError)
+		session, err := sessionStore.Get(c.Request, storeName)
+		if err != nil {
+			http.Error(c.Response, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		token := c.Request.PostFormValue(tokName)
-		if token == "" {
-			token = c.Request.Header.Get("X-CSRF-Token")
+		method := c.Request.Method
+		safeRequest := strings.HasPrefix(c.Request.Header.Get("Origin"), c.Config.BaseURL("/")) || c.Request.Header.Get("Origin") == "same-origin"
+		if method != http.MethodGet && method != http.MethodHead && !safeRequest {
+			sToken, ok := session.Values[tokName].(string)
+			if !ok {
+				http.Error(c.Response, errCSRFMismatch.Error(), http.StatusInternalServerError)
+				return
+			}
+			token := c.Request.PostFormValue(tokName)
+			if token == "" {
+				token = c.Request.Header.Get("X-CSRF-Token")
+			}
+			if token != sToken {
+				http.Error(c.Response, errCSRFMismatch.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
-		if token != sToken {
-			http.Error(c.Response, errCSRFMismatch.Error(), http.StatusInternalServerError)
+		tok := rand.Text()
+		session.Values[tokName] = tok
+		err = session.Save(c.Request, c.Response)
+		if err != nil {
+			http.Error(c.Response, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		c.csrf = tok
+		c.Response.Header().Add("X-CSRF-Token", tok)
+		handler(c)
 	}
-	tok := rand.Text()
-	session.Values[tokName] = tok
-	err = session.Save(c.Request, c.Response)
-	if err != nil {
-		http.Error(c.Response, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	c.csrf = tok
-	c.Response.Header().Add("X-CSRF-Token", tok)
-	handler(c)
 }
 
 func withLogging(h http.Handler) http.Handler {
@@ -578,6 +542,20 @@ func serveDeleteDocument(c *webContext) {
 		log.Error().Err(err).Str("URL", u).Msg("failed to delete URL")
 	}
 	serve200(c)
+}
+
+func serveFavicon(c *webContext) {
+	i, err := static.FS.ReadFile("favicon.ico")
+	if err != nil {
+		serve500(c)
+		return
+	}
+	c.Response.Header().Add("Content-Type", "image/vnd.microsoft.icon")
+	c.Response.Write(i)
+}
+
+func serveStatic(c *webContext) {
+	fs.ServeHTTP(c.Response, c.Request)
 }
 
 func serve200(c *webContext) {
