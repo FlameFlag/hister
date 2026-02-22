@@ -74,6 +74,8 @@ var tFns = template.FuncMap{
 	"FormatTime": func(t time.Time) string { return t.Format("2006-01-02 15:04:05") },
 	"ToHTML":     func(s string) template.HTML { return template.HTML(s) },
 	"Join":       func(s []string, delim string) string { return strings.Join(s, delim) },
+	"Replace":    strings.ReplaceAll,
+	"ToLower":    strings.ToLower,
 	"Truncate": func(s string, maxLen int) string {
 		if len(s) > maxLen {
 			return s[:maxLen] + "[..]"
@@ -103,6 +105,7 @@ func init() {
 	addTemplate("add", "layout/base.tpl", "add.tpl")
 	addTemplate("rules", "layout/base.tpl", "rules.tpl")
 	addTemplate("help", "layout/base.tpl", "help.tpl")
+	addTemplate("api", "layout/base.tpl", "api.tpl")
 	addTemplate("about", "layout/base.tpl", "about.tpl")
 	addTemplate("history", "layout/base.tpl", "history.tpl")
 	addTemplate("opensearch", "opensearch.tpl")
@@ -486,6 +489,12 @@ func serveHelp(c *webContext) {
 
 func serveAbout(c *webContext) {
 	c.Render("about", nil)
+}
+
+func serveAPI(c *webContext) {
+	c.Render("api", tArgs{
+		"Endpoints": Endpoints,
+	})
 }
 
 func serveOpensearch(c *webContext) {

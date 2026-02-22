@@ -184,5 +184,13 @@ func init() {
 			Handler:      serveStatic,
 			Description:  "Static files",
 		},
+		&Endpoint{
+			Name:         "API",
+			Path:         "/api",
+			Method:       GET,
+			CSRFRequired: false,
+			Handler:      serveAPI,
+			Description:  "API documentation",
+		},
 	}
 }

@@ -528,6 +528,14 @@ mark {
     color: var(--color-semilight);
 }
 
+.small {
+    font-size: 0.6em;
+}
+
+.grey {
+    color: var(--color-semilight);
+}
+
 .export-buttons a {
     cursor: pointer;
     color: var(--color-blue);
