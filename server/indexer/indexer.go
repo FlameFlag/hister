@@ -324,8 +324,6 @@ func docFromHit(h *search.DocumentMatch) *Document {
 	}
 	if t, ok := h.Fragments["text"]; ok {
 		d.Text = t[0]
-	} else if s, ok := h.Fields["text"].(string); ok {
-		d.Text = s
 	}
 	if s, ok := h.Fields["html"].(string); ok {
 		d.HTML = s
