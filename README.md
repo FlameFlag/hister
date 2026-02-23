@@ -36,8 +36,10 @@ Execute `./hister` to see all available commands.
 
 ### Build for yourself
 
+**NPM is required**
+
  - Clone the repository
- - Build with `go build`
+ - Build with `./manage.sh build` (or `go generate ./...; go build`)
  - Run `./hister help` to list the available commands
  - Execute `./hister listen` to start the web application
 
