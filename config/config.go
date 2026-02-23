@@ -68,7 +68,7 @@ type Aliases map[string]string
 
 var (
 	secretKeyFilename                = ".secret_key"
-	hotkeyKeyRe       *regexp.Regexp = regexp.MustCompile(`^((ctrl|alt|meta)\+)?([a-z0-9/?]|enter|tab|arrow(up|down|right|left))$`)
+	hotkeyKeyRe       *regexp.Regexp = regexp.MustCompile(`^((ctrl|alt|meta)\+)?([a-z0-9/?]|enter|tab|arrow(up|down|right|left)|f[1-9]|f1[012])$`)
 	hotkeyActions                    = []string{
 		"select_previous_result",
 		"select_next_result",
@@ -185,7 +185,7 @@ func CreateDefaultConfig() *Config {
 			TUI: map[string]string{
 				"ctrl+c": "quit",
 				"q":      "quit",
-				"?":      "toggle_help",
+				"f1":     "toggle_help",
 				"tab":    "toggle_focus",
 				"up":     "scroll_up",
 				"k":      "scroll_up",
