@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Build static assets
 COPY . .
 
+RUN go generate
+
 # Enable CGO and build the application for Linux
 RUN CGO_ENABLED=1 GOOS=linux go build \
     -ldflags="-s -w" \
