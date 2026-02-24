@@ -24,6 +24,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
 
+      - name: Set up Node
+        uses: actions/setup-node@v6.2.0
+
         # Mark the checkout as 'safe' despite being owned by `root`
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: git config --global --add safe.directory "$(pwd)"
