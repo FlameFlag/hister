@@ -471,8 +471,7 @@ func serveGet(c *webContext) {
 		serve500(c)
 		return
 	}
-	c.Response.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(c.Response).Encode(doc)
+	c.JSON(doc)
 }
 
 func serveReadable(c *webContext) {
@@ -498,8 +497,7 @@ func serveReadable(c *webContext) {
 	if r.Title() != "" {
 		title = r.Title()
 	}
-	c.Response.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(c.Response).Encode(map[string]string{
+	c.JSON(map[string]string{
 		"title":   title,
 		"content": htmlContent.String(),
 	})
@@ -628,4 +626,9 @@ func (c *webContext) Render(tpl string, args tArgs) {
 
 func (c *webContext) Redirect(u string) {
 	http.Redirect(c.Response, c.Request, u, http.StatusFound)
+}
+
+func (c *webContext) JSON(o any) {
+	c.Response.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(c.Response).Encode(o)
 }
