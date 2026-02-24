@@ -13,19 +13,22 @@ jobs:
     if: github.repository == 'asciimoo/hister'
     name: GoReleaser build
     runs-on: ubuntu-latest
-    container:
-      image: goreleaser/goreleaser-cross:v1.25.5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6.2.0
+        with:
+          go-version: 'stable'
 
-      - name: Set up Node
-        uses: actions/setup-node@v6.2.0
+      - name: Install cross-compilers
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu mingw-w64
 
         # Mark the checkout as 'safe' despite being owned by `root`
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
