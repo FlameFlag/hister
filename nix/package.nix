@@ -2,10 +2,16 @@
   lib,
   buildGoModule,
   sqlite,
+  fetchNpmDeps,
+  nodejs,
   histerRev ? "unknown",
 }:
 let
   packageJson = builtins.fromJSON (builtins.readFile ../ext/package.json);
+  npmDeps = fetchNpmDeps {
+    src = ../server/static/js;
+    hash = "sha256-9ynzvzSX1pHwfB2Dm714ZkytjrFtIujtGtiwFHNcXAM=";
+  };
 in
 buildGoModule (finalAttrs: {
   pname = "hister";
@@ -13,11 +19,26 @@ buildGoModule (finalAttrs: {
 
   src = ../.;
 
-  vendorHash = "sha256-BoM5CN57UuuxCaf1myyQxUyT2N1uGy+IjpCvDJmfvAU=";
+  vendorHash = "sha256-Tnvr9TqP7BNGmZ+0wrEfi9FH6KteLVORH3qUFWjn02Q=";
+
+  nativeBuildInputs = [ nodejs ];
 
   buildInputs = [ sqlite ];
 
+  postPatch = "";
+
   preBuild = ''
+    # Build npm frontend
+    # In goModules derivation, this runs but doesn't affect the build
+    # In main derivation, this creates dist files before Go compilation
+    cd server/static/js
+    mkdir -p $TMPDIR/npm-cache
+    cp -r ${npmDeps}/* $TMPDIR/npm-cache/
+    export NPM_CONFIG_CACHE=$TMPDIR/npm-cache
+    npm ci --offline
+    npm run build
+    cd ../..
+
     export CGO_CFLAGS="-I${sqlite.dev}/include"
     export CGO_LDFLAGS="-L${sqlite.out}/lib -lsqlite3"
   '';
@@ -33,10 +54,14 @@ buildGoModule (finalAttrs: {
 
   doCheck = false;
 
+  passthru = {
+    inherit npmDeps;
+  };
+
   meta = {
     description = "Web history on steroids - blazing fast, content-based search for visited websites";
     homepage = "https://github.com/asciimoo/hister";
-    license = lib.licenses.agpl3Only;
+    license = lib.licenses.agpl3Plus;
     maintainers = [ lib.maintainers.FlameFlag ];
     mainProgram = "hister";
     platforms = lib.platforms.unix;

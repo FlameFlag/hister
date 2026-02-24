@@ -249,7 +249,7 @@ func serveIndex(c *webContext) {
 			return
 		}
 	}
-	c.Render("index", nil)
+	c.Render("index", tArgs{"Query": q, "WebSocketURL": c.Config.WebSocketURL()})
 }
 
 func serveSearch(c *webContext) {
@@ -339,7 +339,8 @@ func doSearch(query *indexer.Query, cfg *config.Config) (*indexer.Results, error
 	if oq != "" {
 		res.QuerySuggestion = model.GetQuerySuggestion(oq)
 	}
-	res.SearchDuration = fmt.Sprintf("%v", time.Since(start))
+	duration := float32(time.Since(start).Milliseconds()) / 1000.
+	res.SearchDuration = fmt.Sprintf("%.3f seconds", duration)
 	return res, nil
 }
 
@@ -463,6 +464,16 @@ func serveRules(c *webContext) {
 	})
 }
 
+func serveGet(c *webContext) {
+	u := c.Request.URL.Query().Get("url")
+	doc := indexer.GetByURL(u)
+	if doc == nil {
+		serve500(c)
+		return
+	}
+	c.JSON(doc)
+}
+
 func serveReadable(c *webContext) {
 	u := c.Request.URL.Query().Get("url")
 	doc := indexer.GetByURL(u)
@@ -480,7 +491,16 @@ func serveReadable(c *webContext) {
 		serve500(c)
 		return
 	}
-	r.RenderHTML(c.Response)
+	var htmlContent strings.Builder
+	r.RenderHTML(&htmlContent)
+	title := doc.Title
+	if r.Title() != "" {
+		title = r.Title()
+	}
+	c.JSON(map[string]string{
+		"title":   title,
+		"content": htmlContent.String(),
+	})
 }
 
 func serveHelp(c *webContext) {
@@ -606,4 +626,9 @@ func (c *webContext) Render(tpl string, args tArgs) {
 
 func (c *webContext) Redirect(u string) {
 	http.Redirect(c.Response, c.Request, u, http.StatusFound)
+}
+
+func (c *webContext) JSON(o any) {
+	c.Response.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(c.Response).Encode(o)
 }
