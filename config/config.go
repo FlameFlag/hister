@@ -5,6 +5,7 @@
 package config
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -21,36 +22,36 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
 	fname                    string
-	App                      App               `yaml:"app"`
-	Server                   Server            `yaml:"server"`
-	Hotkeys                  Hotkeys           `yaml:"hotkeys"`
-	SensitiveContentPatterns map[string]string `yaml:"sensitive_content_patterns"`
-	Rules                    *Rules            `yaml:"-"`
+	App                      App               `yaml:"app" mapstructure:"app"`
+	Server                   Server            `yaml:"server" mapstructure:"server"`
+	Hotkeys                  Hotkeys           `yaml:"hotkeys" mapstructure:"hotkeys"`
+	SensitiveContentPatterns map[string]string `yaml:"sensitive_content_patterns" mapstructure:"sensitive_content_patterns"`
+	Rules                    *Rules            `yaml:"-" mapstructure:"-"`
 	secretKey                []byte
 }
 
 type App struct {
-	Directory           string `yaml:"directory"`
-	SearchURL           string `yaml:"search_url"`
-	LogLevel            string `yaml:"log_level"`
-	DebugSQL            bool   `yaml:"debug_sql"`
-	OpenResultsOnNewTab bool   `yaml:"open_results_on_new_tab"`
+	Directory           string `yaml:"directory" mapstructure:"directory"`
+	SearchURL           string `yaml:"search_url" mapstructure:"search_url"`
+	LogLevel            string `yaml:"log_level" mapstructure:"log_level"`
+	DebugSQL            bool   `yaml:"debug_sql" mapstructure:"debug_sql"`
+	OpenResultsOnNewTab bool   `yaml:"open_results_on_new_tab" mapstructure:"open_results_on_new_tab"`
 }
 
 type Server struct {
-	Address  string `yaml:"address"`
-	BaseURL  string `yaml:"base_url"`
-	Database string `yaml:"database"`
+	Address  string `yaml:"address" mapstructure:"address"`
+	BaseURL  string `yaml:"base_url" mapstructure:"base_url"`
+	Database string `yaml:"database" mapstructure:"database"`
 }
 
 type Hotkeys struct {
-	Web map[string]string `yaml:"web"`
-	TUI map[string]string `yaml:"tui"`
+	Web map[string]string `yaml:"web" mapstructure:"web"`
+	TUI map[string]string `yaml:"tui" mapstructure:"tui"`
 }
 
 type Rules struct {
@@ -140,19 +141,53 @@ func readConfigFile(filename string) ([]byte, string, error) {
 	return b, "", errors.New("configuration file not found. Use --config to specify a custom config file")
 }
 
-// Load reads and parses the configuration from the specified file.
-func Load(filename string) (*Config, error) {
-	b, fn, err := readConfigFile(filename)
-	var c *Config
-	if err != nil {
-		log.Debug().Msg("No config file found, using default config")
-		c = CreateDefaultConfig()
-	} else {
-		c, err = parseConfig(b)
-		if err != nil {
+func loadViper(rawConfig []byte) (*viper.Viper, error) {
+	v := viper.New()
+	v.SetConfigType("yaml")
+
+	bindEnvironment(v)
+
+	if len(rawConfig) > 0 {
+		if err := v.ReadConfig(bytes.NewBuffer(rawConfig)); err != nil {
 			return nil, err
 		}
 	}
+
+	return v, nil
+}
+
+func bindEnvironment(v *viper.Viper) {
+	v.SetEnvPrefix("HISTER")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
+	v.AutomaticEnv()
+
+	for _, env := range os.Environ() {
+		if !strings.HasPrefix(env, "HISTER__") {
+			continue
+		}
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimPrefix(parts[0], "HISTER__")
+		normalizedKey := strings.ToLower(strings.ReplaceAll(key, "__", "."))
+		v.Set(normalizedKey, parts[1])
+		log.Debug().Str("env", parts[0]).Str("key", normalizedKey).Msg("Loaded configuration from environment variable")
+	}
+}
+
+// Load reads and parses the configuration from the specified file.
+func Load(filename string) (*Config, error) {
+	b, fn, err := readConfigFile(filename)
+	if err != nil {
+		log.Debug().Msg("No config file found, using default config")
+	}
+
+	c, err := parseConfig(b)
+	if err != nil {
+		return nil, err
+	}
+
 	c.fname = fn
 	return c, c.init()
 }
@@ -208,11 +243,16 @@ func CreateDefaultConfig() *Config {
 }
 
 func parseConfig(rawConfig []byte) (*Config, error) {
-	c := CreateDefaultConfig()
-	err := yaml.Unmarshal(rawConfig, &c)
+	v, err := loadViper(rawConfig)
 	if err != nil {
 		return nil, err
 	}
+
+	c := CreateDefaultConfig()
+	if err := v.Unmarshal(&c); err != nil {
+		return nil, err
+	}
+
 	if c.Server.BaseURL != "" {
 		pu, err := url.Parse(c.Server.BaseURL)
 		if err != nil || pu.Scheme == "" || pu.Host == "" {

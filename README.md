@@ -25,14 +25,19 @@ Available for [Chrome](https://chromewebstore.google.com/detail/hister/cciilamhc
 
 ### Download pre-built binary
 
-Grab a pre-built binary from the [latest release](https://github.com/asciimoo/hister/releases/latest). (Don't forget to `chmod +x`)
+- **Stable:** Grab a versioned binary from the [releases page](https://github.com/asciimoo/hister/releases).
+- **Latest (HEAD):** Get the absolute latest build from our [Rolling Release](https://github.com/asciimoo/hister/releases/tag/latest).
+
+Choose the binary for your architecture (e.g., `hister_linux_amd64`), make it executable (`chmod +x hister_linux_amd64`), and run it.
 
 Execute `./hister` to see all available commands.
 
 ### Build for yourself
 
+**NPM is required**
+
  - Clone the repository
- - Build with `go build`
+ - Build with `./manage.sh build` (or `go generate ./...; go build`)
  - Run `./hister help` to list the available commands
  - Execute `./hister listen` to start the web application
 
