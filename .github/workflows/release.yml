@@ -40,7 +40,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean ${{ matrix.os == 'ubuntu-latest' && '--id=build_cgo_unix --id=build_cgo_windows' || '--id=build_cgo_darwin' }}
+          args: build --clean ${{ matrix.os == 'ubuntu-latest' && '--id=build_cgo_unix --id=build_cgo_windows' || '--id=build_cgo_darwin' }}
 
       - name: Upload assets
         uses: actions/upload-artifact@v4
