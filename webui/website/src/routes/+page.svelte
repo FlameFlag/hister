@@ -1,0 +1,86 @@
+<svelte:head>
+  <title>Hister - Web History on Steroids</title>
+</svelte:head>
+
+<main>
+  <header>
+  <h1 class="title"><img src="/logo.png" alt="logo" />Hister</h1>
+  <h3 class="tagline">Personal Web Search Engine</h3>
+  <div class="cta-buttons">
+    <a href="https://demo.hister.org/" class="btn btn-secondary">Read-only Demo</a>
+    <a href="https://github.com/asciimoo/hister" class="btn btn-secondary">View on GitHub</a>
+  </div>
+</header>
+
+<div class="features">
+  <h2>Features</h2>
+  <div class="feature-grid">
+    <div class="feature-item">
+      <h3>Privacy-Focused</h3>
+      <p>Keep your browsing history indexed locally. No need to use remote search engines when you can search your own data.</p>
+    </div>
+    <div class="feature-item">
+      <h3>Full-Text Indexing</h3>
+      <p>Search through the actual content of web pages you've visited, not just URLs and titles.</p>
+    </div>
+    <div class="feature-item">
+      <h3>Blazing Fast</h3>
+      <p>Instant results as you type.<br />Full keyboard driven workflow.</p>
+    </div>
+    <div class="feature-item">
+      <h3>Advanced Search</h3>
+      <p>Utilize a powerful query language for precise results across your entire browsing history.</p>
+    </div>
+    <div class="feature-item">
+      <h3>Flexible Management</h3>
+      <p>Configure blacklist and priority rules for better control over your indexed content.</p>
+    </div>
+    <div class="feature-item">
+      <h3>Browser Extensions</h3>
+      <p>Available for both <a href="https://chromewebstore.google.com/detail/hister/cciilamhchpmbdnniabclekddabkifhb">Chrome</a> and <a href="https://addons.mozilla.org/en-US/firefox/addon/hister/">Firefox</a> with seamless integration into your workflow.</p>
+    </div>
+    <div class="feature-item">
+      <h3>Offline Preview</h3>
+      <p>Offline, readable preview of result websites.</p>
+    </div>
+    <div class="feature-item">
+      <h3>Browser Import</h3>
+      <p>Import existing Firefox or Chrome browser history with a single command.</p>
+    </div>
+    <div class="feature-item">
+      <h3>Search Aliases</h3>
+      <p>Create custom keyword shortcuts to simplify complex or frequently used queries.</p>
+    </div>
+  </div>
+</div>
+
+<div class="features">
+  <h2>Why Hister?</h2>
+
+  <p>When we search online it can be because of two reasons:</p>
+  <ul>
+    <li><b>Find new information</b></li>
+    <li><b>Recall information</b></li>
+  </ul>
+  <p>Hister provides solution to latter by indexing all the websites you visit and providing a search interface as efficient as possible, while seamlessly letting you fall back to traditional search methods in case you need to find unexplored content.</p>
+  <hr />
+
+  <p>Benefits of using Hister instead of free online search engines:</p>
+  <ul>
+    <li>Privacy</li>
+    <li>No advertisements</li>
+    <li>No incorrect AI suggestion</li>
+    <li>No sponsored results</li>
+    <li>No manipulated result order</li>
+  </ul>
+</div>
+
+<div class="demo">
+  <h2>Web UI</h2>
+  <img src="/screenshot.png" alt="web screenshot"/>
+</div>
+<div class="demo">
+  <h2>Terminal UI</h2>
+  <img src="/demo.gif" alt="terminal demo gif"/>
+</div>
+</main>

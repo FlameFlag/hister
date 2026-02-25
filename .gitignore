@@ -8,3 +8,6 @@ result
 result-*
 node_modules/
 dist/
+.svelte-kit/
+build/
+server/static/app

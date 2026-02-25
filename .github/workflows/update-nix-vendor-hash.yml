@@ -7,8 +7,8 @@ on:
     paths:
       - go.mod
       - go.sum
-      - server/static/js/package.json
-      - server/static/js/package-lock.json
+      - package.json
+      - package-lock.json
       - nix/package.nix
       - .github/workflows/update-nix-vendor-hash.yml
       - nix/update-nix-vendor-hash.sh

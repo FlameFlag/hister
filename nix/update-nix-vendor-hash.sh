@@ -17,8 +17,6 @@ update_hash() {
     
     if echo "$output" | grep -q "go-modules.drv"; then
       echo "::notice::Updating vendorHash"
-    elif echo "$output" | grep -q "npm-deps.drv"; then
-      echo "::notice::Updating npmDepsHash"
     else
       echo "::warning::Unknown hash mismatch, updating anyway"
     fi
@@ -48,7 +46,7 @@ echo "::endgroup::"
 RESULT2=$(update_hash "$OUTPUT" "2")
 
 if [ -n "$RESULT1" ] || [ -n "$RESULT2" ]; then
-  echo "::notice::Updated vendorHash and/or npmDeps"
+  echo "::notice::Updated vendorHash"
 fi
 
 echo "::group::Verifying final build"

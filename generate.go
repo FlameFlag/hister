@@ -1,3 +1,3 @@
 package main
 
-//go:generate sh server/static/js/build.sh
+//go:generate sh webui/build.sh

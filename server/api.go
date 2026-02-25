@@ -49,11 +49,11 @@ func init() {
 	// TODO add Args
 	Endpoints = []*Endpoint{
 		&Endpoint{
-			Name:         "Index",
-			Path:         "/",
+			Name:         "Config",
+			Path:         "/api/config",
 			Method:       GET,
 			CSRFRequired: true,
-			Handler:      serveIndex,
+			Handler:      serveConfig,
 			Description:  "Index page",
 		},
 		&Endpoint{
@@ -113,14 +113,6 @@ func init() {
 			Description:  "Save rules",
 		},
 		&Endpoint{
-			Name:         "Help",
-			Path:         "/help",
-			Method:       GET,
-			CSRFRequired: false,
-			Handler:      serveHelp,
-			Description:  "Help page",
-		},
-		&Endpoint{
 			Name:         "History",
 			Path:         "/history",
 			Method:       GET,
@@ -159,14 +151,6 @@ func init() {
 			CSRFRequired: true,
 			Handler:      serveAddAlias,
 			Description:  "Add alias",
-		},
-		&Endpoint{
-			Name:         "About",
-			Path:         "/about",
-			Method:       GET,
-			CSRFRequired: false,
-			Handler:      serveAbout,
-			Description:  "About page",
 		},
 		&Endpoint{
 			Name:         "Readable",

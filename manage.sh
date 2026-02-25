@@ -28,11 +28,12 @@ Tests
 -----
 run_unit_tests       - Run unit tests
  
-Build
------
-build                - Build main hister application
-build_addon          - Build addon
-build_addon_artifact - Build addon artifacts to distribute to addon stores
+ Build
+ -----
+ build                - Build main hister application
+ build_addon          - Build addon
+ build_addon_artifact - Build addon artifacts to distribute to addon stores
+ build_website        - Build website
  
  ========
  
@@ -71,6 +72,11 @@ build_addon() {
     cd ext
     npm run build
     cd ..
+}
+
+build_website() {
+    check_npm
+    npm run build -w @hister/website
 }
 
 build_addon_artifact() {
