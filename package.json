@@ -1,0 +1,14 @@
+{
+  "name": "hister",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "webui/app",
+    "webui/website",
+    "webui/components"
+  ],
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@typescript-eslint/types": "^8.56.1"
+  }
+}

@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
+	iofs "io/fs"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,7 +19,6 @@ import (
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/server/static"
-	"github.com/asciimoo/hister/server/templates"
 
 	readability "codeberg.org/readeck/go-readability/v2"
 	"github.com/gorilla/sessions"
@@ -26,15 +27,14 @@ import (
 )
 
 var (
-	tpls            map[string]*template.Template
-	fs              http.Handler
-	sessionStore    *sessions.CookieStore
-	errCSRFMismatch = errors.New("CSRF token mismatch")
-	storeName       = "hister"
-	tokName         = "csrf_token"
+	appSubFS         iofs.FS
+	spaFileServer    http.Handler
+	staticFileServer http.Handler
+	sessionStore     *sessions.CookieStore
+	errCSRFMismatch  = errors.New("CSRF token mismatch")
+	storeName        = "hister"
+	tokName          = "csrf_token"
 )
-
-type tArgs map[string]any
 
 type historyItem struct {
 	URL    string `json:"url"`
@@ -69,21 +69,6 @@ func (lrw *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) 
 	return hj.Hijack()
 }
 
-var tFns = template.FuncMap{
-	"FormatDate": func(t time.Time) string { return t.Format("2006-01-02") },
-	"FormatTime": func(t time.Time) string { return t.Format("2006-01-02 15:04:05") },
-	"ToHTML":     func(s string) template.HTML { return template.HTML(s) },
-	"Join":       func(s []string, delim string) string { return strings.Join(s, delim) },
-	"Replace":    strings.ReplaceAll,
-	"ToLower":    strings.ToLower,
-	"Truncate": func(s string, maxLen int) string {
-		if len(s) > maxLen {
-			return s[:maxLen] + "[..]"
-		}
-		return s
-	},
-}
-
 var ws = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -99,16 +84,13 @@ type webContext struct {
 }
 
 func init() {
-	fs = http.StripPrefix("/static/", http.FileServerFS(static.FS))
-	tpls = make(map[string]*template.Template)
-	addTemplate("index", "layout/base.tpl", "index.tpl")
-	addTemplate("add", "layout/base.tpl", "add.tpl")
-	addTemplate("rules", "layout/base.tpl", "rules.tpl")
-	addTemplate("help", "layout/base.tpl", "help.tpl")
-	addTemplate("api", "layout/base.tpl", "api.tpl")
-	addTemplate("about", "layout/base.tpl", "about.tpl")
-	addTemplate("history", "layout/base.tpl", "history.tpl")
-	addTemplate("opensearch", "opensearch.tpl")
+	sub, err := iofs.Sub(static.FS, "app")
+	if err != nil {
+		panic(err)
+	}
+	appSubFS = sub
+	spaFileServer = http.FileServerFS(appSubFS)
+	staticFileServer = http.StripPrefix("/static/", http.FileServerFS(appSubFS))
 }
 
 func Listen(cfg *config.Config) {
@@ -119,19 +101,10 @@ func Listen(cfg *config.Config) {
 		HttpOnly: true,
 	}
 	handler := registerEndpoints(cfg)
-
 	handler = withLogging(handler)
 
 	log.Info().Str("Address", cfg.Server.Address).Str("URL", cfg.BaseURL("/")).Msg("Starting webserver")
 	http.ListenAndServe(cfg.Server.Address, handler)
-}
-
-func addTemplate(name string, paths ...string) {
-	t, err := template.New(name).Funcs(tFns).ParseFS(templates.FS, paths...)
-	if err != nil {
-		panic(err)
-	}
-	tpls[name] = t
 }
 
 func registerEndpoints(cfg *config.Config) http.Handler {
@@ -144,6 +117,8 @@ func registerEndpoints(cfg *config.Config) http.Handler {
 		}
 		mux.HandleFunc(e.Pattern(), createHandler(cfg, h))
 	}
+	// SPA catch-all: serve index.html for any path not matched above
+	mux.HandleFunc("/", createHandler(cfg, serveSPA))
 	return mux
 }
 
@@ -155,7 +130,6 @@ func createHandler(cfg *config.Config, h func(*webContext)) func(w http.Response
 			Config:   cfg,
 			nonce:    rand.Text(),
 		}
-		c.Response.Header().Add("Content-Security-Policy", fmt.Sprintf("script-src 'nonce-%s'", c.nonce))
 		h(c)
 	}
 }
@@ -223,33 +197,60 @@ func withLogging(h http.Handler) http.Handler {
 	})
 }
 
-func serveIndex(c *webContext) {
-	q := c.Request.URL.Query().Get("q")
-	if strings.HasPrefix(q, "!!") {
-		c.Redirect(strings.Replace(c.Config.App.SearchURL, "{query}", q[2:], 1))
-		return
+// serveSPA serves the SPA index.html for any route not matching a static file.
+func serveSPA(c *webContext) {
+	path := strings.TrimPrefix(c.Request.URL.Path, "/")
+	if path == "" {
+		path = "index.html"
 	}
-	if q != "" {
-		res, err := indexer.Search(c.Config, &indexer.Query{
-			Text: c.Config.Rules.ResolveAliases(q),
-		})
-		if err != nil {
-			res = &indexer.Results{}
-		}
-		hr, err := model.GetURLsByQuery(q)
-		if err == nil && len(hr) > 0 {
-			res.History = hr
-		}
+	// If the exact file exists in the embedded app FS, serve it directly
+	if _, err := iofs.Stat(appSubFS, path); err == nil {
+		// Read the file and serve it with proper MIME type
+		content, err := iofs.ReadFile(appSubFS, path)
 		if err != nil {
 			serve500(c)
 			return
 		}
-		if len(res.Documents) == 0 && len(hr) == 0 {
-			c.Redirect(strings.Replace(c.Config.App.SearchURL, "{query}", q, 1))
-			return
+		// Detect and set proper MIME type
+		ext := filepath.Ext(path)
+		if mimeType := mime.TypeByExtension(ext); mimeType != "" {
+			c.Response.Header().Set("Content-Type", mimeType)
+		} else {
+			// Default to application/octet-stream if we can't detect the type
+			c.Response.Header().Set("Content-Type", "application/octet-stream")
 		}
+		c.Response.WriteHeader(http.StatusOK)
+		c.Response.Write(content)
+		return
 	}
-	c.Render("index", tArgs{"Query": q, "WebSocketURL": c.Config.WebSocketURL()})
+	// Otherwise serve index.html for client-side routing
+	content, err := iofs.ReadFile(appSubFS, "index.html")
+	if err != nil {
+		serve500(c)
+		return
+	}
+	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	c.Response.Write(content)
+}
+
+// serveConfig returns app configuration as JSON and refreshes CSRF token.
+func serveConfig(c *webContext) {
+	type configResponse struct {
+		WsURL               string            `json:"wsUrl"`
+		SearchURL           string            `json:"searchUrl"`
+		OpenResultsOnNewTab bool              `json:"openResultsOnNewTab"`
+		Hotkeys             map[string]string `json:"hotkeys"`
+	}
+	hotkeys := c.Config.Hotkeys.Web
+	if hotkeys == nil {
+		hotkeys = make(map[string]string)
+	}
+	c.JSON(configResponse{
+		WsURL:               c.Config.WebSocketURL(),
+		SearchURL:           c.Config.App.SearchURL,
+		OpenResultsOnNewTab: c.Config.App.OpenResultsOnNewTab,
+		Hotkeys:             hotkeys,
+	})
 }
 
 func serveSearch(c *webContext) {
@@ -261,9 +262,6 @@ func serveSearch(c *webContext) {
 	}
 	q := c.Request.URL.Query().Get("q")
 	if q != "" {
-		// Go uses a reference time (2006-01-02 15:04:05)
-		// "2006-01-02" = YYYY-MM-DD format
-		// Very weird...
 		query := &indexer.Query{Text: q}
 		for param, field := range map[string]*int64{"date_from": &query.DateFrom, "date_to": &query.DateTo} {
 			if v := c.Request.URL.Query().Get(param); v != "" {
@@ -283,7 +281,7 @@ func serveSearch(c *webContext) {
 			serve500(c)
 			return
 		}
-		c.Response.Header().Add("Content-Type", "application/xml")
+		c.Response.Header().Add("Content-Type", "application/json")
 		c.Response.Write(jr)
 		return
 	}
@@ -347,7 +345,7 @@ func doSearch(query *indexer.Query, cfg *config.Config) (*indexer.Results, error
 func serveAdd(c *webContext) {
 	m := c.Request.Method
 	if m == http.MethodGet {
-		c.Render("add", nil)
+		serve200(c)
 		return
 	}
 	if m != http.MethodPost {
@@ -395,7 +393,7 @@ func serveAdd(c *webContext) {
 	if jsonData {
 		return
 	}
-	c.Render("add", nil)
+	serve200(c)
 }
 
 func serveHistory(c *webContext) {
@@ -406,9 +404,7 @@ func serveHistory(c *webContext) {
 			serve500(c)
 			return
 		}
-		c.Render("history", tArgs{
-			"History": hs,
-		})
+		c.JSON(hs)
 		return
 	}
 	if m != http.MethodPost {
@@ -438,7 +434,24 @@ func serveHistory(c *webContext) {
 func serveRules(c *webContext) {
 	m := c.Request.Method
 	if m == http.MethodGet {
-		c.Render("rules", nil)
+		type rulesResponse struct {
+			Skip     []string          `json:"skip"`
+			Priority []string          `json:"priority"`
+			Aliases  map[string]string `json:"aliases"`
+		}
+		skip := c.Config.Rules.Skip.ReStrs
+		if skip == nil {
+			skip = []string{}
+		}
+		priority := c.Config.Rules.Priority.ReStrs
+		if priority == nil {
+			priority = []string{}
+		}
+		aliases := map[string]string(c.Config.Rules.Aliases)
+		if aliases == nil {
+			aliases = make(map[string]string)
+		}
+		c.JSON(rulesResponse{Skip: skip, Priority: priority, Aliases: aliases})
 		return
 	}
 	if m != http.MethodPost {
@@ -459,9 +472,7 @@ func serveRules(c *webContext) {
 		serve500(c)
 		return
 	}
-	c.Render("rules", tArgs{
-		"Success": "Rules saved",
-	})
+	serve200(c)
 }
 
 func serveGet(c *webContext) {
@@ -503,23 +514,53 @@ func serveReadable(c *webContext) {
 	})
 }
 
-func serveHelp(c *webContext) {
-	c.Render("help", nil)
-}
-
-func serveAbout(c *webContext) {
-	c.Render("about", nil)
-}
-
 func serveAPI(c *webContext) {
-	c.Render("api", tArgs{
-		"Endpoints": Endpoints,
-	})
+	type endpointArg struct {
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		Required    bool   `json:"required"`
+		Description string `json:"description"`
+	}
+	type endpointInfo struct {
+		Name         string         `json:"name"`
+		Path         string         `json:"path"`
+		Method       string         `json:"method"`
+		CSRFRequired bool           `json:"csrf_required"`
+		Description  string         `json:"description"`
+		Args         []*endpointArg `json:"args"`
+	}
+	var result []endpointInfo
+	for _, e := range Endpoints {
+		info := endpointInfo{
+			Name:         e.Name,
+			Path:         e.Path,
+			Method:       e.Method,
+			CSRFRequired: e.CSRFRequired,
+			Description:  e.Description,
+		}
+		for _, a := range e.Args {
+			info.Args = append(info.Args, &endpointArg{
+				Name:        a.Name,
+				Type:        a.Type,
+				Required:    a.Required,
+				Description: a.Description,
+			})
+		}
+		result = append(result, info)
+	}
+	c.JSON(result)
 }
 
 func serveOpensearch(c *webContext) {
-	c.Response.Header().Add("Content-Type", "application/xml")
-	c.Render("opensearch", nil)
+	baseURL := strings.TrimSuffix(c.Config.BaseURL("/"), "/")
+	xml := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Hister</ShortName>
+  <Description>Search your history with Hister</Description>
+  <Url type="text/html" template="%s/?q={searchTerms}"/>
+</OpenSearchDescription>`, baseURL)
+	c.Response.Header().Set("Content-Type", "application/xml")
+	c.Response.Write([]byte(xml))
 }
 
 func serveAddAlias(c *webContext) {
@@ -538,7 +579,7 @@ func serveAddAlias(c *webContext) {
 		serve500(c)
 		return
 	}
-	c.Redirect("/rules")
+	serve200(c)
 }
 
 func serveDeleteAlias(c *webContext) {
@@ -557,7 +598,7 @@ func serveDeleteAlias(c *webContext) {
 		log.Error().Err(err).Msg("failed to save rules")
 		serve500(c)
 	}
-	c.Redirect("/rules")
+	serve200(c)
 }
 
 func serveDeleteDocument(c *webContext) {
@@ -574,7 +615,7 @@ func serveDeleteDocument(c *webContext) {
 }
 
 func serveFavicon(c *webContext) {
-	i, err := static.FS.ReadFile("favicon.ico")
+	i, err := iofs.ReadFile(appSubFS, "favicon.ico")
 	if err != nil {
 		serve500(c)
 		return
@@ -584,7 +625,7 @@ func serveFavicon(c *webContext) {
 }
 
 func serveStatic(c *webContext) {
-	fs.ServeHTTP(c.Response, c.Request)
+	staticFileServer.ServeHTTP(c.Response, c.Request)
 }
 
 func serve200(c *webContext) {
@@ -599,36 +640,11 @@ func serve500(c *webContext) {
 	http.Error(c.Response, "Internal Server Error", http.StatusInternalServerError)
 }
 
-func (c *webContext) Render(tpl string, args tArgs) {
-	if args == nil {
-		args = make(tArgs)
-	}
-	args["Config"] = c.Config
-	args["Nonce"] = c.nonce
-	args["CSRF"] = c.csrf
-	t, ok := tpls[tpl]
-	if !ok {
-		log.Error().Str("template", tpl).Msg("template not found")
-		serve500(c)
-		return
-	}
-	base := "base"
-	if tpl == "opensearch" {
-		base = "opensearch.tpl"
-	}
-	err := t.ExecuteTemplate(c.Response, base, args)
-	if err != nil {
-		log.Error().Err(err).Msg("template render error")
-		serve500(c)
-		return
-	}
+func (c *webContext) JSON(o any) {
+	c.Response.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(c.Response).Encode(o)
 }
 
 func (c *webContext) Redirect(u string) {
 	http.Redirect(c.Response, c.Request, u, http.StatusFound)
-}
-
-func (c *webContext) JSON(o any) {
-	c.Response.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(c.Response).Encode(o)
 }

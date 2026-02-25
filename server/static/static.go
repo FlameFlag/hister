@@ -2,9 +2,6 @@ package static
 
 import "embed"
 
-//go:embed favicon.ico
-//go:embed js/dist/*.js
-//go:embed logo.png
-//go:embed style.css
-
+//go:embed app
+//go:embed app/_app
 var FS embed.FS

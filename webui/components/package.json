@@ -1,0 +1,12 @@
+{
+  "name": "@hister/components",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/lib/index.ts",
+    "./style.css": "./src/style.css"
+  },
+  "devDependencies": {
+    "svelte": "^5.53.5"
+  }
+}

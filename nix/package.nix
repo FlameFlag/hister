@@ -2,23 +2,26 @@
   lib,
   buildGoModule,
   buildNpmPackage,
+  importNpmLock,
   sqlite,
   pkg-config,
   histerRev ? "unknown",
 }:
 let
-  version = (builtins.fromJSON (builtins.readFile ../ext/package.json)).version;
+  version = (builtins.fromJSON (builtins.readFile ../webui/app/package.json)).version;
 
   frontend = buildNpmPackage {
     pname = "hister-frontend";
     inherit version;
-    src = ../server/static/js;
-    npmDepsHash = "sha256-BupgGlAhzanFyjv43terHsUUjmAxFniwMSBLFi8shC0=";
+    src = ../.;
+    npmWorkspace = "webui/app";
+    npmDeps = importNpmLock { npmRoot = ../.; };
+    npmConfigHook = importNpmLock.npmConfigHook;
     dontNpmBuild = false;
     installPhase = ''
       runHook preInstall
       mkdir -p $out
-      cp -r dist/* $out/
+      cp -r webui/app/build/* $out/
       runHook postInstall
     '';
   };
@@ -48,8 +51,8 @@ buildGoModule (finalAttrs: {
   tags = [ "libsqlite3" ];
 
   preBuild = ''
-    mkdir -p server/static/js/dist
-    cp -r ${frontend}/* server/static/js/dist/
+    mkdir -p server/static/app
+    cp -r ${frontend}/* server/static/app/
   '';
 
   ldflags = [
