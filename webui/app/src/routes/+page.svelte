@@ -365,6 +365,20 @@
     updateURL();
   });
 
+  $effect.pre(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const q = urlParams.get('q');
+    const df = urlParams.get('date_from');
+    const dt = urlParams.get('date_to');
+    const lastQuery = localStorage.getItem('lastQuery');
+    if (q) {
+      query = q;
+    }
+    if (df) dateFrom = df;
+    if (dt) dateTo = dt;
+
+  });
+
   $effect(() => {
     inputEl?.focus();
   });
@@ -381,19 +395,7 @@
     };
 
     showHotkeyButton = !appConfig.hotkeys['show_hotkeys'] || localStorage.getItem('hideHotkeyButton') !== 'true';
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const q = urlParams.get('q');
-    const df = urlParams.get('date_from');
-    const dt = urlParams.get('date_to');
-    const lastQuery = localStorage.getItem('lastQuery');
-    if (q) {
-      query = q;
-    } else if (lastQuery) {
-      query = lastQuery;
-    }
-    if (df) dateFrom = df;
-    if (dt) dateTo = dt;
+    focusSearchInput();
 
     connect();
     keyHandler = new KeyHandler(config.hotkeys, hotkeyActions);
