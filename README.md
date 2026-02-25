@@ -15,7 +15,7 @@ Hister is a web history management tool that provides blazing fast, content-base
 
 - **Privacy-focused**: Keep your browsing history indexed locally - don't use remote search engines if it isn't necessary
 - **Full-text indexing**: Search through the actual content of web pages you've visited
-- **Advanced search capabilities**: Utilize a powerful [query language](https://blevesearch.com/docs/Query-String-Query/) for precise results
+- **Advanced search capabilities**: Utilize a powerful [query language](https://hister.org/documentation/query-language/) for precise results
 - **Efficient retrieval**: Use keyword aliases to quickly find content
 - **Flexible content management**: Configure blacklist and priority rules for better control
 

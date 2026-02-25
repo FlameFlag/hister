@@ -122,7 +122,7 @@ Once set up:
 
 1. **Browse the web** with the extension installed - pages are automatically indexed
 2. **Search your history** by visiting the Hister web interface
-3. **Use advanced queries** with the [Bleve query syntax](https://blevesearch.com/docs/Query-String-Query/)
+3. **Use advanced queries** with our [query syntax](https://blevesearch.com/docs/Query-String-Query/)
 4. **Create keyword aliases** for frequently searched topics
 5. **Configure blacklists** to exclude unwanted content
 
