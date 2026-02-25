@@ -10,37 +10,37 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    if: github.repository == 'asciimoo/hister'
+    name: GoReleaser build
+    runs-on: ubuntu-latest
+    container:
+      image: goreleaser/goreleaser-cross:v1.25.5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v6.2.0
+        uses: actions/setup-go@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6.2.0
         with:
-          go-version: 'stable'
+          node-version: latest
 
-      - name: Install cross-compilers
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-x86-64-linux-gnu mingw-w64
-
+        # Mark the checkout as 'safe' despite being owned by `root`
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: git config --global --add safe.directory "$(pwd)"
 
-      # We use 'build --snapshot' because GoReleaser won't let us "release" without a valid SemVer tag
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v7.0.0
+        uses: goreleaser/goreleaser-action@master
         with:
-          distribution: goreleaser
           version: latest
-          args: build --clean ${{ matrix.os == 'ubuntu-latest' && '--id=build_cgo_unix --id=build_cgo_windows' || '--id=build_cgo_darwin' }}
+          args: release --clean
+          workdir: .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GORELEASER_TOKEN }}
 
       - name: Upload assets
         uses: actions/upload-artifact@v4

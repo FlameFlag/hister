@@ -1,27 +1,32 @@
 ---
 version: 2
 
-snapshot:
-  version_template: "latest"
-
 builds:
-  - id: build_cgo_unix
+  - id: build_cgo
     binary: hister
     env:
       - CGO_ENABLED=1
     goos:
       - linux
+      - windows
+      - darwin
     goarch:
       - amd64
       - arm64
     flags:
       - -tags=netgo,osusergo
+    ignore:
+      - goos: windows
+        goarch: arm64
     hooks:
       pre:
         - go generate ./...
-      post:
-        - mv "{{ .Path }}" "dist/{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ .Ext }}"
     overrides:
+      - goos: windows
+        goarch: amd64
+        env:
+          - CC=x86_64-w64-mingw32-gcc
+          - CGO_LDFLAGS=-lssp -static
       - goos: linux
         goarch: amd64
         env:
@@ -32,48 +37,14 @@ builds:
         env:
           - CC=aarch64-linux-gnu-gcc
           - CGO_LDFLAGS=-static
-
-  - id: build_cgo_windows
-    binary: hister
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - windows
-    goarch:
-      - amd64
-    flags:
-      - -tags=netgo,osusergo
-    hooks:
-      pre:
-        - go generate ./...
-      post:
-        - mv "{{ .Path }}" "dist/{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ .Ext }}"
-    overrides:
-      - goos: windows
+      - goos: darwin
         goarch: amd64
         env:
-          - CC=x86_64-w64-mingw32-gcc
-          - CGO_LDFLAGS=-lssp -static
-
-  - id: build_cgo_darwin
-    binary: hister
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    flags:
-      - -tags=netgo,osusergo
-    hooks:
-      pre:
-        - go generate ./...
-      post:
-        - mv "{{ .Path }}" "dist/{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ .Ext }}"
-
-release:
-  replace_existing_artifacts: true
+          - CC=o64-clang
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CC=oa64-clang
 
 archives:
   - formats: ["binary"]
