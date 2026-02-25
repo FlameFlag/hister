@@ -19,11 +19,23 @@ The server will start on `http://127.0.0.1:4433` and be accessible only from you
 
 ## Running on a Different Host
 
-If you want to access Hister from other devices on your network or run it on a server, you need to configure two settings:
+If you want to access Hister from other devices on your network or run it on a server, you need to configure two settings.
+
+### Generate Configuration File
+
+You can generate a default configuration file using the `create-config` command:
+
+```bash
+./hister create-config config.yml
+```
+
+If no filename is provided, it will print the default configuration to `stdout`.
+
+> **Note**: You can also configure Hister entirely using **Environment Variables**, which is often easier for server setups. See the [Configuration via Environment Variables](#configuration-via-environment-variables) section below for details.
 
 ### Bind to All Network Interfaces
 
-Create or edit your configuration file at `~/.config/hister/config.yml`:
+Edit your configuration file (e.g., `~/.config/hister/config.yml`):
 
 ```yaml
 server:
@@ -93,9 +105,36 @@ server:
   base_url: "https://hister.example.com"  # Your public URL
 ```
 
+## Configuration via Environment Variables
+
+Hister can be fully configured using environment variables. This is the **recommended approach for containerized environments** (Docker, Kubernetes, etc.) as it avoids the need to manage configuration files inside the container or mounted volumes.
+
+### Environment Variable Format
+
+All configuration options can be set using environment variables with the prefix `HISTER__`. Nested keys are separated by double underscores (`__`).
+
+| Variable | Description |
+| --- | --- |
+| `HISTER__SERVER__ADDRESS` | The address and port the server binds to (default: `127.0.0.1:4433`) |
+| `HISTER__SERVER__BASE_URL` | The external URL used to access Hister (e.g., `https://hister.example.com`) |
+| `HISTER__SERVER__DATABASE` | The filename of the SQLite database (default: `db.sqlite3`) |
+| `HISTER__APP__DIRECTORY` | The directory where Hister stores its data (shorthand: `HISTER_DATA_DIR`) |
+| `HISTER__APP__LOG_LEVEL` | Logging verbosity: `debug`, `info`, `warn`, `error` (default: `info`) |
+| `HISTER_PORT` | Shorthand to override only the port in `server.address` |
+
 ## Docker Setup
 
-Hister provides official Docker images for both AMD64 and ARM64 architectures.
+Hister provides official Docker images for both AMD64 and ARM64 architectures. Using environment variables is the preferred way to configure Hister in Docker.
+
+> **Note on Permissions**: The `latest` image runs as a **non-root user** (UID/GID 1000) by default for better security. Ensure the mounted volume (e.g., `./data`) has the correct permissions. If you need to run as root, use the `ghcr.io/asciimoo/hister:latest-root` image.
+
+### Generating Configuration via Docker
+
+If you prefer using a configuration file instead of environment variables, you can generate a default one using Docker:
+
+```bash
+docker run --rm ghcr.io/asciimoo/hister:latest create-config > config.yml
+```
 
 ### Basic Docker Compose
 
@@ -106,68 +145,50 @@ services:
   hister:
     image: ghcr.io/asciimoo/hister:latest
     container_name: hister
+    user: "1000:1000"
     restart: unless-stopped
     volumes:
-      - ./config:/hister/data
+      - ./data:/hister/data
     ports:
       - 4433:4433
 ```
 
 ### Docker Compose with External Access
 
-To make Hister accessible from other devices, you must create a configuration file:
-
-**Step 1**: Create `config/config.yml`:
-
-```yaml
-server:
-  address: "0.0.0.0:4433"
-  base_url: "http://192.168.1.100:4433"  # Use your actual IP/hostname
-```
-
-**Step 2**: Create `compose.yml`:
+To make Hister accessible from other devices, use the `environment` section in your `compose.yml`:
 
 ```yaml
 services:
   hister:
-    image: ghcr.io/asciimoo/hister:master-root
+    image: ghcr.io/asciimoo/hister:latest
     container_name: hister
+    user: "1000:1000"
     restart: unless-stopped
+    environment:
+      - HISTER__SERVER__ADDRESS=0.0.0.0:4433
+      - HISTER__SERVER__BASE_URL=http://192.168.1.100:4433 # Use your actual IP/hostname
     volumes:
-      - ./config:/hister/data
+      - ./data:/hister/data
     ports:
       - 4433:4433
 ```
 
-**Step 3**: Start the container:
-
-```bash
-docker compose up -d
-```
-
 ### Docker Compose Behind Reverse Proxy
 
-When running behind a reverse proxy:
-
-**config/config.yml**:
-
-```yaml
-server:
-  address: "0.0.0.0:4433"
-  base_url: "https://hister.example.com"  # Your public URL
-```
-
-**compose.yml**:
+When running behind a reverse proxy, set the `base_url` to your public domain:
 
 ```yaml
 services:
   hister:
-    image: ghcr.io/asciimoo/hister:master-root
+    image: ghcr.io/asciimoo/hister:latest
     container_name: hister
+    user: "1000:1000"
     restart: unless-stopped
+    environment:
+      - HISTER__SERVER__ADDRESS=0.0.0.0:4433
+      - HISTER__SERVER__BASE_URL=https://hister.example.com # Your public URL
     volumes:
-      - ./config:/hister/data
+      - ./data:/hister/data
     ports:
-      - 4433:4433  # Expose only to localhost if proxy is on same host
-      # Or use a Docker network and don't expose ports externally
+      - 4433:4433
 ```
