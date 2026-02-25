@@ -126,6 +126,8 @@ All configuration options can be set using environment variables with the prefix
 
 Hister provides official Docker images for both AMD64 and ARM64 architectures. Using environment variables is the preferred way to configure Hister in Docker.
 
+> **Note on Permissions**: The `latest` image runs as a **non-root user** (UID/GID 1000) by default for better security. Ensure the mounted volume (e.g., `./data`) has the correct permissions. If you need to run as root, use the `ghcr.io/asciimoo/hister:latest-root` image.
+
 ### Generating Configuration via Docker
 
 If you prefer using a configuration file instead of environment variables, you can generate a default one using Docker:
@@ -143,6 +145,7 @@ services:
   hister:
     image: ghcr.io/asciimoo/hister:latest
     container_name: hister
+    user: "1000:1000"
     restart: unless-stopped
     volumes:
       - ./data:/hister/data
@@ -159,6 +162,7 @@ services:
   hister:
     image: ghcr.io/asciimoo/hister:latest
     container_name: hister
+    user: "1000:1000"
     restart: unless-stopped
     environment:
       - HISTER__SERVER__ADDRESS=0.0.0.0:4433
@@ -178,6 +182,7 @@ services:
   hister:
     image: ghcr.io/asciimoo/hister:latest
     container_name: hister
+    user: "1000:1000"
     restart: unless-stopped
     environment:
       - HISTER__SERVER__ADDRESS=0.0.0.0:4433
