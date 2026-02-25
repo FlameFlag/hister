@@ -291,7 +291,7 @@ func (d *Document) Process() error {
 	if err := d.extractHTML(); err != nil {
 		return err
 	}
-	d.Title = sanitizer.Sanitize(d.Title)
+	d.Title = strings.ReplaceAll(sanitizer.Sanitize(d.Title), "&#34;", `"`)
 	d.processed = true
 	return nil
 }
