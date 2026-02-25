@@ -73,6 +73,15 @@ header {
     color: #fafaff;
 }
 
+table {
+    width: 100%;
+    border-collapse: collapse;
+    td, th {
+        padding: 0.4em;
+        border: 1px solid #aaa;
+    }
+}
+
 .title {
     img {
         padding-top: 0.2em;
