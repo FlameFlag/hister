@@ -163,7 +163,6 @@ var indexCmd = &cobra.Command{
 	Long:  "Index one or more URLs",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		setStrArg(cmd, "server-url", &cfg.Server.BaseURL)
 		for _, u := range args {
 			if err := indexURL(u); err != nil {
 				exit(1, "Failed to index URL: "+err.Error())
@@ -236,9 +235,11 @@ func exit(errno int, msg string) {
 }
 
 func init() {
+	dcfg := config.CreateDefaultConfig()
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "config.yml", "config file (default paths: ./config.yml or $HOME/.histerrc or $HOME/.config/hister/config.yml)")
 	rootCmd.PersistentFlags().StringP("log-level", "l", "info", "set log level (possible options: error, warning, info, debug, trace)")
-	rootCmd.PersistentFlags().StringP("search-url", "s", "https://google.com/search?q={query}", "set default search engine url")
+	rootCmd.PersistentFlags().StringP("search-url", "s", dcfg.App.SearchURL, "set default search engine url")
+	rootCmd.PersistentFlags().StringP("server-url", "u", dcfg.Server.BaseURL, "hister server URL")
 
 	rootCmd.AddCommand(listenCmd)
 	rootCmd.AddCommand(createConfigCmd)
@@ -249,9 +250,7 @@ func init() {
 	rootCmd.AddCommand(reindexCmd)
 	rootCmd.AddCommand(deleteCmd)
 
-	dcfg := config.CreateDefaultConfig()
 	listenCmd.Flags().StringP("address", "a", dcfg.Server.Address, "Listen address")
-	indexCmd.Flags().StringP("server-url", "u", dcfg.Server.BaseURL, "hister server URL")
 
 	importCmd.Flags().IntP("min-visit", "m", 1, "only import URLs that were opened at least 'min-visit' times")
 
@@ -303,8 +302,11 @@ func initConfig() {
 	if v, _ := rootCmd.PersistentFlags().GetString("log-level"); v != "" && (rootCmd.Flags().Changed("log-level") || cfg.App.LogLevel == "") {
 		cfg.App.LogLevel = v
 	}
-	if v, _ := rootCmd.PersistentFlags().GetString("search-url"); v != "" && (rootCmd.Flags().Changed("log-level") || cfg.App.SearchURL == "") {
+	if v, _ := rootCmd.PersistentFlags().GetString("search-url"); v != "" && (rootCmd.Flags().Changed("search-url") || cfg.App.SearchURL == "") {
 		cfg.App.SearchURL = v
+	}
+	if v, _ := rootCmd.PersistentFlags().GetString("server-url"); v != "" && (rootCmd.Flags().Changed("server-url") || cfg.App.SearchURL == "") {
+		cfg.Server.BaseURL = v
 	}
 }
 
