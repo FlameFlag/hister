@@ -77,6 +77,9 @@ var (
 	ErrSensitiveContent          = errors.New("document contains sensitive data")
 	sensitiveContentRe  *regexp.Regexp
 	sanitizer           *bluemonday.Policy
+	bleveConfig         map[string]any = map[string]any{
+		"bolt_timeout": "2s",
+	}
 )
 
 func Init(cfg *config.Config) error {
@@ -85,8 +88,11 @@ func Init(cfg *config.Config) error {
 		sp = append(sp, v)
 	}
 	sensitiveContentRe = regexp.MustCompile(fmt.Sprintf("(%s)", strings.Join(sp, "|")))
-	idx, err := bleve.Open(cfg.IndexPath())
+	idx, err := bleve.OpenUsing(cfg.IndexPath(), bleveConfig)
 	if err != nil {
+		if err.Error() == "timeout" {
+			return errors.New("cannot open index: index is already opened - close other Hister instances and try again")
+		}
 		mapping := createMapping()
 		idx, err = bleve.New(cfg.IndexPath(), mapping)
 		if err != nil {
@@ -106,7 +112,7 @@ func init() {
 }
 
 func Reindex(idxPath, tmpIdxPath string, rules *config.Rules, skipSensitiveChecks bool) error {
-	idx, err := bleve.Open(idxPath)
+	idx, err := bleve.OpenUsing(idxPath, bleveConfig)
 	if err != nil {
 		return err
 	}

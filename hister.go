@@ -208,7 +208,7 @@ var reindexCmd = &cobra.Command{
 	Short: "Reindex",
 	Long:  `Recreate index - server should be stopped`,
 	PreRun: func(_ *cobra.Command, _ []string) {
-		initDB()
+		initIndex()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		skipSensitive := false
@@ -217,7 +217,7 @@ var reindexCmd = &cobra.Command{
 		}
 		err := indexer.Reindex(cfg.IndexPath(), cfg.FullPath("tmp_index.db"), cfg.Rules, skipSensitive)
 		if err != nil {
-			exit(1, err.Error())
+			exit(1, "Indexer error: "+err.Error())
 		}
 		if err := model.SetIndexerVersion(indexer.Version); err != nil {
 			exit(1, "Failed to update indexer version: "+err.Error())
@@ -345,7 +345,7 @@ func initDB() {
 func initIndex() {
 	initDB()
 	if err := indexer.Init(cfg); err != nil {
-		exit(1, err.Error())
+		exit(1, "Indexer initialization error: "+err.Error())
 	}
 	v, err := model.GetIndexerVersion()
 	if err != nil {
