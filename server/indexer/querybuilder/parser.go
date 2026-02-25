@@ -33,6 +33,23 @@ func New(input string) *Lexer {
 	return l
 }
 
+func (t Token) String() string {
+	var tn string
+	switch t.Type {
+	case TokenWord:
+		tn = "Word"
+	case TokenQuoted:
+		tn = "Quoted"
+	case TokenAlternation:
+		tn = "Alternation"
+	case TokenEOF:
+		tn = "EOF"
+	default:
+		tn = "Unknown"
+	}
+	return fmt.Sprintf("[%s: %s (%q)]", tn, t.Value, t.Parts)
+}
+
 func (l *Lexer) readChar() {
 	if l.pos >= len(l.input) {
 		l.char = 0
@@ -171,21 +188,29 @@ func parseAlternationParts(value string) ([]Token, error) {
 
 func (l *Lexer) readWord() (Token, error) {
 	var builder strings.Builder
+	tt := TokenWord
 
 	quote := false
+	escaped := false
 	for (quote || !unicode.IsSpace(l.char)) && l.char != 0 {
-		if l.char == '"' {
+		skip := false
+		if l.char == '"' && !escaped {
+			tt = TokenQuoted
+			skip = true
 			quote = !quote
 		}
-		builder.WriteRune(l.char)
+		if l.char == '\\' && !escaped {
+			escaped = true
+		} else {
+			escaped = false
+			if !skip {
+				builder.WriteRune(l.char)
+			}
+		}
 		l.readChar()
 	}
 
-	return Token{Type: TokenWord, Value: builder.String()}, nil
-}
-
-func (t Token) String() {
-	fmt.Printf("%d %s: %v\n", t.Type, t.Value, t.Parts)
+	return Token{Type: tt, Value: builder.String()}, nil
 }
 
 func Tokenize(input string) ([]Token, error) {
