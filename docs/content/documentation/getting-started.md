@@ -279,14 +279,6 @@ services.hister = {
       address = "127.0.0.1:4433";
       database = "db.sqlite3";
     };
-    hotkeys = {
-      "/" = "focus_search_input";
-      "enter" = "open_result";
-      "alt+enter" = "open_result_in_new_tab";
-      "alt+j" = "select_next_result";
-      "alt+k" = "select_previous_result";
-      "alt+o" = "open_query_in_search_engine";
-    };
   };
 };
 ```
