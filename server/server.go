@@ -104,7 +104,10 @@ func Listen(cfg *config.Config) {
 	handler = withLogging(handler)
 
 	log.Info().Str("Address", cfg.Server.Address).Str("URL", cfg.BaseURL("/")).Msg("Starting webserver")
-	http.ListenAndServe(cfg.Server.Address, handler)
+	err := http.ListenAndServe(cfg.Server.Address, handler)
+	if err != nil {
+		log.Error().Err(err).Msg("Webserver failed to listen on " + cfg.Server.Address)
+	}
 }
 
 func registerEndpoints(cfg *config.Config) http.Handler {
