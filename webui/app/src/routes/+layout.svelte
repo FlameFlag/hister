@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
+  import "../style.css";
 
   let { children } = $props();
 
