@@ -263,7 +263,7 @@ export function apiRequest(options: APIRequestOptions): void {
     body: options.params?.body as BodyInit,
   };
 
-  fetch(options.url, params).then((r) => {
+  fetch("/api"+options.url, params).then((r) => {
     const newToken = r.headers.get("X-CSRF-Token");
     if (newToken && options.csrfToken !== undefined) {
       options.csrfCallback?.(newToken);

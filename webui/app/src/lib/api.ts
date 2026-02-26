@@ -35,7 +35,7 @@ export async function apiFetch(
   if (_csrf && options.method && options.method.toUpperCase() !== 'GET') {
     headers['X-CSRF-Token'] = _csrf;
   }
-  const res = await fetch(url, { ...options, headers });
+  const res = await fetch("/api"+url, { ...options, headers });
   const newTok = res.headers.get('X-CSRF-Token');
   if (newTok) _csrf = newTok;
   return res;

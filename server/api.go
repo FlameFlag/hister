@@ -64,14 +64,24 @@ func init() {
 			Handler:      serveSearch,
 			Description:  "Search websocket endpoint",
 		},
+		// tmp added for backward compatibility
 		&Endpoint{
 			Name:         "Add",
-			Path:         "/add",
+			Path:         "/api/add",
 			Method:       GET,
 			CSRFRequired: true,
 			Handler:      serveAdd,
 			Description:  "Add document form",
 		},
+		&Endpoint{
+			Name:         "Add post",
+			Path:         "/api/add",
+			Method:       POST,
+			CSRFRequired: true,
+			Handler:      serveAdd,
+			Description:  "Save added document",
+		},
+		// alias for /api/add - backward compatibility - use /api/add in the future
 		&Endpoint{
 			Name:         "Add post",
 			Path:         "/add",
@@ -82,7 +92,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "Get document",
-			Path:         "/document",
+			Path:         "/api/document",
 			Method:       GET,
 			CSRFRequired: false,
 			Handler:      serveGet,
@@ -98,7 +108,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "Rules",
-			Path:         "/rules",
+			Path:         "/api/rules",
 			Method:       GET,
 			CSRFRequired: true,
 			Handler:      serveRules,
@@ -106,7 +116,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "Save rules",
-			Path:         "/rules",
+			Path:         "/api/rules",
 			Method:       POST,
 			CSRFRequired: true,
 			Handler:      serveRules,
@@ -114,7 +124,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "History",
-			Path:         "/history",
+			Path:         "/api/history",
 			Method:       GET,
 			CSRFRequired: true,
 			Handler:      serveHistory,
@@ -122,7 +132,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "Add history item",
-			Path:         "/history",
+			Path:         "/api/history",
 			Method:       POST,
 			CSRFRequired: true,
 			Handler:      serveHistory,
@@ -130,7 +140,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "Delete",
-			Path:         "/delete",
+			Path:         "/api/delete",
 			Method:       POST,
 			CSRFRequired: true,
 			Handler:      serveDeleteDocument,
@@ -138,7 +148,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "Delete alias",
-			Path:         "/delete_alias",
+			Path:         "/api/delete_alias",
 			Method:       POST,
 			CSRFRequired: true,
 			Handler:      serveDeleteAlias,
@@ -146,7 +156,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "Add alias",
-			Path:         "/add_alias",
+			Path:         "/api/add_alias",
 			Method:       POST,
 			CSRFRequired: true,
 			Handler:      serveAddAlias,
@@ -154,7 +164,7 @@ func init() {
 		},
 		&Endpoint{
 			Name:         "Readable",
-			Path:         "/readable",
+			Path:         "/api/readable",
 			Method:       GET,
 			CSRFRequired: false,
 			Handler:      serveReadable,
