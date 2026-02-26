@@ -415,7 +415,7 @@
       <!-- svelte-ignore a11y_missing_attribute -->
       <a class="popup-close" role="button" aria-label="Close" tabindex="0" onclick={closePopup} onkeydown={(e) => handleButtonKeydown(e, closePopup)}>x</a>
     </div>
-    <div class="popup-header">{@html popupTitle}</div>
+    <div class="popup-header">{popupTitle}</div>
     <div class="popup-content">{@html popupContent}</div>
   </div>
 </div>
