@@ -203,9 +203,6 @@ func withLogging(h http.Handler) http.Handler {
 // serveSPA serves the SPA index.html for any route not matching a static file.
 func serveSPA(c *webContext) {
 	path := strings.TrimPrefix(c.Request.URL.Path, "/")
-	if path == "" {
-		path = "index.html"
-	}
 	// If the exact file exists in the embedded app FS, serve it directly
 	if _, err := iofs.Stat(appSubFS, path); err == nil {
 		// Read the file and serve it with proper MIME type
@@ -226,6 +223,41 @@ func serveSPA(c *webContext) {
 		c.Response.Write(content)
 		return
 	}
+
+	// redirect to configured search engine if the query starts or ends with "!!"
+	q := c.Request.URL.Query().Get("q")
+	if strings.HasPrefix(q, "!!") || strings.HasSuffix(q, "!!") {
+		if strings.HasPrefix(q, "!!") {
+			q = q[2:]
+		} else if strings.HasSuffix(q, "!!") {
+			q = q[:len(q)-2]
+		}
+		c.Redirect(strings.Replace(c.Config.App.SearchURL, "{query}", strings.TrimSpace(q), 1))
+		return
+	}
+
+	// redirect to configured search engine if query string exists but we have no matching results
+	if q != "" {
+		res, err := indexer.Search(c.Config, &indexer.Query{
+			Text: c.Config.Rules.ResolveAliases(q),
+		})
+		if err != nil {
+			res = &indexer.Results{}
+		}
+		hr, err := model.GetURLsByQuery(q)
+		if err == nil && len(hr) > 0 {
+			res.History = hr
+		}
+		if err != nil {
+			serve500(c)
+			return
+		}
+		if len(res.Documents) == 0 && len(hr) == 0 {
+			c.Redirect(strings.Replace(c.Config.App.SearchURL, "{query}", q, 1))
+			return
+		}
+	}
+
 	// Otherwise serve index.html for client-side routing
 	content, err := iofs.ReadFile(appSubFS, "index.html")
 	if err != nil {
