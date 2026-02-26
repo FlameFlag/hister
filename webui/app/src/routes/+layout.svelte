@@ -19,7 +19,7 @@
   }
 </script>
 
-<header>
+<header class="shadow-xl">
   <h1 class="menu-item">
     <img src="/static/logo.png" alt="Hister logo" />
     <a href="/">Hister</a>

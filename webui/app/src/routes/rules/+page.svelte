@@ -110,7 +110,7 @@
     <p>Loading...</p>
   {:else}
     <form onsubmit={saveRules}>
-      <h2>Skip Rules</h2>
+      <h2 class="text-xl3">Skip Rules</h2>
       <p>Define regexps to forbid indexing matching URLs</p>
       <textarea
         placeholder="Text..."
@@ -120,7 +120,7 @@
         oninput={(e) => { rules.skip = (e.target as HTMLTextAreaElement).value.split('\n').filter(Boolean); }}
       >{rules.skip.join('\n')}</textarea>
       <br />
-      <h2>Priority Rules</h2>
+      <h2 class="text-xl3">Priority Rules</h2>
       <p>Define regexps to prioritize matching URLs</p>
       <textarea
         placeholder="Text..."
@@ -133,7 +133,7 @@
       <input type="submit" value={saving ? 'Saving...' : 'Save'} disabled={saving} class="mt-1" />
     </form>
 
-    <h2>Search Keyword Aliases</h2>
+    <h2 class="text-xl3">Search Keyword Aliases</h2>
     <p>Define aliases to simplify queries. Alias strings in queries are automatically replaced with the provided value.</p>
 
     {#if Object.keys(rules.aliases).length > 0}

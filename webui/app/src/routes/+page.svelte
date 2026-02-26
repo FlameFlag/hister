@@ -410,7 +410,7 @@
 
 {#if showPopup}
 <div class="popup-wrapper" role="presentation" aria-hidden="true" onclick={(e) => { if (!(e.target as Element).closest('.popup')) closePopup(); }}>
-  <div class="popup container">
+  <div class="popup container bg-dark">
     <div class="float-right">
       <!-- svelte-ignore a11y_missing_attribute -->
       <a class="popup-close" role="button" aria-label="Close" tabindex="0" onclick={closePopup} onkeydown={(e) => handleButtonKeydown(e, closePopup)}>x</a>
@@ -423,8 +423,8 @@
 
 <div class="sticky">
   <div class="search text-center">
-    <input type="text" id="search" bind:this={inputEl} bind:value={query} placeholder="Search..." />
-    <input type="text" disabled id="autocomplete" value={autocomplete || ''} />
+    <input type="text" class="border-2 border-grey rounded-xl" id="search" bind:this={inputEl} bind:value={query} placeholder="Search..." />
+    <input type="text" class="bg-dark border-2 border-dark text-semilight shadow-xl" disabled id="autocomplete" value={autocomplete || ''} />
     <div id="ws-status" class="ws-status" class:connected={connected} title={connected ? 'Websocket connected' : 'Websocket disconnected'}></div>
   </div>
 </div>
@@ -467,8 +467,8 @@
 <div class="container" bind:this={resultsEl} id="results">
   {#if !lastResults?.documents?.length && !lastResults?.history?.length}
     {#if !query}
-      <div class="text-center">
-        <h3>Tip</h3>
+      <div class="text-center border-grey border-2 bg-semidark p-12 rounded-xl">
+        <h3 class="text-2xl font-bold">Tip</h3>
         <p>{@html tips[Math.floor(Math.random() * tips.length)]}</p>
       </div>
     {:else}
