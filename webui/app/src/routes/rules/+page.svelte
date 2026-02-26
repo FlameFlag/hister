@@ -117,7 +117,6 @@
         placeholder="Text..."
         name="skip"
         class="full-width"
-        bind:value={rules.skip}
         oninput={(e) => { rules.skip = (e.target as HTMLTextAreaElement).value.split('\n').filter(Boolean); }}
       >{rules.skip.join('\n')}</textarea>
       <br />
@@ -127,7 +126,6 @@
         placeholder="Text..."
         name="priority"
         class="full-width"
-        bind:value={rules.priority}
         oninput={(e) => { rules.priority = (e.target as HTMLTextAreaElement).value.split('\n').filter(Boolean); }}
       >{rules.priority.join('\n')}</textarea>
       <br />
