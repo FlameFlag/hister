@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fetchConfig, apiFetch } from '$lib/api';
+  import { Button } from "@hister/components";
 
   interface RulesData {
     skip: string[];
@@ -147,7 +148,7 @@
               <td>{k}</td>
               <td>{v}</td>
               <td>
-                <button onclick={() => deleteAlias(k)}>Delete</button>
+                <Button onclick={() => deleteAlias(k)}>Delete</Button>
               </td>
             </tr>
           {/each}
