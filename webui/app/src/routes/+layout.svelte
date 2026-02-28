@@ -32,7 +32,7 @@
 <header class="h-16 px-6 bg-page-bg border-b-[2px] border-border-brand flex items-center justify-between shadow-[4px_4px_0px_var(--hister-indigo)]">
   <h1 class="flex items-center gap-2">
     <img src="/static/logo.png" alt="Hister logo" class="h-8 w-8" />
-    <a href="/" class="font-outfit text-xl font-extrabold text-text-brand no-underline hover:underline">
+    <a data-sveltekit-reload href="/" class="font-outfit text-xl font-extrabold text-text-brand no-underline hover:underline">
       Hister
     </a>
   </h1>
