@@ -19,7 +19,7 @@
   } from '$lib/search';
   import { fetchConfig, apiFetch } from '$lib/api';
   import type { SearchResults } from '$lib/search';
-  import { animate, stagger } from 'animejs';
+  import { animate } from 'animejs';
   import { Input } from '@hister/components/ui/input';
   import { Button } from '@hister/components/ui/button';
   import { Badge } from '@hister/components/ui/badge';
