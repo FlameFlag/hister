@@ -5,6 +5,8 @@
 
   let { children } = $props();
 
+  const isBeta = $derived($page.url.pathname.startsWith('/beta'));
+
   onMount(() => {
     const theme = localStorage.getItem('theme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -19,6 +21,9 @@
   }
 </script>
 
+{#if isBeta}
+  {@render children()}
+{:else}
 <header class="shadow-xl">
   <h1 class="menu-item">
     <img src="/static/logo.png" alt="Hister logo" />
@@ -27,6 +32,7 @@
   <a class="menu-item" class:active={$page.url.pathname === '/history'} href="/history">History</a>
   <a class="menu-item" class:active={$page.url.pathname === '/rules'} href="/rules">Rules</a>
   <a class="menu-item" class:active={$page.url.pathname === '/add'} href="/add">Add</a>
+  <a href="/beta" class="menu-item" style="background: #8080c0; color: white; padding: 0.3em 0.8em; font-size: 0.8em; border: 2px solid #d0d0d0; vertical-align: middle;">Try Beta</a>
   <button id="theme-toggle" class="theme-toggle float-right" title="Toggle theme" onclick={toggleTheme}>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="5"/>
@@ -52,3 +58,4 @@
   <a href="/api">API</a> |
   <a href="https://github.com/asciimoo/hister/">GitHub</a>
 </footer>
+{/if}
