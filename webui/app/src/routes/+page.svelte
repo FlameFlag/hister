@@ -19,14 +19,14 @@
   } from '$lib/search';
   import { fetchConfig, apiFetch } from '$lib/api';
   import type { SearchResults } from '$lib/search';
-  import { animate, createTimeline, stagger } from 'animejs';
+  import { animate, stagger } from 'animejs';
   import { Input } from '@hister/components/ui/input';
   import { Button } from '@hister/components/ui/button';
   import { Badge } from '@hister/components/ui/badge';
   import { Separator } from '@hister/components/ui/separator';
   import {
     Search, Star, Globe, MoreVertical, Eye, Trash2,
-    Pin, PinOff, Download, ExternalLink,
+    Pin, PinOff, Download, ExternalLink, History, Shield, Link2,
     Keyboard, HelpCircle, X
   } from 'lucide-svelte';
 
@@ -35,6 +35,13 @@
     searchUrl: string;
     openResultsOnNewTab: boolean;
     hotkeys: Record<string, string>;
+  }
+
+  interface HistoryItem {
+    query: string;
+    url: string;
+    title: string;
+    favicon?: string;
   }
 
   let config: Config = $state({
@@ -46,7 +53,7 @@
 
   let wsManager: WebSocketManager | undefined;
   let keyHandler: KeyHandler | undefined;
-  let inputEl: HTMLInputElement | undefined;
+  let inputEl: HTMLInputElement | undefined = $state();
 
   let query = $state('');
   let autocomplete = $state('');
@@ -66,14 +73,39 @@
 
   let showHelp = $state(false);
 
-  let heroTitleEl: HTMLElement | undefined;
-  let searchBoxEl: HTMLElement | undefined;
-  let hintEl: HTMLElement | undefined;
-  let kbdEl: HTMLElement | undefined;
-  let underlineEl: HTMLElement | undefined;
-  let gridContainerEl: HTMLElement | undefined;
+  let contextMenuSearch: string | null = $state(null);
+  let contextMenuPos = $state({ x: 0, y: 0 });
+
+  let recentSearches: string[] = $state([]);
+  let rulesCount = $state(0);
+  let aliasesCount = $state(0);
+  let historyCount = $state(0);
+
+  let displayHistoryCount = $state(0);
+  let displayRulesCount = $state(0);
+  let displayAliasesCount = $state(0);
+
+  let heroTitleEl: HTMLElement | undefined = $state();
+  let searchBoxEl: HTMLElement | undefined = $state();
+  let hintEl: HTMLElement | undefined = $state();
+  let chipsContainerEl: HTMLElement | undefined = $state();
+  let statsRowEl: HTMLElement | undefined = $state();
+  let kbdEl: HTMLElement | undefined = $state();
+  let underlineEl: HTMLElement | undefined = $state();
 
   let animationHandles: any[] = [];
+
+  const resultColors = [
+    'hister-indigo', 'hister-teal', 'hister-coral', 'hister-amber',
+    'hister-rose', 'hister-cyan', 'hister-lime'
+  ];
+
+  const chipColors = [
+    { border: 'border-hister-indigo', bg: 'bg-hister-indigo/10', text: 'text-hister-indigo' },
+    { border: 'border-hister-teal', bg: 'bg-hister-teal/10', text: 'text-hister-teal' },
+    { border: 'border-hister-coral', bg: 'bg-hister-coral/10', text: 'text-hister-coral' },
+    { border: 'border-hister-amber', bg: 'bg-hister-amber/10', text: 'text-hister-amber' },
+  ];
 
   const hotkeyActions: Record<string, (e?: KeyboardEvent) => void> = {
     'open_result': openSelectedResult,
@@ -259,15 +291,82 @@
     if (keyHandler?.handle(e)) { e.preventDefault(); return; }
     if (e.key === 'Escape') {
       if (showHelp) { showHelp = false; e.preventDefault(); return; }
+      if (contextMenuSearch) { contextMenuSearch = null; e.preventDefault(); return; }
       if (closePopup()) { e.preventDefault(); return; }
     }
     showActionsForResult = null;
+    contextMenuSearch = null;
+  }
+
+  function getResultColor(idx: number): string {
+    return resultColors[idx % resultColors.length];
+  }
+
+  function clickChip(q: string) {
+    query = q;
+    inputEl?.focus();
+  }
+
+  function deleteRecentSearch(q: string) {
+    recentSearches = recentSearches.filter(s => s !== q);
+    localStorage.setItem('deletedSearches', JSON.stringify(
+      [...JSON.parse(localStorage.getItem('deletedSearches') || '[]'), q]
+    ));
+    contextMenuSearch = null;
+  }
+
+  function deleteAllRecentSearches() {
+    localStorage.setItem('deletedSearches', JSON.stringify(
+      [...JSON.parse(localStorage.getItem('deletedSearches') || '[]'), ...recentSearches]
+    ));
+    recentSearches = [];
+  }
+
+  function showChipContextMenu(e: MouseEvent, q: string) {
+    e.preventDefault();
+    contextMenuSearch = q;
+    contextMenuPos = { x: e.clientX, y: e.clientY };
   }
 
   function getFaviconSrc(favicon: string | undefined, url: string): string | null {
     if (favicon) return favicon;
     return null;
   }
+
+  async function loadHomeStats() {
+    try {
+      const [historyRes, rulesRes] = await Promise.all([
+        apiFetch('/history', { headers: { 'Accept': 'application/json' } }),
+        apiFetch('/rules', { headers: { 'Accept': 'application/json' } })
+      ]);
+
+      if (historyRes.ok) {
+        const items: HistoryItem[] = await historyRes.json();
+        historyCount = items.length;
+        const seen = new Set<string>();
+        for (const item of items) {
+          if (item.query && !seen.has(item.query)) {
+            seen.add(item.query);
+            if (seen.size >= 4) break;
+          }
+        }
+        const deletedSearches: string[] = JSON.parse(localStorage.getItem('deletedSearches') || '[]');
+        recentSearches = [...seen].filter(q => !deletedSearches.includes(q));
+      }
+
+      if (rulesRes.ok) {
+        const rules = await rulesRes.json();
+        rulesCount = (rules.skip?.length || 0) + (rules.priority?.length || 0);
+        aliasesCount = Object.keys(rules.aliases || {}).length;
+      }
+
+      statsLoaded = true;
+    } catch {
+      statsLoaded = true;
+    }
+  }
+
+  let statsLoaded = $state(false);
 
   function startHeroAnimations() {
     cleanupAnimations();
@@ -306,46 +405,24 @@
         })
       );
     }
+  }
 
-    if (gridContainerEl) {
-      const hLines = gridContainerEl.querySelectorAll('.grid-h');
-      const vLines = gridContainerEl.querySelectorAll('.grid-v');
-      const allLines = [...hLines, ...vLines];
-
-      if (allLines.length > 0) {
-        animationHandles.push(
-          animate(allLines, {
-            opacity: [0.07, 0.18, 0.07],
-            duration: 6000,
-            ease: 'inOutSine',
-            loop: true,
-            delay: stagger(300)
-          })
-        );
-      }
-
-      function triggerWave() {
-        if (!gridContainerEl) return;
-        const isHorizontal = Math.random() > 0.5;
-        const lines = [...gridContainerEl.querySelectorAll(isHorizontal ? '.grid-h' : '.grid-v')] as HTMLElement[];
-        if (lines.length === 0) return;
-        const startIdx = Math.floor(Math.random() * lines.length);
-        const waveLines = lines.slice(Math.max(0, startIdx - 2), startIdx + 3);
-        animate(waveLines, {
-          opacity: [0.08, 0.35, 0.08],
-          duration: 1200,
-          ease: 'inOutSine',
-          delay: stagger(120)
-        });
-      }
-
-      const waveInterval = setInterval(() => {
-        if (!gridContainerEl) { clearInterval(waveInterval); return; }
-        triggerWave();
-      }, 4000 + Math.random() * 2000);
-
-      animationHandles.push({ revert: () => clearInterval(waveInterval) });
-    }
+  function animateCounters() {
+    const counterObj = { h: displayHistoryCount, r: displayRulesCount, a: displayAliasesCount };
+    animationHandles.push(
+      animate(counterObj, {
+        h: historyCount,
+        r: rulesCount,
+        a: aliasesCount,
+        duration: 800,
+        ease: 'outCubic',
+        onRender: () => {
+          displayHistoryCount = Math.round(counterObj.h);
+          displayRulesCount = Math.round(counterObj.r);
+          displayAliasesCount = Math.round(counterObj.a);
+        }
+      })
+    );
   }
 
   function cleanupAnimations() {
@@ -360,6 +437,12 @@
       tick().then(() => startHeroAnimations());
     }
     return () => cleanupAnimations();
+  });
+
+  $effect(() => {
+    if (statsLoaded && !isSearching) {
+      tick().then(() => animateCounters());
+    }
   });
 
   $effect(() => {
@@ -392,6 +475,7 @@
       inputEl?.focus();
       connect();
       keyHandler = new KeyHandler(config.hotkeys, hotkeyActions);
+      loadHomeStats();
     })();
     return () => { wsManager?.close(); cleanupAnimations(); };
   });
@@ -419,7 +503,7 @@
       <div class="border-b-[3px] border-border-brand-muted pb-4 mb-4">
         <h2 class="font-outfit font-bold text-lg text-text-brand pr-6">{popupTitle}</h2>
       </div>
-      <div class="font-inter text-text-brand-secondary prose max-w-none">{@html popupContent}</div>
+      <div class="font-inter text-sm text-text-brand-secondary prose max-w-none">{@html popupContent}</div>
     </div>
   </div>
 {/if}
@@ -668,24 +752,10 @@
   </div>
 {:else}
   <div class="flex-1 flex flex-col items-center justify-center gap-10 py-12 px-12 overflow-y-auto relative">
-    <div bind:this={gridContainerEl} class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
-      <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-        {#each Array(12) as _, i}
-          <line class="grid-h" x1="0" y1="{(i + 1) * 8.33}%" x2="100%" y2="{(i + 1) * 8.33}%"
-            stroke="var(--hister-indigo)" stroke-width="0.5" opacity="0.08" />
-        {/each}
-        {#each Array(16) as _, i}
-          <line class="grid-v" x1="{(i + 1) * 6.25}%" y1="0" x2="{(i + 1) * 6.25}%" y2="100%"
-            stroke="var(--hister-indigo)" stroke-width="0.5" opacity="0.08" />
-        {/each}
-        <line class="grid-h" x1="0" y1="0" x2="100%" y2="100%" stroke="var(--hister-coral)" stroke-width="0.3" opacity="0.04" />
-        <line class="grid-h" x1="100%" y1="0" x2="0" y2="100%" stroke="var(--hister-teal)" stroke-width="0.3" opacity="0.04" />
-      </svg>
-    </div>
 
     <h1
       bind:this={heroTitleEl}
-      class="font-outfit font-black text-[96px] leading-none tracking-[8px] bg-clip-text text-transparent select-none"
+      class="font-outfit font-black text-8xl leading-none tracking-[8px] bg-clip-text text-transparent select-none"
       style="background-image: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal), var(--hister-indigo)); background-size: 300% 100%; background-position: 0% 50%;"
     >
       HISTER
@@ -718,6 +788,73 @@
       <span>Pro tip: Press</span>
       <kbd bind:this={kbdEl} class="inline-block bg-muted-surface border-[2px] border-border-brand-muted px-2 py-0.5 font-fira text-xs font-semibold text-text-brand-secondary">/</kbd>
       <span>to focus search anywhere</span>
+    </div>
+
+    {#if recentSearches.length > 0}
+      <div bind:this={chipsContainerEl} class="flex flex-wrap gap-3 items-center justify-center relative">
+        {#each recentSearches as search, i}
+          {@const chip = chipColors[i % chipColors.length]}
+          <button
+            class="border-[2px] {chip.border} {chip.bg} px-3.5 py-1.5 font-inter text-sm font-semibold {chip.text} cursor-pointer hover:opacity-90 hover:scale-105 hover:-translate-y-0.5 transition-all duration-200 bg-transparent"
+            onclick={() => clickChip(search)}
+            oncontextmenu={(e) => showChipContextMenu(e, search)}
+          >
+            {search}
+          </button>
+        {/each}
+        <button
+          class="border-[2px] border-hister-rose/40 px-2.5 py-1.5 font-inter text-xs font-semibold text-hister-rose/60 cursor-pointer hover:text-hister-rose hover:border-hister-rose hover:bg-hister-rose/10 transition-all duration-200 bg-transparent"
+          onclick={deleteAllRecentSearches}
+          title="Clear all recent searches"
+        >
+          &times; clear
+        </button>
+      </div>
+    {/if}
+
+    {#if contextMenuSearch}
+      <div
+        class="fixed inset-0 z-40"
+        role="presentation"
+        onclick={() => { contextMenuSearch = null; }}
+        oncontextmenu={(e) => { e.preventDefault(); contextMenuSearch = null; }}
+      ></div>
+      <div
+        class="fixed z-50 border-[2px] border-border-brand bg-card-surface shadow-[4px_4px_0px_var(--hister-indigo)] py-1 min-w-[160px]"
+        style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
+      >
+        <button
+          class="w-full flex items-center gap-2 px-3 py-2 text-left font-inter text-sm text-text-brand hover:bg-muted-surface bg-transparent border-0 cursor-pointer"
+          onclick={() => { clickChip(contextMenuSearch!); contextMenuSearch = null; }}
+        >
+          <Search class="size-3.5" /> Search "{contextMenuSearch}"
+        </button>
+        <div class="h-px bg-border-brand-muted mx-2"></div>
+        <button
+          class="w-full flex items-center gap-2 px-3 py-2 text-left font-inter text-sm text-hister-rose hover:bg-hister-rose/10 bg-transparent border-0 cursor-pointer"
+          onclick={() => deleteRecentSearch(contextMenuSearch!)}
+        >
+          <Trash2 class="size-3.5" /> Remove
+        </button>
+      </div>
+    {/if}
+
+    <div bind:this={statsRowEl} class="flex items-center gap-8">
+      <div class="flex items-center gap-2 text-hister-indigo">
+        <History class="size-[18px]" />
+        <span class="font-outfit text-xl font-extrabold">{displayHistoryCount}</span>
+        <span class="font-inter text-sm">indexed pages</span>
+      </div>
+      <div class="flex items-center gap-2 text-hister-teal">
+        <Shield class="size-[18px]" />
+        <span class="font-outfit text-xl font-extrabold">{displayRulesCount}</span>
+        <span class="font-inter text-sm">active rules</span>
+      </div>
+      <div class="flex items-center gap-2 text-hister-coral">
+        <Link2 class="size-[18px]" />
+        <span class="font-outfit text-xl font-extrabold">{displayAliasesCount}</span>
+        <span class="font-inter text-sm">aliases</span>
+      </div>
     </div>
 
   </div>
