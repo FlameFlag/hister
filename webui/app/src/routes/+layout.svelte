@@ -79,7 +79,7 @@
   </button>
 </header>
 
-<main class="flex-1 min-h-0">
+<main class="flex-1">
   {@render children()}
 </main>
 

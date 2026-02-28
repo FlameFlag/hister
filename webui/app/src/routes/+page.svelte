@@ -75,11 +75,6 @@
 
   let animationHandles: any[] = [];
 
-  const resultColors = [
-    'hister-indigo', 'hister-teal', 'hister-coral', 'hister-amber',
-    'hister-rose', 'hister-cyan', 'hister-lime'
-  ];
-
   const hotkeyActions: Record<string, (e?: KeyboardEvent) => void> = {
     'open_result': openSelectedResult,
     'open_result_in_new_tab': (e) => openSelectedResult(e, true),
@@ -172,7 +167,7 @@
 
   async function openReadable(e: Event, url: string, title: string) {
     e.preventDefault();
-    e.stopPropagation();
+    if(e.stopPropagation) e.stopPropagation();
     try {
       const resp = await apiFetch(`/readable?url=${encodeURIComponent(url)}`);
       if (!resp.ok) {
@@ -216,7 +211,10 @@
 
   function viewResultPopup(e?: KeyboardEvent) {
     if (e) e.preventDefault();
-    closePopup();
+    if (showPopup) {
+      closePopup();
+      return;
+    }
     const readables = document.querySelectorAll('[data-result] [data-readable]');
     if (highlightIdx >= 0 && highlightIdx < readables.length) {
       const el = readables[highlightIdx] as HTMLElement;
@@ -264,10 +262,6 @@
       if (closePopup()) { e.preventDefault(); return; }
     }
     showActionsForResult = null;
-  }
-
-  function getResultColor(idx: number): string {
-    return resultColors[idx % resultColors.length];
   }
 
   function getFaviconSrc(favicon: string | undefined, url: string): string | null {
@@ -425,7 +419,7 @@
       <div class="border-b-[3px] border-border-brand-muted pb-4 mb-4">
         <h2 class="font-outfit font-bold text-lg text-text-brand pr-6">{popupTitle}</h2>
       </div>
-      <div class="font-inter text-sm text-text-brand-secondary prose max-w-none">{@html popupContent}</div>
+      <div class="font-inter text-text-brand-secondary prose max-w-none">{@html popupContent}</div>
     </div>
   </div>
 {/if}
@@ -453,7 +447,7 @@
       <div class="p-4 space-y-0">
         {#each Object.entries(config.hotkeys) as [key, action]}
           <div class="flex items-center justify-between py-2.5 border-b-[1px] border-border-brand-muted">
-            <span class="font-inter text-sm text-text-brand-secondary">{hotkeyDescriptions[action] || action}</span>
+            <span class="font-inter text-text-brand-secondary">{hotkeyDescriptions[action] || action}</span>
             <kbd class="bg-muted-surface border-[2px] border-border-brand-muted px-2.5 py-0.5 font-fira text-xs font-semibold text-text-brand">{key}</kbd>
           </div>
         {/each}
@@ -478,21 +472,21 @@
 
 {#if isSearching}
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="flex items-center gap-3 h-11 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
+    <div class="flex items-center gap-3 h-16 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
       <Search class="size-4 text-text-brand-muted shrink-0" />
       <input
         type="text"
         bind:this={inputEl}
         bind:value={query}
         placeholder="Search..."
-        class="flex-1 h-full bg-transparent font-inter text-sm font-medium text-text-brand placeholder:text-text-brand-muted outline-none border-0"
+        class="flex-1 h-full bg-transparent font-inter text-2xl font-medium text-text-brand placeholder:text-text-brand-muted outline-none border-0"
       />
       {#if autocomplete && autocomplete !== query}
-        <span class="font-fira text-xs text-text-brand-muted">
+        <span class="font-fira text-sm text-text-brand-muted">
           Tab: <span class="text-hister-indigo">{autocomplete}</span>
         </span>
       {/if}
-      <div class="w-2 h-2 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}"></div>
+      <div class="w-2 h-2 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}" title={connected ? 'Connected' : 'Disconnected'}></div>
     </div>
 
     <div class="flex-1 overflow-y-auto px-12 py-6 space-y-3 overflow-x-hidden">
@@ -524,7 +518,7 @@
 
         {#if lastResults?.query && lastResults.query.text !== query}
           <p class="font-inter text-sm text-text-brand-muted">
-            Expanded query: <code class="font-fira bg-muted-surface px-1.5 py-0.5 text-xs">{lastResults.query.text}</code>
+            Expanded query: <code class="font-fira bg-muted-surface text-primary px-1.5 py-0.5 text-xs">{lastResults.query.text}</code>
           </p>
         {/if}
 
@@ -553,13 +547,13 @@
                 {/if}
               </div>
               <div class="flex-1 min-w-0 w-0 space-y-0.5">
-                <a data-result-link href={r.url} class="font-outfit text-[15px] font-semibold text-hister-teal hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
+                <a data-result-link href={r.url} class="font-outfit text-xl font-semibold text-hister-teal hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
                   {@html r.title || '*title*'}
                 </a>
                 <div class="flex items-center gap-2">
-                  <span class="font-fira text-[11px] text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
-                  <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 bg-hister-teal/10 text-hister-teal border-0">pinned</Badge>
-                  <button data-readable class="flex items-center gap-0.5 font-inter text-xs font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
+                  <span class="font-fira text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
+                  <Badge variant="secondary" class="px-1.5 py-0 h-4 bg-hister-teal/10 text-hister-teal border-0">pinned</Badge>
+                  <button data-readable class="flex items-center gap-0.5 font-inter text-sm font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
                     <Eye class="size-3" /><span>view</span>
                   </button>
                 </div>
@@ -590,7 +584,7 @@
         {#if lastResults?.documents}
           {#each lastResults.documents as r, i}
             {@const idx = historyLen + i}
-            {@const color = getResultColor(i)}
+            {@const color = "hister-cyan" }
             {@const favSrc = getFaviconSrc(r.favicon, r.url)}
             <div data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
               style={idx === highlightIdx ? `background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--${color}) 12%, transparent), transparent); border-left: 3px solid var(--${color}); padding-left: 0.75rem;` : ''}>
@@ -603,21 +597,21 @@
                 {/if}
               </div>
               <div class="flex-1 min-w-0 w-0 space-y-0.5">
-                <a data-result-link href={r.url} class="font-outfit text-[15px] font-semibold hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" style="color: var(--{color});" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
+                <a data-result-link href={r.url} class="font-outfit text-xl font-semibold hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" style="color: var(--{color});" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
                   {@html r.title || '*title*'}
                 </a>
-                {#if r.text}
-                  <p class="font-inter text-[13px] text-text-brand-secondary leading-[1.4] line-clamp-1 overflow-hidden text-ellipsis whitespace-nowrap">{@html r.text}</p>
-                {/if}
                 <div class="flex items-center gap-2">
-                  <span class="font-fira text-[11px] text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
+                  <span class="font-fira text-sm text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
                   {#if r.added}
-                    <span class="font-inter text-xs text-text-brand-muted" title={formatTimestamp(r.added)}>· {formatRelativeTime(r.added)}</span>
+                    <span class="font-inter text-sm text-text-brand-muted" title={formatTimestamp(r.added)}>· {formatRelativeTime(r.added)}</span>
                   {/if}
-                  <button data-readable class="flex items-center gap-0.5 font-inter text-xs font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
+                  <button data-readable class="flex items-center gap-0.5 font-inter text-sm font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
                     <Eye class="size-3" /><span>view</span>
                   </button>
                 </div>
+                {#if r.text}
+                  <p class="font-inter text-text-brand-secondary leading-[1.4] line-clamp-1 overflow-hidden text-ellipsis whitespace-nowrap">{@html r.text}</p>
+                {/if}
               </div>
               <Button
                 variant="ghost"
@@ -706,7 +700,7 @@
       style="background: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal)); transform: scaleX(0); transform-origin: left;"
     ></div>
 
-    <div bind:this={searchBoxEl} class="search-box-gradient w-full max-w-[680px] p-[3px] shadow-[4px_4px_0px_var(--hister-coral)]">
+    <div bind:this={searchBoxEl} class="search-box-gradient w-full max-w-[1200px] p-[3px] shadow-[4px_4px_0px_var(--hister-coral)]">
       <div class="h-14 flex items-center gap-3 pl-4 bg-card-surface">
         <Search class="size-5 text-text-brand-muted shrink-0" />
         <input
@@ -714,7 +708,7 @@
           bind:this={inputEl}
           bind:value={query}
           placeholder="Search ..."
-          class="flex-1 h-full bg-transparent font-inter text-base text-text-brand placeholder:text-text-brand-muted outline-none border-0"
+          class="flex-1 h-full bg-transparent font-inter text-lg text-text-brand placeholder:text-text-brand-muted outline-none border-0"
         />
         <div class="w-2.5 h-2.5 mr-4 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}" title={connected ? 'Connected' : 'Disconnected'}></div>
       </div>

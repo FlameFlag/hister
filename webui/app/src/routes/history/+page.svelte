@@ -204,9 +204,9 @@
   <StatusMessage type="empty" message={filter ? 'No matching entries' : 'No history yet'} />
 {:else}
   <div class="flex flex-1 min-h-0">
-    <div class="w-[180px] shrink-0 border-r-[2px] border-border-brand-muted pt-5 pr-3 overflow-y-auto">
+    <div class="w-[360px] shrink-0 border-r-[2px] border-border-brand-muted pt-5 pr-3 overflow-y-auto">
       <div class="space-y-1">
-        <span class="font-space text-[11px] font-bold tracking-[2px] text-text-brand-muted px-2.5 flex items-center gap-1.5">
+        <span class="font-space text-lg font-bold tracking-[2px] text-text-brand-muted px-2.5 flex items-center gap-1.5">
           <Clock class="size-3" />
           TIMELINE
         </span>
@@ -219,12 +219,12 @@
           class:hover:bg-muted-surface={!!filterByDate}
           onclick={showAll}
         >
-          <span class="font-inter text-[13px] font-semibold" class:text-text-brand-secondary={!!filterByDate}>
+          <span class="font-inter text-lg font-semibold" class:text-text-brand-secondary={!!filterByDate}>
             Show All
           </span>
           <Badge
             variant="secondary"
-            class="ml-auto shrink-0 text-[10px] px-1.5 py-0 h-4 border-0 {filterByDate ? 'bg-muted-surface text-text-brand-muted' : ''}"
+            class="ml-auto shrink-0 text-lg px-1.5 py-0 h-4 border-0 {filterByDate ? 'bg-muted-surface text-text-brand-muted' : ''}"
             style={!filterByDate ? 'background-color: rgba(255,255,255,0.2); color: white;' : ''}
           >
             {filteredItems.length}
@@ -248,7 +248,7 @@
               style={isActive ? 'background-color: white;' : `background-color: ${getColorVar(color)};`}
             ></span>
             <span
-              class="font-inter text-[13px] truncate"
+              class="font-inter text-lg truncate"
               class:font-semibold={isActive}
               class:font-medium={!isActive}
               class:text-text-brand-secondary={!isActive}
@@ -257,7 +257,7 @@
             </span>
             <Badge
               variant="secondary"
-              class="ml-auto shrink-0 text-[10px] px-1.5 py-0 h-4 border-0 {!isActive ? 'bg-muted-surface text-text-brand-muted' : ''}"
+              class="ml-auto shrink-0 px-1.5 py-0 h-4 border-0 {!isActive ? 'bg-muted-surface text-text-brand-muted' : ''}"
               style={isActive ? 'background-color: rgba(255,255,255,0.2); color: white;' : ''}
             >
               {group.items.length}
@@ -284,14 +284,14 @@
                 <div class="flex-1 min-w-0 space-y-0.5">
                   <a
                     href={item.url}
-                    class="font-outfit text-[15px] font-bold hover:underline block truncate no-underline"
+                    class="font-outfit text-lg font-bold hover:underline block truncate no-underline"
                     style="color: {getColorVar(itemColor)};"
                     target="_blank"
                     rel="noopener"
                   >
                     {item.title || item.url}
                   </a>
-                  <span class="font-fira text-[11px] text-text-brand-muted block truncate" title={item.url}>{item.url}</span>
+                  <span class="font-fira text-lg text-text-brand-muted block truncate" title={item.url}>{item.url}</span>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
                   <Button

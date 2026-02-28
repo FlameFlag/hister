@@ -139,7 +139,7 @@
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div class="space-y-1">
-      <h1 class="font-outfit text-[22px] font-extrabold text-text-brand">Search Rules & Aliases</h1>
+      <h1 class="font-outfit text-xl font-extrabold text-text-brand">Search Rules & Aliases</h1>
       <p class="font-inter text-sm text-text-brand-secondary">Configure how Hister indexes and searches your browsing history</p>
     </div>
     <div class="flex items-center gap-4">
@@ -168,7 +168,7 @@
       <!-- Indigo header -->
       <div class="flex items-center justify-between px-4 py-3 bg-hister-indigo">
         <span class="font-outfit text-lg font-extrabold text-white">Search Aliases</span>
-        <span class="font-inter text-[13px] font-medium text-white/70">{Object.keys(rules.aliases).length} aliases</span>
+        <span class="font-inter text-lg font-medium text-white/70">{Object.keys(rules.aliases).length} aliases</span>
       </div>
 
       <!-- Column headers -->
@@ -181,8 +181,8 @@
       <!-- Alias rows -->
       {#each Object.entries(rules.aliases) as [keyword, value]}
         <div class="flex items-center gap-4 px-4 py-2.5 border-b-[2px] border-border-brand-muted">
-          <span class="font-fira text-[13px] font-semibold text-text-brand w-[120px] shrink-0">{keyword}</span>
-          <span class="font-fira text-[13px] text-text-brand-secondary flex-1 truncate">{value}</span>
+          <span class="font-fira text-lg font-semibold text-text-brand w-[120px] shrink-0">{keyword}</span>
+          <span class="font-fira text-lg text-text-brand-secondary flex-1 truncate">{value}</span>
           <Button
             variant="ghost"
             size="icon-sm"
@@ -211,7 +211,7 @@
         <Button
           type="submit"
           size="sm"
-          class="bg-hister-indigo text-white font-inter text-[13px] font-bold border-0 hover:bg-hister-indigo/90 shadow-none gap-1.5 leading-none"
+          class="bg-hister-indigo text-white font-inter text-lg font-bold border-0 hover:bg-hister-indigo/90 shadow-none gap-1.5 leading-none"
         >
           <Plus class="size-3.5 shrink-0" />
           <span>Add</span>
@@ -224,7 +224,7 @@
       <!-- Coral header -->
       <div class="flex items-center justify-between px-4 py-3 bg-hister-coral">
         <span class="font-outfit text-lg font-extrabold text-white">Indexing Rules</span>
-        <span class="font-inter text-[13px] font-medium text-white/70">{ruleRows.length} rules</span>
+        <span class="font-inter text-lg font-medium text-white/70">{ruleRows.length} rules</span>
       </div>
 
       <!-- Column headers -->
@@ -237,10 +237,10 @@
       <!-- Rule rows -->
       {#each ruleRows as row}
         <div class="flex items-center gap-4 px-4 py-2.5 border-b-[2px] border-border-brand-muted">
-          <span class="font-fira text-[13px] text-text-brand flex-1 truncate">{row.pattern}</span>
+          <span class="font-fira text-lg text-text-brand flex-1 truncate">{row.pattern}</span>
           <Badge
             variant="default"
-            class="text-[11px] font-bold px-2.5 py-0.5 border-0 {row.type === 'skip' ? 'bg-hister-rose text-white' : 'bg-hister-teal text-white'}"
+            class="text-lg font-bold px-2.5 py-0.5 border-0 {row.type === 'skip' ? 'bg-hister-rose text-white' : 'bg-hister-teal text-white'}"
           >
             {row.type === 'skip' ? 'Skip' : 'Priority'}
           </Badge>
@@ -280,7 +280,7 @@
           type="button"
           size="sm"
           onclick={addRule}
-          class="bg-hister-coral text-white font-inter text-[13px] font-bold border-0 hover:bg-hister-coral/90 shadow-none gap-1.5 leading-none"
+          class="bg-hister-coral text-white font-inter text-lg font-bold border-0 hover:bg-hister-coral/90 shadow-none gap-1.5 leading-none"
         >
           <Plus class="size-3.5 shrink-0" />
           <span>Add</span>
