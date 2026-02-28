@@ -670,6 +670,10 @@ func (r *Rule) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (r *Rules) Count() int {
+	return len(r.Skip.ReStrs) + len(r.Priority.ReStrs)
+}
+
 func (r *Rules) Compile() error {
 	if err := r.Skip.Compile(); err != nil {
 		return err

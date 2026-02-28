@@ -155,6 +155,17 @@ func Reindex(idxPath, tmpIdxPath string, rules *config.Rules, skipSensitiveCheck
 	return os.Rename(tmpIdxPath, idxPath)
 }
 
+func DocumentCount() uint64 {
+	q := query.NewMatchAllQuery()
+	req := bleve.NewSearchRequest(q)
+	req.Size = 1
+	res, err := i.idx.Search(req)
+	if err != nil {
+		return 0
+	}
+	return res.Total
+}
+
 func Add(d *Document) error {
 	if !d.processed {
 		if err := d.Process(); err != nil {

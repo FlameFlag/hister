@@ -195,6 +195,14 @@ func init() {
 			Description:  "Static files",
 		},
 		&Endpoint{
+			Name:         "Stats",
+			Path:         "/api/stats",
+			Method:       GET,
+			CSRFRequired: false,
+			Handler:      serveStats,
+			Description:  "Search engine statistics",
+		},
+		&Endpoint{
 			Name:         "API",
 			Path:         "/api",
 			Method:       GET,

@@ -586,6 +586,16 @@ func serveAPI(c *webContext) {
 	c.JSON(result)
 }
 
+func serveStats(c *webContext) {
+	hs, _ := model.GetLatestHistoryItems(5)
+	c.JSON(map[string]any{
+		"doc_count":       indexer.DocumentCount(),
+		"rule_count":      c.Config.Rules.Count(),
+		"alias_count":     len(c.Config.Rules.Aliases),
+		"recent_searches": hs,
+	})
+}
+
 func serveOpensearch(c *webContext) {
 	baseURL := strings.TrimSuffix(c.Config.BaseURL("/"), "/")
 	xml := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>

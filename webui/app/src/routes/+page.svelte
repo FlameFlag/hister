@@ -337,35 +337,23 @@
 
   async function loadHomeStats() {
     try {
-      const [historyRes, rulesRes] = await Promise.all([
-        apiFetch('/history', { headers: { 'Accept': 'application/json' } }),
-        apiFetch('/rules', { headers: { 'Accept': 'application/json' } })
-      ]);
+      const statsRes = await apiFetch('/stats', { headers: { 'Accept': 'application/json' } });
 
-      if (historyRes.ok) {
-        const items: HistoryItem[] = await historyRes.json();
-        historyCount = items.length;
-        const seen = new Set<string>();
-        for (const item of items) {
-          if (item.query && !seen.has(item.query)) {
-            seen.add(item.query);
-            if (seen.size >= 4) break;
-          }
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        rulesCount = stats.rule_count;
+        aliasesCount = stats.alias_count;
+        historyCount = stats.doc_count;
+        if(stats.recent_searches) {
+          const deletedSearches: string[] = JSON.parse(localStorage.getItem('deletedSearches') || '[]');
+          recentSearches = stats.recent_searches.map(s => s.query).filter(q => !deletedSearches.includes(q));
         }
-        const deletedSearches: string[] = JSON.parse(localStorage.getItem('deletedSearches') || '[]');
-        recentSearches = [...seen].filter(q => !deletedSearches.includes(q));
       }
 
-      if (rulesRes.ok) {
-        const rules = await rulesRes.json();
-        rulesCount = (rules.skip?.length || 0) + (rules.priority?.length || 0);
-        aliasesCount = Object.keys(rules.aliases || {}).length;
-      }
-
-      statsLoaded = true;
-    } catch {
-      statsLoaded = true;
+    } catch(e) {
+      console.log("Failed to retreive stats", e);
     }
+    statsLoaded = true;
   }
 
   let statsLoaded = $state(false);
