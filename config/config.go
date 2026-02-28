@@ -133,7 +133,7 @@ var DefaultTUIHotkeys = map[string]string{
 }
 
 var DefaultTUIConfig = TUI{
-	DarkTheme:   "catppuccin-mocha",
+	DarkTheme:   "tokyonight",
 	LightTheme:  "catppuccin-latte",
 	ColorScheme: "auto",
 }
