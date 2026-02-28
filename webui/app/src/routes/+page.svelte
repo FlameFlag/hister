@@ -26,7 +26,8 @@
   import { Separator } from '@hister/components/ui/separator';
   import {
     Search, Star, Globe, MoreVertical, Eye, Trash2,
-    Pin, PinOff, Download, ExternalLink, Keyboard, HelpCircle, X
+    Pin, PinOff, Download, ExternalLink,
+    Keyboard, HelpCircle, X
   } from 'lucide-svelte';
 
   interface Config {
@@ -351,24 +352,6 @@
 
       animationHandles.push({ revert: () => clearInterval(waveInterval) });
     }
-  }
-
-  function animateCounters() {
-    const counterObj = { h: displayHistoryCount, r: displayRulesCount, a: displayAliasesCount };
-    animationHandles.push(
-      animate(counterObj, {
-        h: historyCount,
-        r: rulesCount,
-        a: aliasesCount,
-        duration: 800,
-        ease: 'outCubic',
-        onRender: () => {
-          displayHistoryCount = Math.round(counterObj.h);
-          displayRulesCount = Math.round(counterObj.r);
-          displayAliasesCount = Math.round(counterObj.a);
-        }
-      })
-    );
   }
 
   function cleanupAnimations() {
@@ -742,7 +725,6 @@
       <kbd bind:this={kbdEl} class="inline-block bg-muted-surface border-[2px] border-border-brand-muted px-2 py-0.5 font-fira text-xs font-semibold text-text-brand-secondary">/</kbd>
       <span>to focus search anywhere</span>
     </div>
-
 
   </div>
 {/if}
