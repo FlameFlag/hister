@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { page } from '$app/stores';
   import {
     WebSocketManager,
     KeyHandler,
-    apiRequest,
     getSearchUrl,
     exportJSON,
     exportCSV,
@@ -18,31 +17,35 @@
     updateSearchURL,
     openURL
   } from '$lib/search';
-  import { fetchConfig, getCsrf, setCsrf } from '$lib/api';
+  import { fetchConfig, apiFetch } from '$lib/api';
   import type { SearchResults } from '$lib/search';
+  import { animate, createTimeline, stagger } from 'animejs';
+  import { Input } from '@hister/components/ui/input';
+  import { Button } from '@hister/components/ui/button';
+  import { Badge } from '@hister/components/ui/badge';
+  import { Separator } from '@hister/components/ui/separator';
+  import {
+    Search, Star, Globe, MoreVertical, Eye, Trash2,
+    Pin, PinOff, Download, ExternalLink, Keyboard, HelpCircle, X
+  } from 'lucide-svelte';
 
   interface Config {
     wsUrl: string;
-    csrf: string;
     searchUrl: string;
     openResultsOnNewTab: boolean;
     hotkeys: Record<string, string>;
-    initialQuery: string;
   }
 
   let config: Config = $state({
     wsUrl: '',
-    csrf: '',
     searchUrl: '',
     openResultsOnNewTab: false,
     hotkeys: {},
-    initialQuery: ''
   });
 
   let wsManager: WebSocketManager | undefined;
   let keyHandler: KeyHandler | undefined;
   let inputEl: HTMLInputElement | undefined;
-  let resultsEl: HTMLElement | undefined;
 
   let query = $state('');
   let autocomplete = $state('');
@@ -52,14 +55,29 @@
   let currentSort = $state('');
   let dateFrom = $state('');
   let dateTo = $state('');
-  let showHotkeyButton = $state(true);
   let showPopup = $state(false);
   let popupTitle = $state('');
   let popupContent = $state('');
-  let showActionsForResult: string | null = $state(null);
   let actionsQuery = $state('');
   let actionsMessage: string | null = $state(null);
   let actionsError = $state(false);
+  let showActionsForResult: string | null = $state(null);
+
+  let showHelp = $state(false);
+
+  let heroTitleEl: HTMLElement | undefined;
+  let searchBoxEl: HTMLElement | undefined;
+  let hintEl: HTMLElement | undefined;
+  let kbdEl: HTMLElement | undefined;
+  let underlineEl: HTMLElement | undefined;
+  let gridContainerEl: HTMLElement | undefined;
+
+  let animationHandles: any[] = [];
+
+  const resultColors = [
+    'hister-indigo', 'hister-teal', 'hister-coral', 'hister-amber',
+    'hister-rose', 'hister-cyan', 'hister-lime'
+  ];
 
   const hotkeyActions: Record<string, (e?: KeyboardEvent) => void> = {
     'open_result': openSelectedResult,
@@ -73,35 +91,12 @@
     'show_hotkeys': showHotkeys
   };
 
-  const hotkeyDescriptions: Record<string, string> = {
-    'open_result': 'Open result',
-    'open_result_in_new_tab': 'Open result in new tab',
-    'select_next_result': 'Select next result',
-    'select_previous_result': 'Select previous result',
-    'open_query_in_search_engine': 'Open query in search engine',
-    'focus_search_input': 'Focus search input',
-    'view_result_popup': 'View result popup',
-    'autocomplete': 'Autocomplete query',
-    'show_hotkeys': 'Show Hotkeys'
-  };
+  const isSearching = $derived(query.length > 0);
 
-  const tips = [
-    'Use <code>*</code> for partial match.<br />Prefixing word with <code>-</code> excludes matching documents.',
-    'Click on the three dots near the result URL to specify priority queries for that result.',
-    'Press <code>enter</code> to open the first result.',
-    'Use <code>alt+k</code> and <code>alt+j</code> to navigate between results.',
-    'Press <code>alt+o</code> to open current search query in your configured search engine.',
-    'Use <code>url:</code> prefix to search only in the URL field. E.g.: <code>url:*github* hister</code>.',
-    'Set hister to your default search engine in your browser to access it with ease.',
-    'Start search query with <code>!!</code> to open the query in your configured search engine'
-  ];
-
-  const SORT_OPTIONS = [
-    { id: '', label: 'Relevance' },
-    { id: 'domain', label: 'Domain' }
-  ];
-
-  const emptyImg = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  const historyLen = $derived((lastResults?.history as any)?.length || 0);
+  const docsLen = $derived((lastResults?.documents as any)?.length || 0);
+  const totalResults = $derived(historyLen + docsLen);
+  const hasResults = $derived(totalResults > 0);
 
   function connect() {
     wsManager = new WebSocketManager(config.wsUrl, {
@@ -132,27 +127,20 @@
     highlightIdx = 0;
   }
 
-  function openUrl(u: string, newWindow?: boolean) {
-    openURL(u, newWindow);
-  }
-
   function openResult(url: string, title: string, newWindow = false) {
     if (config.openResultsOnNewTab) newWindow = true;
-    saveHistoryItem(url, title, query, false, () => openUrl(url, newWindow));
+    saveHistoryItem(url, title, query, false, () => openURL(url, newWindow));
   }
 
-  function saveHistoryItem(url: string, title: string, queryStr: string, remove: boolean, callback?: (r: Response) => void) {
-    apiRequest({
-      url: '/history',
-      params: {
+  async function saveHistoryItem(url: string, title: string, queryStr: string, remove: boolean, callback?: () => void) {
+    try {
+      const res = await apiFetch('/history', {
         method: 'POST',
         headers: { 'Content-type': 'application/json; charset=UTF-8' },
         body: JSON.stringify({ url, title, query: queryStr, delete: remove })
-      },
-      csrfToken: config.csrf,
-      csrfCallback: (tok) => { config.csrf = tok; setCsrf(tok); },
-      callback
-    });
+      });
+      callback?.();
+    } catch {}
   }
 
   function setSort(sortId: string) {
@@ -161,100 +149,79 @@
     if (query) sendQuery(query);
   }
 
-  function deleteResult(url: string) {
+  async function deleteResult(url: string) {
     const data = new URLSearchParams({ url });
-    apiRequest({
-      url: '/delete',
-      params: { method: 'POST', body: data },
-      csrfToken: config.csrf,
-      csrfCallback: (tok) => { config.csrf = tok; setCsrf(tok); },
-      callback: () => {
-        if (lastResults?.documents) {
-          lastResults = {
-            ...lastResults,
-            documents: lastResults.documents.filter((d) => d.url !== url)
-          };
-        }
-      }
-    });
+    await apiFetch('/delete', { method: 'POST', body: data });
+    if (lastResults?.documents) {
+      lastResults = {
+        ...lastResults,
+        documents: lastResults.documents.filter((d) => d.url !== url)
+      };
+    }
   }
 
   function updatePriorityResult(url: string, title: string, remove: boolean) {
     const q = actionsQuery || query;
     if (!q) return;
-    saveHistoryItem(url, title, q, remove, (r) => {
-      if (r.status === 200) {
-        actionsMessage = `Priority result ${remove ? 'deleted' : 'added'}.`;
-        actionsError = false;
-      } else {
-        actionsMessage = `Failed to ${remove ? 'delete' : 'add'} priority result.`;
-        actionsError = true;
-      }
+    saveHistoryItem(url, title, q, remove, () => {
+      actionsMessage = `Priority result ${remove ? 'deleted' : 'added'}.`;
+      actionsError = false;
     });
   }
 
-  function openReadable(e: Event, url: string, title: string) {
+  async function openReadable(e: Event, url: string, title: string) {
     e.preventDefault();
-    apiRequest({
-      url: `/readable?url=${encodeURIComponent(url)}`,
-      csrfToken: config.csrf,
-      csrfCallback: (tok) => { config.csrf = tok; setCsrf(tok); },
-      callback: (resp) => {
-        resp.json().then((data) => {
-          popupTitle = data.title;
-          popupContent = data.content;
-          showPopup = true;
-        });
+    e.stopPropagation();
+    try {
+      const resp = await apiFetch(`/readable?url=${encodeURIComponent(url)}`);
+      if (!resp.ok) {
+        popupTitle = 'Error';
+        popupContent = `<p class="text-hister-rose">Failed to load readable content. Status: ${resp.status}</p>`;
+        showPopup = true;
+        return;
       }
-    });
+      const data = await resp.json();
+      popupTitle = data.title || title;
+      popupContent = data.content || '<p>No content available</p>';
+      showPopup = true;
+    } catch (err) {
+      popupTitle = 'Error';
+      popupContent = `<p class="text-hister-rose">Failed to parse response: ${err}</p>`;
+      showPopup = true;
+    }
   }
-
-  const historyLen = $derived(lastResults?.history?.length || 0);
-  const docsLen = $derived(lastResults?.documents?.length || 0);
-  const totalResults = $derived(historyLen + docsLen);
 
   function selectNthResult(n: number) {
     if (!totalResults) return;
     highlightIdx = (highlightIdx + n + totalResults) % totalResults;
-    const results = document.querySelectorAll('.result');
+    const results = document.querySelectorAll('[data-result]');
     scrollTo(results[highlightIdx]);
   }
 
-  function selectNextResult(e?: KeyboardEvent) {
-    if (e) e.preventDefault();
-    selectNthResult(1);
-  }
-
-  function selectPreviousResult(e?: KeyboardEvent) {
-    if (e) e.preventDefault();
-    selectNthResult(-1);
-  }
+  function selectNextResult(e?: KeyboardEvent) { if (e) e.preventDefault(); selectNthResult(1); }
+  function selectPreviousResult(e?: KeyboardEvent) { if (e) e.preventDefault(); selectNthResult(-1); }
 
   function openSelectedResult(e?: KeyboardEvent, newWindow = false) {
     if (e) e.preventDefault();
     if (query.startsWith('!!')) {
-      openUrl(getSearchUrl(config.searchUrl, query.substring(2)), newWindow);
+      openURL(getSearchUrl(config.searchUrl, query.substring(2)), newWindow);
       return;
     }
-    const res = document.querySelectorAll<HTMLAnchorElement>('.result .result-title a')[highlightIdx];
+    const res = document.querySelectorAll<HTMLAnchorElement>('[data-result] [data-result-link]')[highlightIdx];
     if (res) {
-      const url = res.getAttribute('href')!;
-      const title = res.innerText;
-      openResult(url, title, newWindow);
+      openResult(res.getAttribute('href')!, res.innerText, newWindow);
     }
   }
 
   function viewResultPopup(e?: KeyboardEvent) {
     if (e) e.preventDefault();
     closePopup();
-    const readables = document.querySelectorAll('.result .readable');
-    if (highlightIdx >= 0 && highlightIdx < readables.length && readables[highlightIdx]) {
-      const readableEl = readables[highlightIdx];
-      const result = readableEl.closest('.result')!;
-      const link = result.querySelector<HTMLAnchorElement>('.result-title a')!;
-      const url = link.getAttribute('href')!;
-      const title = link.innerText;
-      openReadable({ preventDefault: () => {} } as Event, url, title);
+    const readables = document.querySelectorAll('[data-result] [data-readable]');
+    if (highlightIdx >= 0 && highlightIdx < readables.length) {
+      const el = readables[highlightIdx] as HTMLElement;
+      const result = el.closest('[data-result]')!;
+      const link = result.querySelector<HTMLAnchorElement>('[data-result-link]')!;
+      openReadable({ preventDefault: () => {} } as Event, link.href, link.innerText);
     }
   }
 
@@ -266,307 +233,535 @@
     }
   }
 
-  function openQueryInSearchEngine(e?: KeyboardEvent) {
-    if (e) e.preventDefault();
-    openUrl(getSearchUrl(config.searchUrl, query));
-  }
+  function openQueryInSearchEngine(e?: KeyboardEvent) { if (e) e.preventDefault(); openURL(getSearchUrl(config.searchUrl, query)); }
+  function focusSearchInput(e?: KeyboardEvent) { if (document.activeElement !== inputEl) { if (e) e.preventDefault(); inputEl?.focus(); } }
 
-  function focusSearchInput(e?: KeyboardEvent) {
-    if (document.activeElement !== inputEl) {
-      if (e) e.preventDefault();
-      inputEl?.focus();
-    }
-  }
+  function closePopup(): boolean { if (showPopup) { showPopup = false; return true; } return false; }
 
-  function toggleHotkeyButton() {
-    showHotkeyButton = !showHotkeyButton;
-    localStorage.setItem('hideHotkeyButton', showHotkeyButton ? 'false' : 'true');
-    closePopup();
-  }
+  const hotkeyDescriptions: Record<string, string> = {
+    'open_result': 'Open result',
+    'open_result_in_new_tab': 'Open result in new tab',
+    'select_next_result': 'Select next result',
+    'select_previous_result': 'Select previous result',
+    'open_query_in_search_engine': 'Open in search engine',
+    'focus_search_input': 'Focus search input',
+    'view_result_popup': 'View result content',
+    'autocomplete': 'Autocomplete query',
+    'show_hotkeys': 'Show help'
+  };
 
   function showHotkeys(e?: KeyboardEvent) {
     if (document.activeElement === inputEl) return;
-    if (closePopup()) return;
-
-    let hotkeysHtml = '<div class="hotkeys-list">';
-    for (const k in config.hotkeys) {
-      hotkeysHtml += `<div class="hotkey"><kbd>${escapeHTML(k)}</kbd><span>${hotkeyDescriptions[config.hotkeys[k]] || config.hotkeys[k]}</span></div>`;
-    }
-    hotkeysHtml += '</div>';
-
-    const toggleSection = `<div class="hotkey-toggle-section"><p>The hotkey button can be toggled below. Press <kbd>?</kbd> to view this dialog.</p><button type="button" class="hotkey-toggle-btn" id="toggle-hotkey-btn">${showHotkeyButton ? 'Hide Hotkey Button' : 'Show Hotkey Button'}</button></div>`;
-
-    popupTitle = 'Hotkeys';
-    popupContent = hotkeysHtml + toggleSection;
-    showPopup = true;
-
-    // Wire up toggle button after DOM update
-    setTimeout(() => {
-      document.getElementById('toggle-hotkey-btn')?.addEventListener('click', toggleHotkeyButton);
-    }, 0);
-  }
-
-  function closePopup(): boolean {
-    if (showPopup) {
-      showPopup = false;
-      return true;
-    }
-    return false;
+    if (showHelp) { showHelp = false; return; }
+    showHelp = true;
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (keyHandler?.handle(e)) {
-      e.preventDefault();
-      return;
-    }
+    if (keyHandler?.handle(e)) { e.preventDefault(); return; }
     if (e.key === 'Escape') {
-      if (closePopup()) {
-        e.preventDefault();
-        return;
-      }
+      if (showHelp) { showHelp = false; e.preventDefault(); return; }
+      if (closePopup()) { e.preventDefault(); return; }
     }
     showActionsForResult = null;
   }
 
-  function handleButtonKeydown(e: KeyboardEvent, action: (e?: KeyboardEvent) => void) {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      action(e);
+  function getResultColor(idx: number): string {
+    return resultColors[idx % resultColors.length];
+  }
+
+  function getFaviconSrc(favicon: string | undefined, url: string): string | null {
+    if (favicon) return favicon;
+    return null;
+  }
+
+  function startHeroAnimations() {
+    cleanupAnimations();
+
+    if (heroTitleEl) {
+      animationHandles.push(
+        animate(heroTitleEl, {
+          backgroundPosition: ['0% 50%', '100% 50%'],
+          ease: 'inOutSine',
+          duration: 6000,
+          loop: true,
+          alternate: true
+        })
+      );
+    }
+
+    if (kbdEl) {
+      animationHandles.push(
+        animate(kbdEl, {
+          translateY: [0, 3, 0],
+          duration: 400,
+          ease: 'inOutSine',
+          loop: true,
+          loopDelay: 10000
+        })
+      );
+    }
+
+    if (underlineEl) {
+      animationHandles.push(
+        animate(underlineEl, {
+          scaleX: [0, 1],
+          duration: 800,
+          ease: 'outCubic',
+          delay: 300
+        })
+      );
+    }
+
+    if (gridContainerEl) {
+      const hLines = gridContainerEl.querySelectorAll('.grid-h');
+      const vLines = gridContainerEl.querySelectorAll('.grid-v');
+      const allLines = [...hLines, ...vLines];
+
+      if (allLines.length > 0) {
+        animationHandles.push(
+          animate(allLines, {
+            opacity: [0.07, 0.18, 0.07],
+            duration: 6000,
+            ease: 'inOutSine',
+            loop: true,
+            delay: stagger(300)
+          })
+        );
+      }
+
+      function triggerWave() {
+        if (!gridContainerEl) return;
+        const isHorizontal = Math.random() > 0.5;
+        const lines = [...gridContainerEl.querySelectorAll(isHorizontal ? '.grid-h' : '.grid-v')] as HTMLElement[];
+        if (lines.length === 0) return;
+        const startIdx = Math.floor(Math.random() * lines.length);
+        const waveLines = lines.slice(Math.max(0, startIdx - 2), startIdx + 3);
+        animate(waveLines, {
+          opacity: [0.08, 0.35, 0.08],
+          duration: 1200,
+          ease: 'inOutSine',
+          delay: stagger(120)
+        });
+      }
+
+      const waveInterval = setInterval(() => {
+        if (!gridContainerEl) { clearInterval(waveInterval); return; }
+        triggerWave();
+      }, 4000 + Math.random() * 2000);
+
+      animationHandles.push({ revert: () => clearInterval(waveInterval) });
     }
   }
 
-  function getHighlightIdxForHistory(i: number) {
-    return i === highlightIdx;
+  function animateCounters() {
+    const counterObj = { h: displayHistoryCount, r: displayRulesCount, a: displayAliasesCount };
+    animationHandles.push(
+      animate(counterObj, {
+        h: historyCount,
+        r: rulesCount,
+        a: aliasesCount,
+        duration: 800,
+        ease: 'outCubic',
+        onRender: () => {
+          displayHistoryCount = Math.round(counterObj.h);
+          displayRulesCount = Math.round(counterObj.r);
+          displayAliasesCount = Math.round(counterObj.a);
+        }
+      })
+    );
   }
 
-  function getHighlightIdxForDocs(i: number) {
-    return (historyLen + i) === highlightIdx;
+  function cleanupAnimations() {
+    for (const h of animationHandles) {
+      try { h.revert(); } catch {}
+    }
+    animationHandles = [];
   }
 
   $effect(() => {
-    if (query && connected) {
-      sendQuery(query);
-      localStorage.setItem('lastQuery', query);
+    if (!isSearching) {
+      tick().then(() => startHeroAnimations());
     }
+    return () => cleanupAnimations();
   });
 
   $effect(() => {
-    if (!query) {
-      autocomplete = '';
-      lastResults = null;
-    }
+    isSearching;
+    (async () => { await tick(); inputEl?.focus(); })();
   });
-
-  $effect(() => {
-    if (dateFrom || dateTo) sendQuery(query);
-  });
-
-  $effect(() => {
-    updateURL();
-  });
-
+  $effect(() => { if (query && connected) { sendQuery(query); localStorage.setItem('lastQuery', query); } });
+  $effect(() => { if (!query) { autocomplete = ''; lastResults = null; } });
+  $effect(() => { if (dateFrom || dateTo) sendQuery(query); });
+  $effect(() => { updateURL(); });
   $effect.pre(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const q = urlParams.get('q');
     const df = urlParams.get('date_from');
     const dt = urlParams.get('date_to');
-    const lastQuery = localStorage.getItem('lastQuery');
-    if (q) {
-      query = q;
-    }
+    if (q) query = q;
     if (df) dateFrom = df;
     if (dt) dateTo = dt;
-
   });
 
-  $effect(() => {
-    inputEl?.focus();
-  });
-
-  onMount(async () => {
-    const appConfig = await fetchConfig();
-    config = {
-      wsUrl: appConfig.wsUrl,
-      csrf: getCsrf(),
-      searchUrl: appConfig.searchUrl,
-      openResultsOnNewTab: appConfig.openResultsOnNewTab,
-      hotkeys: appConfig.hotkeys,
-      initialQuery: ''
-    };
-
-    showHotkeyButton = !appConfig.hotkeys['show_hotkeys'] || localStorage.getItem('hideHotkeyButton') !== 'true';
-    focusSearchInput();
-
-    connect();
-    keyHandler = new KeyHandler(config.hotkeys, hotkeyActions);
-
-    return () => {
-      wsManager?.close();
-    };
+  onMount(() => {
+    (async () => {
+      const appConfig = await fetchConfig();
+      config = {
+        wsUrl: appConfig.wsUrl,
+        searchUrl: appConfig.searchUrl,
+        openResultsOnNewTab: appConfig.openResultsOnNewTab,
+        hotkeys: appConfig.hotkeys,
+      };
+      inputEl?.focus();
+      connect();
+      keyHandler = new KeyHandler(config.hotkeys, hotkeyActions);
+    })();
+    return () => { wsManager?.close(); cleanupAnimations(); };
   });
 </script>
+
+<svelte:head>
+  <title>Hister</title>
+</svelte:head>
 
 <svelte:window onkeydown={handleKeydown} />
 
 {#if showPopup}
-<div class="popup-wrapper" role="presentation" aria-hidden="true" onclick={(e) => { if (!(e.target as Element).closest('.popup')) closePopup(); }}>
-  <div class="popup container bg-dark">
-    <div class="float-right">
-      <!-- svelte-ignore a11y_missing_attribute -->
-      <a class="popup-close" role="button" aria-label="Close" tabindex="0" onclick={closePopup} onkeydown={(e) => handleButtonKeydown(e, closePopup)}>x</a>
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    role="presentation"
+    onclick={(e) => { if (e.target === e.currentTarget) closePopup(); }}
+    onkeydown={(e) => { if (e.key === 'Escape') closePopup(); }}
+  >
+    <div class="relative w-full max-w-2xl max-h-[80vh] overflow-auto mx-4 border-[3px] border-border-brand bg-card-surface shadow-[6px_6px_0px_var(--hister-indigo)] p-6">
+      <button
+        class="absolute top-3 right-3 text-text-brand-muted hover:text-text-brand bg-transparent border-0 cursor-pointer text-lg font-bold leading-none p-1"
+        onclick={closePopup}
+        aria-label="Close"
+      >&times;</button>
+      <div class="border-b-[3px] border-border-brand-muted pb-4 mb-4">
+        <h2 class="font-outfit font-bold text-lg text-text-brand pr-6">{popupTitle}</h2>
+      </div>
+      <div class="font-inter text-sm text-text-brand-secondary prose max-w-none">{@html popupContent}</div>
     </div>
-    <div class="popup-header">{popupTitle}</div>
-    <div class="popup-content">{@html popupContent}</div>
   </div>
-</div>
 {/if}
 
-<div class="sticky">
-  <div class="search text-center">
-    <input type="text" class="border-2 border-grey rounded-xl" id="search" bind:this={inputEl} bind:value={query} placeholder="Search..." />
-    <input type="text" class="bg-dark border-2 border-dark text-semilight shadow-xl" disabled id="autocomplete" value={autocomplete || ''} />
-    <div id="ws-status" class="ws-status" class:connected={connected} title={connected ? 'Websocket connected' : 'Websocket disconnected'}></div>
-  </div>
-</div>
-
-<details class="section" class:hidden={!lastResults?.documents?.length && !lastResults?.history?.length}>
-  <summary>Actions</summary>
-  <div class="container">
-    <div class="sort-buttons small-grey">
-      Sort by: <span class="sort-options-container">
-        {#each SORT_OPTIONS as opt, i}
-          <!-- svelte-ignore a11y_invalid_attribute -->
-          <a class="sort-btn" class:active={currentSort === opt.id} onclick={(e) => { e.preventDefault(); setSort(opt.id); }} href="#" role="button" aria-pressed={currentSort === opt.id} tabindex="0">{opt.label}</a>{#if i < SORT_OPTIONS.length - 1}<span class="sort-separator"> | </span>{/if}
+{#if showHelp}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    role="presentation"
+    onclick={(e) => { if (e.target === e.currentTarget) showHelp = false; }}
+  >
+    <div class="relative w-full max-w-md mx-4 border-[3px] border-border-brand bg-card-surface shadow-[6px_6px_0px_var(--hister-indigo)] overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 bg-hister-indigo">
+        <div class="flex items-center gap-2">
+          <Keyboard class="size-5 text-white" />
+          <span class="font-outfit text-lg font-extrabold text-white">Keyboard Shortcuts</span>
+        </div>
+        <button
+          class="text-white/70 hover:text-white bg-transparent border-0 cursor-pointer p-0.5"
+          onclick={() => { showHelp = false; }}
+          aria-label="Close"
+        >
+          <X class="size-5" />
+        </button>
+      </div>
+      <div class="p-4 space-y-0">
+        {#each Object.entries(config.hotkeys) as [key, action]}
+          <div class="flex items-center justify-between py-2.5 border-b-[1px] border-border-brand-muted">
+            <span class="font-inter text-sm text-text-brand-secondary">{hotkeyDescriptions[action] || action}</span>
+            <kbd class="bg-muted-surface border-[2px] border-border-brand-muted px-2.5 py-0.5 font-fira text-xs font-semibold text-text-brand">{key}</kbd>
+          </div>
         {/each}
-      </span>
-    </div>
-    <div class="export-buttons small-grey">
-      <!-- svelte-ignore a11y_invalid_attribute -->
-      Export: <a onclick={(e) => { e.preventDefault(); exportJSON(lastResults!); }} href="#" role="button" tabindex="0">JSON</a> |
-      <!-- svelte-ignore a11y_invalid_attribute -->
-      <a onclick={(e) => { e.preventDefault(); exportCSV(lastResults!, query); }} href="#" role="button" tabindex="0">CSV</a> |
-      <!-- svelte-ignore a11y_invalid_attribute -->
-      <a onclick={(e) => { e.preventDefault(); exportRSS(lastResults!, query); }} href="#" role="button" tabindex="0">RSS</a>
-    </div>
-    <div class="date-filters small-grey">
-      Filter from: <input type="date" id="date-from" bind:value={dateFrom} placeholder="From date" title="From date" />
-      Filter to: <input type="date" id="date-to" bind:value={dateTo} placeholder="To date" title="To date" />
+      </div>
+      <div class="px-5 py-3 bg-muted-surface border-t-[2px] border-border-brand-muted">
+        <p class="font-inter text-xs text-text-brand-muted">
+          Press <kbd class="bg-card-surface border border-border-brand-muted px-1.5 py-0.5 font-fira text-[10px]">?</kbd> to toggle this dialog
+        </p>
+      </div>
     </div>
   </div>
-</details>
-
-{#if showHotkeyButton}
-  <button type="button" id="hotkey-button" class="hotkeys-button" title="Hotkeys (?)" onclick={showHotkeys} aria-label="Show hotkeys">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <rect x="2" y="4" width="20" height="16" rx="2"/>
-      <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/>
-    </svg>
-  </button>
 {/if}
 
-<div class="container" bind:this={resultsEl} id="results">
-  {#if !lastResults?.documents?.length && !lastResults?.history?.length}
-    {#if !query}
-      <div class="text-center border-grey border-2 bg-semidark p-12 rounded-xl">
-        <h3 class="text-2xl font-bold">Tip</h3>
-        <p>{@html tips[Math.floor(Math.random() * tips.length)]}</p>
-      </div>
-    {:else}
-      <div class="result">
-        <div class="result-title">
-          <img src={emptyImg} alt="" />
-          <a href={getSearchUrl(config.searchUrl, query)} class="error" onclick={(e) => { e.preventDefault(); openUrl(getSearchUrl(config.searchUrl, query), config.openResultsOnNewTab); }}>No results found - open query in web search engine</a>
-        </div>
-        <span class="result-url">{getSearchUrl(config.searchUrl, query)}</span>
-      </div>
-    {/if}
-  {:else}
-    {#if lastResults?.search_duration || lastResults?.total !== undefined}
-      <div class="results-header">
-        <div class="float-right">
-          <div class="duration text-right">{lastResults.search_duration || ''}</div>
-          <div class="search-engine-link">
-            {#if query.trim()}
-              <a id="external-search-link" href={getSearchUrl(config.searchUrl, query)}>Open in external search engine</a>
-            {/if}
+<button
+  class="fixed bottom-14 right-6 z-30 w-10 h-10 flex items-center justify-center bg-card-surface border-[2px] border-border-brand-muted text-text-brand-muted hover:border-hister-indigo hover:text-hister-indigo cursor-pointer shadow-[3px_3px_0px_var(--border-brand)] hover:shadow-[3px_3px_0px_var(--hister-indigo)] transition-all"
+  onclick={() => { showHelp = !showHelp; }}
+  title="Keyboard shortcuts (?)"
+  aria-label="Show keyboard shortcuts"
+>
+  <Keyboard class="size-4" />
+</button>
+
+{#if isSearching}
+  <div class="flex-1 flex flex-col min-h-0">
+    <div class="flex items-center gap-3 h-11 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
+      <Search class="size-4 text-text-brand-muted shrink-0" />
+      <input
+        type="text"
+        bind:this={inputEl}
+        bind:value={query}
+        placeholder="Search..."
+        class="flex-1 h-full bg-transparent font-inter text-sm font-medium text-text-brand placeholder:text-text-brand-muted outline-none border-0"
+      />
+      {#if autocomplete && autocomplete !== query}
+        <span class="font-fira text-xs text-text-brand-muted">
+          Tab: <span class="text-hister-indigo">{autocomplete}</span>
+        </span>
+      {/if}
+      <div class="w-2 h-2 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}"></div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-12 py-6 space-y-3 overflow-x-hidden">
+      {#if hasResults}
+        <div class="flex items-center justify-between">
+          <span class="font-outfit text-base font-bold text-hister-indigo">
+            {lastResults?.total || totalResults} results{query ? ` for "${query}"` : ''}
+          </span>
+          <div class="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="font-inter text-xs text-text-brand-muted hover:text-hister-coral gap-1 no-underline"
+              href={getSearchUrl(config.searchUrl, query)}
+            >
+              <ExternalLink class="size-3" />
+              Web
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="font-inter text-xs text-hister-indigo hover:text-hister-coral"
+              onclick={() => setSort(currentSort === '' ? 'domain' : '')}
+            >
+              Sort: {currentSort === 'domain' ? 'Domain' : 'Relevance'}
+            </Button>
           </div>
         </div>
-        <div>Total number of results: <b class="results-num">{lastResults.total || lastResults.documents?.length}</b></div>
-        {#if lastResults.query && lastResults.query.text !== query}
-          <div class="expanded-query">Expanded query: <code>"{escapeHTML(lastResults.query.text)}"</code></div>
+
+        {#if lastResults?.query && lastResults.query.text !== query}
+          <p class="font-inter text-sm text-text-brand-muted">
+            Expanded query: <code class="font-fira bg-muted-surface px-1.5 py-0.5 text-xs">{lastResults.query.text}</code>
+          </p>
         {/if}
+
+        <div class="flex items-center gap-3 font-inter text-sm text-text-brand-secondary">
+          <label class="flex items-center gap-1.5">
+            From:
+            <Input type="date" bind:value={dateFrom} class="h-7 px-2 text-xs border-[2px] border-border-brand-muted bg-card-surface text-text-brand font-fira shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo" />
+          </label>
+          <label class="flex items-center gap-1.5">
+            To:
+            <Input type="date" bind:value={dateTo} class="h-7 px-2 text-xs border-[2px] border-border-brand-muted bg-card-surface text-text-brand font-fira shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo" />
+          </label>
+        </div>
+
+        {#if lastResults?.history?.length}
+          {#each lastResults.history as r, i}
+            {@const favSrc = getFaviconSrc(r.favicon, r.url)}
+            <div data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
+              style={i === highlightIdx ? 'background: linear-gradient(90deg, transparent, rgba(90, 138, 138, 0.12), transparent); border-left: 3px solid var(--hister-teal); padding-left: 0.75rem;' : ''}>
+              <div class="w-5 h-5 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden bg-hister-teal">
+                {#if favSrc}
+                  <img src={favSrc} alt="" class="w-full h-full object-cover" onload={(e) => { (e.target as HTMLImageElement).parentElement!.style.backgroundColor = 'transparent'; }} onerror={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                  <Star class="size-3 text-white hidden" />
+                {:else}
+                  <Star class="size-3 text-white" />
+                {/if}
+              </div>
+              <div class="flex-1 min-w-0 w-0 space-y-0.5">
+                <a data-result-link href={r.url} class="font-outfit text-[15px] font-semibold text-hister-teal hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
+                  {@html r.title || '*title*'}
+                </a>
+                <div class="flex items-center gap-2">
+                  <span class="font-fira text-[11px] text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
+                  <Badge variant="secondary" class="text-[10px] px-1.5 py-0 h-4 bg-hister-teal/10 text-hister-teal border-0">pinned</Badge>
+                  <button data-readable class="flex items-center gap-0.5 font-inter text-xs font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
+                    <Eye class="size-3" /><span>view</span>
+                  </button>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="shrink-0 text-text-brand-muted hover:text-text-brand cursor-pointer"
+                onclick={() => { showActionsForResult = showActionsForResult === 'history:' + r.url ? null : 'history:' + r.url; }}
+              >
+                <MoreVertical class="size-4" />
+              </Button>
+            </div>
+            {#if showActionsForResult === 'history:' + r.url}
+              <div class="ml-8 p-3 border-[2px] border-border-brand-muted bg-card-surface space-y-2">
+                <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10" onclick={() => updatePriorityResult(r.url, r.title || '*title*', true)}>
+                  <PinOff class="size-3.5" />
+                  Remove priority
+                </Button>
+                {#if actionsMessage}
+                  <p class="text-xs font-inter {actionsError ? 'text-hister-rose' : 'text-hister-teal'}">{actionsMessage}</p>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+        {/if}
+
+        {#if lastResults?.documents}
+          {#each lastResults.documents as r, i}
+            {@const idx = historyLen + i}
+            {@const color = getResultColor(i)}
+            {@const favSrc = getFaviconSrc(r.favicon, r.url)}
+            <div data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
+              style={idx === highlightIdx ? `background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--${color}) 12%, transparent), transparent); border-left: 3px solid var(--${color}); padding-left: 0.75rem;` : ''}>
+              <div class="w-5 h-5 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden" style="background-color: var(--{color});">
+                {#if favSrc}
+                  <img src={favSrc} alt="" class="w-full h-full object-cover" onload={(e) => { (e.target as HTMLImageElement).parentElement!.style.backgroundColor = 'transparent'; }} onerror={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                  <Globe class="size-3 text-white hidden" />
+                {:else}
+                  <Globe class="size-3 text-white" />
+                {/if}
+              </div>
+              <div class="flex-1 min-w-0 w-0 space-y-0.5">
+                <a data-result-link href={r.url} class="font-outfit text-[15px] font-semibold hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" style="color: var(--{color});" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
+                  {@html r.title || '*title*'}
+                </a>
+                {#if r.text}
+                  <p class="font-inter text-[13px] text-text-brand-secondary leading-[1.4] line-clamp-1 overflow-hidden text-ellipsis whitespace-nowrap">{@html r.text}</p>
+                {/if}
+                <div class="flex items-center gap-2">
+                  <span class="font-fira text-[11px] text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
+                  {#if r.added}
+                    <span class="font-inter text-xs text-text-brand-muted" title={formatTimestamp(r.added)}>· {formatRelativeTime(r.added)}</span>
+                  {/if}
+                  <button data-readable class="flex items-center gap-0.5 font-inter text-xs font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
+                    <Eye class="size-3" /><span>view</span>
+                  </button>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="shrink-0 text-text-brand-muted hover:text-text-brand cursor-pointer"
+                onclick={() => { showActionsForResult = showActionsForResult === 'doc:' + r.url ? null : 'doc:' + r.url; }}
+              >
+                <MoreVertical class="size-4" />
+              </Button>
+            </div>
+            {#if showActionsForResult === 'doc:' + r.url}
+              <div class="ml-8 p-3 border-[2px] border-border-brand-muted bg-card-surface space-y-2">
+                <div class="flex items-center gap-2">
+                  <Input bind:value={actionsQuery} placeholder="Query for priority..." class="flex-1 h-7 text-sm font-inter border-[2px] border-border-brand-muted shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo" />
+                  <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-indigo text-hister-indigo" onclick={() => updatePriorityResult(r.url, r.title || '*title*', false)}>
+                    <Pin class="size-3.5" />
+                    Pin
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10" onclick={() => deleteResult(r.url)}>
+                  <Trash2 class="size-3.5" />
+                  Delete
+                </Button>
+                {#if actionsMessage}
+                  <p class="text-xs font-inter {actionsError ? 'text-hister-rose' : 'text-hister-teal'}">{actionsMessage}</p>
+                {/if}
+              </div>
+            {/if}
+          {/each}
+        {/if}
+
+        <Separator class="bg-border-brand-muted" />
+        <div class="flex items-center gap-4 font-inter text-xs text-text-brand-muted">
+          <Download class="size-3.5" />
+          <span>Export:</span>
+          <Button variant="link" size="sm" class="text-xs text-hister-indigo p-0 h-auto" onclick={() => exportJSON(lastResults!)}>JSON</Button>
+          <Button variant="link" size="sm" class="text-xs text-hister-indigo p-0 h-auto" onclick={() => exportCSV(lastResults!, query)}>CSV</Button>
+          <Button variant="link" size="sm" class="text-xs text-hister-indigo p-0 h-auto" onclick={() => exportRSS(lastResults!, query)}>RSS</Button>
+        </div>
+      {:else if query && lastResults}
+        <div class="text-center py-12">
+          <p class="font-inter text-text-brand-secondary mb-4">No results found for "<span class="font-semibold">{query}</span>"</p>
+          <Button variant="outline" class="border-[3px] border-hister-coral text-hister-coral hover:bg-hister-coral/10 font-inter font-semibold shadow-[3px_3px_0px_var(--hister-coral)]" href={getSearchUrl(config.searchUrl, query)}>
+            <ExternalLink class="size-4" />
+            Search
+          </Button>
+        </div>
+      {:else if query}
+        <div class="flex items-center justify-center py-16">
+          <span class="font-inter text-text-brand-muted">Searching...</span>
+        </div>
+      {/if}
+    </div>
+  </div>
+{:else}
+  <div class="flex-1 flex flex-col items-center justify-center gap-10 py-12 px-12 overflow-y-auto relative">
+    <div bind:this={gridContainerEl} class="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+      <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        {#each Array(12) as _, i}
+          <line class="grid-h" x1="0" y1="{(i + 1) * 8.33}%" x2="100%" y2="{(i + 1) * 8.33}%"
+            stroke="var(--hister-indigo)" stroke-width="0.5" opacity="0.08" />
+        {/each}
+        {#each Array(16) as _, i}
+          <line class="grid-v" x1="{(i + 1) * 6.25}%" y1="0" x2="{(i + 1) * 6.25}%" y2="100%"
+            stroke="var(--hister-indigo)" stroke-width="0.5" opacity="0.08" />
+        {/each}
+        <line class="grid-h" x1="0" y1="0" x2="100%" y2="100%" stroke="var(--hister-coral)" stroke-width="0.3" opacity="0.04" />
+        <line class="grid-h" x1="100%" y1="0" x2="0" y2="100%" stroke="var(--hister-teal)" stroke-width="0.3" opacity="0.04" />
+      </svg>
+    </div>
+
+    <h1
+      bind:this={heroTitleEl}
+      class="font-outfit font-black text-[96px] leading-none tracking-[8px] bg-clip-text text-transparent select-none"
+      style="background-image: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal), var(--hister-indigo)); background-size: 300% 100%; background-position: 0% 50%;"
+    >
+      HISTER
+    </h1>
+
+    <p class="font-inter text-lg text-text-brand-secondary">
+      Your personal search engine
+    </p>
+    <div
+      bind:this={underlineEl}
+      class="h-[2px] w-48"
+      style="background: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal)); transform: scaleX(0); transform-origin: left;"
+    ></div>
+
+    <div bind:this={searchBoxEl} class="search-box-gradient w-full max-w-[680px] p-[3px] shadow-[4px_4px_0px_var(--hister-coral)]">
+      <div class="h-14 flex items-center gap-3 pl-4 bg-card-surface">
+        <Search class="size-5 text-text-brand-muted shrink-0" />
+        <input
+          type="text"
+          bind:this={inputEl}
+          bind:value={query}
+          placeholder="Search ..."
+          class="flex-1 h-full bg-transparent font-inter text-base text-text-brand placeholder:text-text-brand-muted outline-none border-0"
+        />
+        <div class="w-2.5 h-2.5 mr-4 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}" title={connected ? 'Connected' : 'Disconnected'}></div>
       </div>
-    {/if}
+    </div>
 
-    {#if lastResults?.history?.length}
-      {#each lastResults.history as r, i}
-        <div class="result" class:highlight={getHighlightIdxForHistory(i)}>
-          <div class="result-title">
-            <img src={emptyImg} alt="" />
-            <a href={r.url} class="success" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>{@html r.title || '*title*'}</a>
-          </div>
-          <span class="result-url">{r.url}</span>
-          <span class="action-button" role="button" tabindex="0" aria-label="Show actions"
-            onclick={(e) => { e.stopPropagation(); showActionsForResult = showActionsForResult === 'history:' + r.url ? null : 'history:' + r.url; }}
-            onkeydown={(e) => handleButtonKeydown(e, () => { showActionsForResult = showActionsForResult === 'history:' + r.url ? null : 'history:' + r.url; })}>
-            <svg focusable="false" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path fill="#95a5a6" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-            </svg>
-          </span>
-          <!-- svelte-ignore a11y_invalid_attribute -->
-          <a class="readable" onclick={(e) => openReadable(e, r.url, r.title || '*title*')} href="#" role="button" tabindex="0">view</a>
-          {#if showActionsForResult === 'history:' + r.url}
-            <div class="actions bordered padded mt-1">
-              <!-- svelte-ignore a11y_invalid_attribute -->
-              <a class="close float-right" onclick={(e) => { e.stopPropagation(); showActionsForResult = null; }} href="#" role="button" tabindex="0">close</a>
-              <button class="delete error" onclick={(e) => { e.stopPropagation(); updatePriorityResult(r.url, r.title || '*title*', true); }}>Delete this priority result</button>
-              {#if actionsMessage}
-                <p class:success={!actionsError} class:error={actionsError}>
-                  <b>{actionsError ? 'Error!' : 'Success!'}</b> <span class="message">{actionsMessage}</span>
-                </p>
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {/each}
-    {/if}
+    <div bind:this={hintEl} class="flex items-center gap-2 font-inter text-xs text-text-brand-muted">
+      <span>Pro tip: Press</span>
+      <kbd bind:this={kbdEl} class="inline-block bg-muted-surface border-[2px] border-border-brand-muted px-2 py-0.5 font-fira text-xs font-semibold text-text-brand-secondary">/</kbd>
+      <span>to focus search anywhere</span>
+    </div>
 
-    {#if lastResults?.documents}
-      {#each lastResults.documents as r, i}
-        <div class="result" class:highlight={getHighlightIdxForDocs(i)}>
-          <div class="result-title">
-            <img src={r.favicon || emptyImg} alt="" />
-            <a href={r.url} onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>{@html r.title || '*title*'}</a>
-          </div>
-          <span class="result-url">{r.url}</span>
-          <span class="action-button" role="button" tabindex="0" aria-label="Show actions"
-            onclick={(e) => { e.stopPropagation(); showActionsForResult = showActionsForResult === 'doc:' + r.url ? null : 'doc:' + r.url; }}
-            onkeydown={(e) => handleButtonKeydown(e, () => { showActionsForResult = showActionsForResult === 'doc:' + r.url ? null : 'doc:' + r.url; })}>
-            <svg focusable="false" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-              <path fill="#95a5a6" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-            </svg>
-          </span>
-          <span class="added" title={formatTimestamp(r.added || 0)}>{formatRelativeTime(r.added || 0)}</span>
-          <!-- svelte-ignore a11y_invalid_attribute -->
-          <a class="readable" onclick={(e) => openReadable(e, r.url, r.title || '*title*')} href="#" role="button" tabindex="0">view</a>
-          <p class="result-content">{@html r.text || ''}</p>
-          {#if showActionsForResult === 'doc:' + r.url}
-            <div class="actions bordered padded mt-1">
-              <!-- svelte-ignore a11y_invalid_attribute -->
-              <a class="close float-right" onclick={(e) => { e.stopPropagation(); showActionsForResult = null; }} href="#" role="button" tabindex="0">close</a>
-              Prioritize this result for the following query:<br />
-              <input type="text" class="action-query" bind:value={actionsQuery} placeholder="Query.." />
-              <button class="save" onclick={(e) => { e.stopPropagation(); updatePriorityResult(r.url, r.title || '*title*', false); }}>Save</button><br />
-              <button class="delete error" onclick={(e) => { e.stopPropagation(); deleteResult(r.url); }}>Delete this result</button>
-              {#if actionsMessage}
-                <p class:success={!actionsError} class:error={actionsError}>
-                  <b>{actionsError ? 'Error!' : 'Success!'}</b> <span class="message">{actionsMessage}</span>
-                </p>
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {/each}
-    {/if}
-  {/if}
-</div>
+
+  </div>
+{/if}
+
+<style>
+  :global(.pulse-dot) {
+    animation: pulse-throb 6s ease-in-out infinite;
+  }
+  @keyframes pulse-throb {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.6); }
+  }
+  .search-box-gradient {
+    background: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal), var(--hister-indigo));
+    background-size: 300% 100%;
+    animation: gradient-slide 6s ease-in-out infinite alternate;
+  }
+  @keyframes gradient-slide {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+  }
+</style>
