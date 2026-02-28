@@ -1,22 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Fira+Code:wght@400;500&family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+@source "../../components/src";
 @import "../../components/src/colors.css";
 
 
 @layer components {
     input, textarea, button {
         border: 1px solid var(--color-semilight);
-        border-radius: 0.5em;
+        border-radius: 0;
+    }
+    .beta-layout input,
+    .beta-layout textarea,
+    .beta-layout button {
+        border: revert-layer;
+        border-radius: revert-layer;
     }
 }
 
-/* PRE-TAILWIND LEGACY CSS BELOW */
+/* LEGACY CSS — inside @layer base so Tailwind utilities can override */
+@layer base {
 
 * {
 	box-sizing: inherit;
 }
 
 html {
-	font-family: system-ui, "Helvetica Neue", Arial, sans-serif;
+	font-family: 'Inter', system-ui, "Helvetica Neue", Arial, sans-serif;
 	font-size: 1.1rem;
 	height: 100%;
 	box-sizing: border-box;
@@ -26,11 +35,14 @@ body {
     margin: 0;
     height: 100%;
     min-height: 100vh;
+    background: var(--color-dark);
+    color: var(--color-light);
+    padding: 0px;
+}
+
+body:not(:has(.beta-main)) {
 	display: grid;
 	grid-template-rows: auto 1fr auto;
-	background: var(--color-dark);
-	color: var(--color-light);
-	padding: 0px;
 }
 
 a, summary {
@@ -96,28 +108,28 @@ header {
     }
 }
 
-main {
+main:not(.beta-main) {
     padding: 0 1em;
     margin-bottom: 1em;
 }
 
-footer {
+footer:not(.beta-footer) {
     padding: 1em;
     a {
         padding: 1em 0;
     }
 }
 
-input, textarea {
+:not(.beta-layout) input, :not(.beta-layout) textarea {
     font-size: 1em;
     padding: 0.4em;
     margin-bottom: 0.4em;
-    border-radius: 0.4em;
+    border-radius: 0;
 }
 
-input[type=submit], button {
+:not(.beta-layout) input[type=submit], :not(.beta-layout) button {
     font-size: 1em;
-    border-radius: 0.2em;
+    border-radius: 0;
     padding: 0.4em 0.8em;
 	font-weight: 600;
 }
@@ -139,7 +151,7 @@ code {
 kbd {
     background-color: var(--color-grey);
     border: 1px solid var(--color-semilight);
-    border-radius: 0.3em;
+    border-radius: 0;
     padding: 0.3em 0.7em;
     margin: 0 0.2em;
     font-family: monospace;
@@ -179,7 +191,7 @@ table {
     margin: auto;
     margin-top: 1em;
     padding: 1em 2em;
-    border-radius: 0.4em;
+    border-radius: 0;
 }
 
 .box {
@@ -198,7 +210,7 @@ table {
 
 .bordered {
     border: 1px solid var(--color-grey);
-    border-radius: 0.4em;
+    border-radius: 0;
 }
 .padded {
     padding: 1em;
@@ -267,7 +279,7 @@ table {
         background-color: var(--color-semidark);
         color: var(--color-light);
         border: 1px solid var(--color-grey);
-        border-radius: 0.3em;
+        border-radius: 0;
     }
 }
 
@@ -285,7 +297,7 @@ table {
     right: 2em;
     width: 3em;
     height: 3em;
-    border-radius: 50%;
+    border-radius: 0;
     background: var(--color-semidark);
     border: 2px solid var(--color-grey);
     color: var(--color-blue);
@@ -538,3 +550,5 @@ mark {
 .sort-buttons .sort-separator {
     padding: 0 0.2em;
 }
+
+} /* end @layer base */

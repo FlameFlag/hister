@@ -5,16 +5,25 @@
 
   let { children } = $props();
 
+  function applyTheme(theme: string) {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }
+
   onMount(() => {
     const theme = localStorage.getItem('theme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
+    applyTheme(theme);
   });
 
   function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme');
     const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
+    applyTheme(next);
     localStorage.setItem('theme', next);
   }
 </script>
