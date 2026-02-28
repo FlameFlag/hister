@@ -72,6 +72,7 @@
   let showActionsForResult: string | null = $state(null);
 
   let showHelp = $state(false);
+  let resultsShown = $state(false);
 
   let contextMenuSearch: string | null = $state(null);
   let contextMenuPos = $state({ x: 0, y: 0 });
@@ -119,7 +120,7 @@
     'show_hotkeys': showHotkeys
   };
 
-  const isSearching = $derived(query.length > 0);
+  const isSearching = $derived(query.length > 0 || resultsShown);
 
   const historyLen = $derived((lastResults?.history as any)?.length || 0);
   const docsLen = $derived((lastResults?.documents as any)?.length || 0);
@@ -153,6 +154,7 @@
     lastResults = res;
     autocomplete = (query && res.query_suggestion) || '';
     highlightIdx = 0;
+    resultsShown = true;
   }
 
   function openResult(url: string, title: string, newWindow = false) {
