@@ -546,24 +546,24 @@
 
 {#if isSearching}
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="flex items-center gap-3 h-16 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
-      <Search class="size-4 text-text-brand-muted shrink-0" />
+    <div class="flex items-center gap-3 h-10 md:h-14 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
+      <Search class="size-4 md:size-6 text-text-brand-muted" />
       <input
         type="text"
         bind:this={inputEl}
         bind:value={query}
         placeholder="Search..."
-        class="flex-1 h-full bg-transparent font-inter text-2xl font-medium text-text-brand placeholder:text-text-brand-muted outline-none border-0"
+        class="flex-1 h-full bg-transparent font-inter text-lg md:text-2xl font-medium text-text-brand placeholder:text-text-brand-muted outline-none border-0"
       />
-      {#if autocomplete && autocomplete !== query}
-        <span class="font-fira text-sm text-text-brand-muted">
-          Tab: <span class="text-hister-indigo">{autocomplete}</span>
-        </span>
-      {/if}
       <div class="w-2 h-2 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}" title={connected ? 'Connected' : 'Disconnected'}></div>
     </div>
+    {#if autocomplete && autocomplete !== query}
+    <span class="mx-8 font-fira text-sm text-text-brand-muted">
+        Tab: <span class="text-hister-indigo">{autocomplete}</span>
+    </span>
+    {/if}
 
-    <div class="flex-1 overflow-y-auto px-12 py-6 space-y-3 overflow-x-hidden">
+    <div class="flex-1 overflow-y-auto px-4 md:px-12 py-2 space-y-3 overflow-x-hidden">
       {#if hasResults}
         <div class="flex items-center justify-between">
           <span class="font-outfit text-base font-bold text-hister-indigo">
@@ -621,13 +621,13 @@
                 {/if}
               </div>
               <div class="flex-1 min-w-0 w-0 space-y-0.5">
-                <a data-result-link href={r.url} class="font-outfit text-xl font-semibold text-hister-teal hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
+                <a data-result-link href={r.url} class="font-outfit text-md md:text-xl font-semibold text-hister-teal hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
                   {@html r.title || '*title*'}
                 </a>
                 <div class="flex items-center gap-2">
                   <span class="font-fira text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
                   <Badge variant="secondary" class="px-1.5 py-0 h-4 bg-hister-teal/10 text-hister-teal border-0">pinned</Badge>
-                  <button data-readable class="flex items-center gap-0.5 font-inter text-sm font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
+                  <button data-readable class="flex items-center gap-0.5 font-inter text-xs md:text-sm font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
                     <Eye class="size-3" /><span>view</span>
                   </button>
                 </div>
@@ -671,20 +671,20 @@
                 {/if}
               </div>
               <div class="flex-1 min-w-0 w-0 space-y-0.5">
-                <a data-result-link href={r.url} class="font-outfit text-xl font-semibold hover:underline block overflow-hidden text-ellipsis whitespace-nowrap w-full" style="color: var(--{color});" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
+                <a data-result-link href={r.url} class="font-outfit text-md md:text-xl font-semibold hover:underline block w-full" style="color: var(--{color});" onclick={(e) => { e.preventDefault(); openResult(r.url, r.title || '*title*'); }}>
                   {@html r.title || '*title*'}
                 </a>
-                <div class="flex items-center gap-2">
-                  <span class="font-fira text-sm text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
+                <div class="flex items-left md:items-center gap-0 md:gap-2 flex-col md:flex-row">
+                  <span class="font-fira text-xs md:text-sm text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
                   {#if r.added}
-                    <span class="font-inter text-sm text-text-brand-muted" title={formatTimestamp(r.added)}>· {formatRelativeTime(r.added)}</span>
+                    <span class="font-inter text-xs md:text-sm text-text-brand-muted" title={formatTimestamp(r.added)}>· {formatRelativeTime(r.added)}</span>
                   {/if}
-                  <button data-readable class="flex items-center gap-0.5 font-inter text-sm font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
+                  <button data-readable class="flex items-center gap-0.5 font-inter text-xs md:text-sm font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
                     <Eye class="size-3" /><span>view</span>
                   </button>
                 </div>
                 {#if r.text}
-                  <p class="font-inter text-text-brand-secondary leading-[1.4] line-clamp-1 overflow-hidden text-ellipsis whitespace-nowrap">{@html r.text}</p>
+                  <p class="font-inter text-text-brand-secondary text-sm md:text-base leading-[1.4]">{@html r.text}</p>
                 {/if}
               </div>
               <Button
@@ -726,7 +726,7 @@
           <Button variant="link" size="sm" class="text-xs text-hister-indigo p-0 h-auto" onclick={() => exportRSS(lastResults!, query)}>RSS</Button>
         </div>
       {:else if query && lastResults}
-        <div class="text-center py-12">
+        <div class="text-center pmd:px-12 y-12">
           <p class="font-inter text-text-brand-secondary mb-4">No results found for "<span class="font-semibold">{query}</span>"</p>
           <Button variant="outline" class="border-[3px] border-hister-coral text-hister-coral hover:bg-hister-coral/10 font-inter font-semibold shadow-[3px_3px_0px_var(--hister-coral)]" href={getSearchUrl(config.searchUrl, query)}>
             <ExternalLink class="size-4" />
@@ -741,18 +741,18 @@
     </div>
   </div>
 {:else}
-  <div class="flex-1 flex flex-col items-center justify-center gap-10 py-12 px-12 overflow-y-auto relative">
+  <div class="flex-1 flex flex-col items-center justify-center gap-10 py-4 md:py-12 px-4 md:px-12 overflow-y-auto relative">
 
     <h1
       bind:this={heroTitleEl}
-      class="font-outfit font-black text-8xl leading-none tracking-[8px] bg-clip-text text-transparent select-none"
+      class="font-outfit font-black text-5xl md:text-9xl leading-none tracking-[8px] bg-clip-text text-transparent select-none"
       style="background-image: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal), var(--hister-indigo)); background-size: 300% 100%; background-position: 0% 50%;"
     >
       HISTER
     </h1>
 
-    <p class="font-inter text-lg text-text-brand-secondary">
-      Your personal search engine
+    <p class="font-inter text-md md:text-lg text-text-brand-secondary">
+      Your own search engine
     </p>
     <div
       bind:this={underlineEl}
@@ -761,14 +761,14 @@
     ></div>
 
     <div bind:this={searchBoxEl} class="search-box-gradient w-full max-w-[1200px] p-[3px] shadow-[4px_4px_0px_var(--hister-coral)]">
-      <div class="h-14 flex items-center gap-3 pl-4 bg-card-surface">
-        <Search class="size-5 text-text-brand-muted shrink-0" />
+      <div class="h-10 md:h-14 flex items-center gap-3 pl-4 bg-card-surface">
+        <Search class="size-6 text-text-brand-muted" />
         <input
           type="text"
           bind:this={inputEl}
           bind:value={query}
           placeholder="Search ..."
-          class="flex-1 h-full bg-transparent font-inter text-lg text-text-brand placeholder:text-text-brand-muted outline-none border-0"
+          class="flex-1 h-full bg-transparent font-inter md:text-lg text-text-brand placeholder:text-text-brand-muted outline-none border-0 min-w-0"
         />
         <div class="w-2.5 h-2.5 mr-4 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}" title={connected ? 'Connected' : 'Disconnected'}></div>
       </div>
@@ -829,7 +829,7 @@
       </div>
     {/if}
 
-    <div bind:this={statsRowEl} class="flex items-center gap-8">
+    <div bind:this={statsRowEl} class="flex items-center gap-8 flex-col md:flex-row">
       <div class="flex items-center gap-2 text-hister-indigo">
         <History class="size-[18px]" />
         <span class="font-outfit text-xl font-extrabold">{displayHistoryCount}</span>
