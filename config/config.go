@@ -35,6 +35,7 @@ type Config struct {
 	SensitiveContentPatterns map[string]string `yaml:"sensitive_content_patterns" mapstructure:"sensitive_content_patterns"`
 	Rules                    *Rules            `yaml:"-" mapstructure:"-"`
 	secretKey                []byte
+	parsedBaseURL             *url.URL
 }
 
 type App struct {
@@ -339,6 +340,10 @@ func (c *Config) init() error {
 		}
 		c.Server.BaseURL = fmt.Sprintf("http://%s", c.Server.Address)
 	}
+	c.Server.BaseURL = strings.TrimSuffix(c.Server.BaseURL, "/")
+	if pu, err := url.Parse(c.Server.BaseURL); err == nil {
+		c.parsedBaseURL = pu
+	}
 	if strings.HasPrefix(c.App.Directory, "~/") {
 		u, _ := user.Current()
 		dir := u.HomeDir
@@ -533,7 +538,7 @@ func (c *Config) BaseURL(u string) string {
 }
 
 func (c *Config) IsSameHost(h string) bool {
-	bu, err := url.Parse(c.BaseURL(""))
+	bu, err := c.baseURLParsed()
 	if err != nil {
 		return false
 	}
@@ -557,7 +562,7 @@ func (c *Config) IsSameHost(h string) bool {
 }
 
 func (c *Config) Host() string {
-	u, err := url.Parse(c.Server.BaseURL)
+	u, err := c.baseURLParsed()
 	if err != nil {
 		return ""
 	}
@@ -565,15 +570,16 @@ func (c *Config) Host() string {
 }
 
 func (c *Config) WebSocketURL() string {
-	bu, err := url.Parse(c.Server.BaseURL)
+	bu, err := c.baseURLParsed()
 	if err != nil {
 		return ""
 	}
+	u := *bu
 	scheme := "ws"
-	if bu.Scheme == "https" {
+	if u.Scheme == "https" {
 		scheme = "wss"
 	}
-	basePath := strings.TrimSuffix(bu.Path, "/")
+	basePath := strings.TrimSuffix(u.Path, "/")
 	if basePath == "/" {
 		basePath = ""
 	}
@@ -581,17 +587,17 @@ func (c *Config) WebSocketURL() string {
 	if !strings.HasPrefix(wsPath, "/") {
 		wsPath = "/" + wsPath
 	}
-	bu.Scheme = scheme
-	bu.Path = wsPath
-	bu.RawQuery = ""
-	bu.Fragment = ""
-	return bu.String()
+	u.Scheme = scheme
+	u.Path = wsPath
+	u.RawQuery = ""
+	u.Fragment = ""
+	return u.String()
 }
 
 // BasePathPrefix returns the URL path component of Server.BaseURL without a trailing slash.
 // It returns "" when Server.BaseURL points to the domain root.
 func (c *Config) BasePathPrefix() string {
-	u, err := url.Parse(c.Server.BaseURL)
+	u, err := c.baseURLParsed()
 	if err != nil {
 		return ""
 	}
@@ -600,6 +606,13 @@ func (c *Config) BasePathPrefix() string {
 		return ""
 	}
 	return p
+}
+
+func (c *Config) baseURLParsed() (*url.URL, error) {
+	if c.parsedBaseURL != nil {
+		return c.parsedBaseURL, nil
+	}
+	return url.Parse(c.Server.BaseURL)
 }
 
 func (c *Config) LoadRules() error {

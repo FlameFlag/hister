@@ -242,10 +242,6 @@ func serveSPA(c *webContext) {
 			serve500(c)
 			return
 		}
-		if filepath.Ext(path) == ".html" {
-			basePrefix := c.Config.BasePathPrefix()
-			content = []byte(strings.ReplaceAll(string(content), "%hister_base%", basePrefix))
-		}
 		// Detect and set proper MIME type
 		ext := filepath.Ext(path)
 		if mimeType := mime.TypeByExtension(ext); mimeType != "" {
@@ -299,17 +295,15 @@ func serveSPA(c *webContext) {
 		serve500(c)
 		return
 	}
-	// Inject runtime base path prefix to support hosting under a subfolder.
-	// The Svelte app template contains a %hister_base% placeholder.
-	basePrefix := c.Config.BasePathPrefix()
-	contentStr := strings.ReplaceAll(string(content), "%hister_base%", basePrefix)
 	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	c.Response.Write([]byte(contentStr))
+	c.Response.Write(content)
 }
 
 // serveConfig returns app configuration as JSON and refreshes CSRF token.
 func serveConfig(c *webContext) {
 	type configResponse struct {
+		BaseURL             string            `json:"baseUrl"`
+		BasePath            string            `json:"basePath"`
 		WsURL               string            `json:"wsUrl"`
 		SearchURL           string            `json:"searchUrl"`
 		OpenResultsOnNewTab bool              `json:"openResultsOnNewTab"`
@@ -320,6 +314,8 @@ func serveConfig(c *webContext) {
 		hotkeys = make(map[string]string)
 	}
 	c.JSON(configResponse{
+		BaseURL:             c.Config.BaseURL(""),
+		BasePath:            c.Config.BasePathPrefix(),
 		WsURL:               c.Config.WebSocketURL(),
 		SearchURL:           c.Config.App.SearchURL,
 		OpenResultsOnNewTab: c.Config.App.OpenResultsOnNewTab,

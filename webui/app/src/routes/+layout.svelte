@@ -38,21 +38,21 @@
   </h1>
   <nav class="flex items-center gap-6">
     <a
-      class:underline={$page.url.pathname.endsWith('/history')}
+      class:underline={$page.url.pathname === new URL('history', $page.url).pathname}
       class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
       href="history"
     >
       History
     </a>
     <a
-      class:underline={$page.url.pathname.endsWith('/rules')}
+      class:underline={$page.url.pathname === new URL('rules', $page.url).pathname}
       class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
       href="rules"
     >
       Rules
     </a>
     <a
-      class:underline={$page.url.pathname.endsWith('/add')}
+      class:underline={$page.url.pathname === new URL('add', $page.url).pathname}
       class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
       href="add"
     >
