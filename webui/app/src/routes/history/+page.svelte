@@ -2,10 +2,12 @@
   import { onMount } from 'svelte';
   import { fetchConfig, apiFetch } from '$lib/api';
   import { Button } from '@hister/components/ui/button';
+  import { Input } from '@hister/components/ui/input';
   import { Badge } from '@hister/components/ui/badge';
   import { Separator } from '@hister/components/ui/separator';
-  import { Search, Clock, Trash2 } from 'lucide-svelte';
-  import StatusMessage from '$lib/components/StatusMessage.svelte';
+  import { ScrollArea } from '@hister/components/ui/scroll-area';
+  import * as Alert from '@hister/components/ui/alert';
+  import { Search, Clock, Trash2, AlertCircle } from 'lucide-svelte';
 
   interface HistoryItem {
     query: string;
@@ -168,16 +170,15 @@
   <title>Hister - History</title>
 </svelte:head>
 
-<div class="flex items-center justify-between px-6 py-3 bg-card-surface border-b-[2px] border-border-brand-muted shrink-0">
+<header class="flex items-center justify-between px-6 py-3 bg-card-surface border-b-[2px] border-border-brand-muted shrink-0">
   <h1 class="font-outfit text-lg font-extrabold text-text-brand">Search History</h1>
-  <div class="flex items-center gap-3">
+  <nav class="flex items-center gap-3">
     <div class="flex items-center gap-2 h-8 px-3 border-[2px] border-border-brand-muted bg-page-bg">
       <Search class="size-3.5 text-text-brand-muted shrink-0" />
-      <input
-        type="text"
+      <Input
         bind:value={filter}
         placeholder="Filter..."
-        class="w-40 h-full bg-transparent font-inter text-xs font-medium text-text-brand placeholder:text-text-brand-muted outline-none border-0"
+        class="w-40 h-full bg-transparent font-inter text-xs font-medium text-text-brand placeholder:text-text-brand-muted border-0 shadow-none focus-visible:ring-0 p-0"
       />
     </div>
     {#if items.length > 0}
@@ -191,20 +192,23 @@
         Delete All
       </Button>
     {/if}
-  </div>
-</div>
+  </nav>
+</header>
 
 {#if loading}
-  <StatusMessage type="loading" message="Loading history..." />
+  <p class="font-inter text-sm text-text-brand-muted text-center py-8">Loading history...</p>
 {:else if error}
   <div class="px-6 py-4">
-    <StatusMessage type="error" message={error} />
+    <Alert.Root variant="destructive" class="border-[2px] border-hister-rose bg-hister-rose/10 text-hister-rose rounded-none">
+      <AlertCircle class="size-4" />
+      <Alert.Description class="font-inter text-sm">{error}</Alert.Description>
+    </Alert.Root>
   </div>
 {:else if filteredItems.length === 0}
-  <StatusMessage type="empty" message={filter ? 'No matching entries' : 'No history yet'} />
+  <p class="font-inter text-sm text-text-brand-muted text-center py-8">{filter ? 'No matching entries' : 'No history yet'}</p>
 {:else}
   <div class="flex flex-1 min-h-0">
-    <div class="w-[360px] shrink-0 border-r-[2px] border-border-brand-muted pt-5 pr-3 overflow-y-auto">
+    <ScrollArea class="w-[360px] shrink-0 border-r-[2px] border-border-brand-muted pt-5 pr-3">
       <div class="space-y-1">
         <span class="font-space text-lg font-bold tracking-[2px] text-text-brand-muted px-2.5 flex items-center gap-1.5">
           <Clock class="size-3" />
@@ -212,11 +216,9 @@
         </span>
         <Separator class="bg-border-brand-muted" />
 
-        <button
-          class="flex items-center gap-2 w-full py-2 px-2.5 text-left border-0 cursor-pointer"
-          style={!filterByDate ? 'background-color: var(--hister-indigo); color: white;' : ''}
-          class:bg-transparent={!!filterByDate}
-          class:hover:bg-muted-surface={!!filterByDate}
+        <Button
+          variant="ghost"
+          class="flex items-center gap-2 w-full py-2 px-2.5 justify-start h-auto rounded-none {!filterByDate ? 'bg-[var(--hister-indigo)] text-white hover:bg-[var(--hister-indigo)]/90 hover:text-white' : 'hover:bg-muted-surface'}"
           onclick={showAll}
         >
           <span class="font-inter text-lg font-semibold" class:text-text-brand-secondary={!!filterByDate}>
@@ -224,23 +226,21 @@
           </span>
           <Badge
             variant="secondary"
-            class="ml-auto shrink-0 text-lg px-1.5 py-0 h-4 border-0 {filterByDate ? 'bg-muted-surface text-text-brand-muted' : ''}"
-            style={!filterByDate ? 'background-color: rgba(255,255,255,0.2); color: white;' : ''}
+            class="ml-auto shrink-0 text-lg px-1.5 py-0 h-4 border-0 {filterByDate ? 'bg-muted-surface text-text-brand-muted' : 'bg-white/20 text-white'}"
           >
             {filteredItems.length}
           </Badge>
-        </button>
+        </Button>
 
         <Separator class="bg-border-brand-muted" />
 
         {#each allGroups as group, i}
           {@const color = getGroupColor(i)}
           {@const isActive = filterByDate === group.key}
-          <button
-            class="flex items-center gap-2 w-full py-2 px-2.5 text-left border-0 cursor-pointer"
-            style={isActive ? `background-color: ${getColorVar(color)}; color: white;` : ''}
-            class:bg-transparent={!isActive}
-            class:hover:bg-muted-surface={!isActive}
+          <Button
+            variant="ghost"
+            class="flex items-center gap-2 w-full py-2 px-2.5 justify-start h-auto rounded-none {isActive ? 'text-white hover:text-white' : 'hover:bg-muted-surface'}"
+            style={isActive ? `background-color: ${getColorVar(color)};` : ''}
             onclick={() => scrollToGroup(group.key)}
           >
             <span
@@ -257,27 +257,26 @@
             </span>
             <Badge
               variant="secondary"
-              class="ml-auto shrink-0 px-1.5 py-0 h-4 border-0 {!isActive ? 'bg-muted-surface text-text-brand-muted' : ''}"
-              style={isActive ? 'background-color: rgba(255,255,255,0.2); color: white;' : ''}
+              class="ml-auto shrink-0 px-1.5 py-0 h-4 border-0 {isActive ? 'bg-white/20 text-white' : 'bg-muted-surface text-text-brand-muted'}"
             >
               {group.items.length}
             </Badge>
-          </button>
+          </Button>
         {/each}
       </div>
-    </div>
+    </ScrollArea>
 
-    <div class="flex-1 min-w-0 overflow-y-auto px-6 py-5 space-y-6">
+    <ScrollArea class="flex-1 min-w-0 px-6 py-5 space-y-6">
       {#each groups as group, gi}
         {@const color = getGroupColor(gi)}
         <div id="group-{encodeURIComponent(group.key)}" class="space-y-2">
           <span class="font-outfit text-sm font-bold" style="color: {getColorVar(color)};">{group.label}</span>
-          <div class="h-0.5" style="background-color: {getColorVar(color)};"></div>
+          <Separator class="h-0.5" style="background-color: {getColorVar(color)};" />
 
           <div class="space-y-0">
             {#each group.items as item, ii}
               {@const itemColor = getGroupColor(gi + ii)}
-              <div
+              <article
                 class="flex items-center gap-3 py-2.5 px-3.5 bg-card-surface border-b-[2px] border-b-border-brand-muted overflow-hidden"
                 style="border-left: 3px solid {getColorVar(itemColor)};"
               >
@@ -293,7 +292,7 @@
                   </a>
                   <span class="font-fira text-lg text-text-brand-muted block truncate" title={item.url}>{item.url}</span>
                 </div>
-                <div class="flex items-center gap-1 shrink-0">
+                <nav class="flex items-center gap-1 shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -311,12 +310,12 @@
                   >
                     <Trash2 class="size-3.5" />
                   </Button>
-                </div>
-              </div>
+                </nav>
+              </article>
             {/each}
           </div>
         </div>
       {/each}
-    </div>
+    </ScrollArea>
   </div>
 {/if}

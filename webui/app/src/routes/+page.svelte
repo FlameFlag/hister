@@ -24,6 +24,11 @@
   import { Button } from '@hister/components/ui/button';
   import { Badge } from '@hister/components/ui/badge';
   import { Separator } from '@hister/components/ui/separator';
+  import * as Dialog from '@hister/components/ui/dialog';
+  import * as Card from '@hister/components/ui/card';
+  import * as DropdownMenu from '@hister/components/ui/dropdown-menu';
+  import { ScrollArea } from '@hister/components/ui/scroll-area';
+  import { Kbd } from '@hister/components/ui/kbd';
   import {
     Search, Star, Globe, MoreVertical, Eye, Trash2,
     Pin, PinOff, Download, ExternalLink, History, Shield, Link2,
@@ -53,7 +58,7 @@
 
   let wsManager: WebSocketManager | undefined;
   let keyHandler: KeyHandler | undefined;
-  let inputEl: HTMLInputElement | undefined = $state();
+  let inputEl: HTMLInputElement | null = $state(null);
 
   let query = $state('');
   let autocomplete = $state('');
@@ -91,7 +96,7 @@
   let hintEl: HTMLElement | undefined = $state();
   let chipsContainerEl: HTMLElement | undefined = $state();
   let statsRowEl: HTMLElement | undefined = $state();
-  let kbdEl: HTMLElement | undefined = $state();
+  let kbdEl: HTMLElement | null = $state(null);
   let underlineEl: HTMLElement | undefined = $state();
 
   let animationHandles: any[] = [];
@@ -477,83 +482,62 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-{#if showPopup}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    role="presentation"
-    onclick={(e) => { if (e.target === e.currentTarget) closePopup(); }}
-    onkeydown={(e) => { if (e.key === 'Escape') closePopup(); }}
-  >
-    <div class="relative w-full max-w-2xl max-h-[80vh] overflow-auto mx-4 border-[3px] border-border-brand bg-card-surface shadow-[6px_6px_0px_var(--hister-indigo)] p-6">
-      <button
-        class="absolute top-3 right-3 text-text-brand-muted hover:text-text-brand bg-transparent border-0 cursor-pointer text-lg font-bold leading-none p-1"
-        onclick={closePopup}
-        aria-label="Close"
-      >&times;</button>
-      <div class="border-b-[3px] border-border-brand-muted pb-4 mb-4">
-        <h2 class="font-outfit font-bold text-lg text-text-brand pr-6">{popupTitle}</h2>
-      </div>
-      <div class="font-inter text-sm text-text-brand-secondary prose max-w-none">{@html popupContent}</div>
-    </div>
-  </div>
-{/if}
+<Dialog.Root bind:open={showPopup}>
+  <Dialog.Content class="max-w-2xl max-h-[80vh] overflow-auto border-[3px] border-border-brand bg-card-surface shadow-[6px_6px_0px_var(--hister-indigo)] rounded-none p-6">
+    <Dialog.Header class="border-b-[3px] border-border-brand-muted pb-4">
+      <Dialog.Title class="font-outfit font-bold text-lg text-text-brand">{popupTitle}</Dialog.Title>
+    </Dialog.Header>
+    <div class="font-inter text-sm text-text-brand-secondary prose max-w-none">{@html popupContent}</div>
+  </Dialog.Content>
+</Dialog.Root>
 
-{#if showHelp}
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    role="presentation"
-    onclick={(e) => { if (e.target === e.currentTarget) showHelp = false; }}
-  >
-    <div class="relative w-full max-w-md mx-4 border-[3px] border-border-brand bg-card-surface shadow-[6px_6px_0px_var(--hister-indigo)] overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-4 bg-hister-indigo">
-        <div class="flex items-center gap-2">
-          <Keyboard class="size-5 text-white" />
-          <span class="font-outfit text-lg font-extrabold text-white">Keyboard Shortcuts</span>
+<Dialog.Root bind:open={showHelp}>
+  <Dialog.Content showCloseButton={false} class="max-w-md border-[3px] border-border-brand bg-card-surface shadow-[6px_6px_0px_var(--hister-indigo)] rounded-none p-0 gap-0 overflow-hidden">
+    <Dialog.Header class="flex-row items-center justify-between px-5 py-4 bg-hister-indigo gap-2">
+      <Dialog.Title class="flex items-center gap-2">
+        <Keyboard class="size-5 text-white" />
+        <span class="font-outfit text-lg font-extrabold text-white">Keyboard Shortcuts</span>
+      </Dialog.Title>
+      <Dialog.Close class="text-white/70 hover:text-white p-0.5">
+        <X class="size-5" />
+      </Dialog.Close>
+    </Dialog.Header>
+    <Card.Content class="p-4 space-y-0">
+      {#each Object.entries(config.hotkeys) as [key, action]}
+        <div class="flex items-center justify-between py-2.5 border-b-[1px] border-border-brand-muted">
+          <span class="font-inter text-text-brand-secondary">{hotkeyDescriptions[action] || action}</span>
+          <Kbd class="bg-muted-surface border-[2px] border-border-brand-muted px-2.5 py-0.5 font-fira text-xs font-semibold text-text-brand rounded-none h-auto">{key}</Kbd>
         </div>
-        <button
-          class="text-white/70 hover:text-white bg-transparent border-0 cursor-pointer p-0.5"
-          onclick={() => { showHelp = false; }}
-          aria-label="Close"
-        >
-          <X class="size-5" />
-        </button>
-      </div>
-      <div class="p-4 space-y-0">
-        {#each Object.entries(config.hotkeys) as [key, action]}
-          <div class="flex items-center justify-between py-2.5 border-b-[1px] border-border-brand-muted">
-            <span class="font-inter text-text-brand-secondary">{hotkeyDescriptions[action] || action}</span>
-            <kbd class="bg-muted-surface border-[2px] border-border-brand-muted px-2.5 py-0.5 font-fira text-xs font-semibold text-text-brand">{key}</kbd>
-          </div>
-        {/each}
-      </div>
-      <div class="px-5 py-3 bg-muted-surface border-t-[2px] border-border-brand-muted">
-        <p class="font-inter text-xs text-text-brand-muted">
-          Press <kbd class="bg-card-surface border border-border-brand-muted px-1.5 py-0.5 font-fira text-[10px]">?</kbd> to toggle this dialog
-        </p>
-      </div>
-    </div>
-  </div>
-{/if}
+      {/each}
+    </Card.Content>
+    <Card.Footer class="px-5 py-3 bg-muted-surface border-t-[2px] border-border-brand-muted">
+      <p class="font-inter text-xs text-text-brand-muted">
+        Press <Kbd class="bg-card-surface border border-border-brand-muted px-1.5 py-0.5 font-fira text-[10px] rounded-none h-auto">?</Kbd> to toggle this dialog
+      </p>
+    </Card.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
-<button
-  class="fixed bottom-14 right-6 z-30 w-10 h-10 flex items-center justify-center bg-card-surface border-[2px] border-border-brand-muted text-text-brand-muted hover:border-hister-indigo hover:text-hister-indigo cursor-pointer shadow-[3px_3px_0px_var(--border-brand)] hover:shadow-[3px_3px_0px_var(--hister-indigo)] transition-all"
+<Button
+  variant="outline"
+  size="icon"
+  class="fixed bottom-14 right-6 z-30 bg-card-surface border-[2px] border-border-brand-muted text-text-brand-muted hover:border-hister-indigo hover:text-hister-indigo shadow-[3px_3px_0px_var(--border-brand)] hover:shadow-[3px_3px_0px_var(--hister-indigo)] transition-all rounded-none"
   onclick={() => { showHelp = !showHelp; }}
   title="Keyboard shortcuts (?)"
   aria-label="Show keyboard shortcuts"
 >
   <Keyboard class="size-4" />
-</button>
+</Button>
 
 {#if isSearching}
   <div class="flex-1 flex flex-col min-h-0">
     <div class="flex items-center gap-3 h-10 md:h-14 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
       <Search class="size-4 md:size-6 text-text-brand-muted" />
-      <input
-        type="text"
-        bind:this={inputEl}
+      <Input
+        bind:ref={inputEl}
         bind:value={query}
         placeholder="Search..."
-        class="flex-1 h-full bg-transparent font-inter text-lg md:text-2xl font-medium text-text-brand placeholder:text-text-brand-muted outline-none border-0"
+        class="flex-1 h-full bg-transparent font-inter text-lg md:text-2xl font-medium text-text-brand placeholder:text-text-brand-muted border-0 shadow-none focus-visible:ring-0 p-0"
       />
       <div class="w-2 h-2 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}" title={connected ? 'Connected' : 'Disconnected'}></div>
     </div>
@@ -563,7 +547,7 @@
     </span>
     {/if}
 
-    <div class="flex-1 overflow-y-auto px-4 md:px-12 py-2 space-y-3 overflow-x-hidden">
+    <ScrollArea class="flex-1 px-4 md:px-12 py-2 space-y-3">
       {#if hasResults}
         <div class="flex items-center justify-between">
           <span class="font-outfit text-base font-bold text-hister-indigo">
@@ -610,7 +594,7 @@
         {#if lastResults?.history?.length}
           {#each lastResults.history as r, i}
             {@const favSrc = getFaviconSrc(r.favicon, r.url)}
-            <div data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
+            <article data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
               style={i === highlightIdx ? 'background: linear-gradient(90deg, transparent, rgba(90, 138, 138, 0.12), transparent); border-left: 3px solid var(--hister-teal); padding-left: 0.75rem;' : ''}>
               <div class="w-5 h-5 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden bg-hister-teal">
                 {#if favSrc}
@@ -627,9 +611,9 @@
                 <div class="flex items-center gap-2">
                   <span class="font-fira text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap">{r.url}</span>
                   <Badge variant="secondary" class="px-1.5 py-0 h-4 bg-hister-teal/10 text-hister-teal border-0">pinned</Badge>
-                  <button data-readable class="flex items-center gap-0.5 font-inter text-xs md:text-sm font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
+                  <Button data-readable variant="link" size="sm" class="text-xs md:text-sm font-medium text-hister-indigo p-0 h-auto gap-0.5 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
                     <Eye class="size-3" /><span>view</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
               <Button
@@ -640,17 +624,19 @@
               >
                 <MoreVertical class="size-4" />
               </Button>
-            </div>
+            </article>
             {#if showActionsForResult === 'history:' + r.url}
-              <div class="ml-8 p-3 border-[2px] border-border-brand-muted bg-card-surface space-y-2">
-                <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10" onclick={() => updatePriorityResult(r.url, r.title || '*title*', true)}>
-                  <PinOff class="size-3.5" />
-                  Remove priority
-                </Button>
-                {#if actionsMessage}
-                  <p class="text-xs font-inter {actionsError ? 'text-hister-rose' : 'text-hister-teal'}">{actionsMessage}</p>
-                {/if}
-              </div>
+              <Card.Root class="ml-8 border-[2px] border-border-brand-muted bg-card-surface rounded-none py-3 gap-2">
+                <Card.Content class="space-y-2">
+                  <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10" onclick={() => updatePriorityResult(r.url, r.title || '*title*', true)}>
+                    <PinOff class="size-3.5" />
+                    Remove priority
+                  </Button>
+                  {#if actionsMessage}
+                    <p class="text-xs font-inter {actionsError ? 'text-hister-rose' : 'text-hister-teal'}">{actionsMessage}</p>
+                  {/if}
+                </Card.Content>
+              </Card.Root>
             {/if}
           {/each}
         {/if}
@@ -660,7 +646,7 @@
             {@const idx = historyLen + i}
             {@const color = "hister-cyan" }
             {@const favSrc = getFaviconSrc(r.favicon, r.url)}
-            <div data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
+            <article data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
               style={idx === highlightIdx ? `background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--${color}) 12%, transparent), transparent); border-left: 3px solid var(--${color}); padding-left: 0.75rem;` : ''}>
               <div class="w-5 h-5 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden" style="background-color: var(--{color});">
                 {#if favSrc}
@@ -679,9 +665,9 @@
                   {#if r.added}
                     <span class="font-inter text-xs md:text-sm text-text-brand-muted" title={formatTimestamp(r.added)}>· {formatRelativeTime(r.added)}</span>
                   {/if}
-                  <button data-readable class="flex items-center gap-0.5 font-inter text-xs md:text-sm font-medium text-hister-indigo hover:underline border-0 bg-transparent cursor-pointer p-0 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
+                  <Button data-readable variant="link" size="sm" class="text-xs md:text-sm font-medium text-hister-indigo p-0 h-auto gap-0.5 shrink-0" onclick={(e) => openReadable(e, r.url, r.title || '*title*')}>
                     <Eye class="size-3" /><span>view</span>
-                  </button>
+                  </Button>
                 </div>
                 {#if r.text}
                   <p class="font-inter text-text-brand-secondary text-sm md:text-base leading-[1.4]">{@html r.text}</p>
@@ -695,50 +681,52 @@
               >
                 <MoreVertical class="size-4" />
               </Button>
-            </div>
+            </article>
             {#if showActionsForResult === 'doc:' + r.url}
-              <div class="ml-8 p-3 border-[2px] border-border-brand-muted bg-card-surface space-y-2">
-                <div class="flex items-center gap-2">
-                  <Input bind:value={actionsQuery} placeholder="Query for priority..." class="flex-1 h-7 text-sm font-inter border-[2px] border-border-brand-muted shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo" />
-                  <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-indigo text-hister-indigo" onclick={() => updatePriorityResult(r.url, r.title || '*title*', false)}>
-                    <Pin class="size-3.5" />
-                    Pin
+              <Card.Root class="ml-8 border-[2px] border-border-brand-muted bg-card-surface rounded-none py-3 gap-2">
+                <Card.Content class="space-y-2">
+                  <div class="flex items-center gap-2">
+                    <Input bind:value={actionsQuery} placeholder="Query for priority..." class="flex-1 h-7 text-sm font-inter border-[2px] border-border-brand-muted shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo" />
+                    <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-indigo text-hister-indigo" onclick={() => updatePriorityResult(r.url, r.title || '*title*', false)}>
+                      <Pin class="size-3.5" />
+                      Pin
+                    </Button>
+                  </div>
+                  <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10" onclick={() => deleteResult(r.url)}>
+                    <Trash2 class="size-3.5" />
+                    Delete
                   </Button>
-                </div>
-                <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10" onclick={() => deleteResult(r.url)}>
-                  <Trash2 class="size-3.5" />
-                  Delete
-                </Button>
-                {#if actionsMessage}
-                  <p class="text-xs font-inter {actionsError ? 'text-hister-rose' : 'text-hister-teal'}">{actionsMessage}</p>
-                {/if}
-              </div>
+                  {#if actionsMessage}
+                    <p class="text-xs font-inter {actionsError ? 'text-hister-rose' : 'text-hister-teal'}">{actionsMessage}</p>
+                  {/if}
+                </Card.Content>
+              </Card.Root>
             {/if}
           {/each}
         {/if}
 
         <Separator class="bg-border-brand-muted" />
-        <div class="flex items-center gap-4 font-inter text-xs text-text-brand-muted">
+        <nav class="flex items-center gap-4 font-inter text-xs text-text-brand-muted">
           <Download class="size-3.5" />
           <span>Export:</span>
           <Button variant="link" size="sm" class="text-xs text-hister-indigo p-0 h-auto" onclick={() => exportJSON(lastResults!)}>JSON</Button>
           <Button variant="link" size="sm" class="text-xs text-hister-indigo p-0 h-auto" onclick={() => exportCSV(lastResults!, query)}>CSV</Button>
           <Button variant="link" size="sm" class="text-xs text-hister-indigo p-0 h-auto" onclick={() => exportRSS(lastResults!, query)}>RSS</Button>
-        </div>
+        </nav>
       {:else if query && lastResults}
-        <div class="text-center pmd:px-12 y-12">
+        <section class="text-center pmd:px-12 y-12">
           <p class="font-inter text-text-brand-secondary mb-4">No results found for "<span class="font-semibold">{query}</span>"</p>
           <Button variant="outline" class="border-[3px] border-hister-coral text-hister-coral hover:bg-hister-coral/10 font-inter font-semibold shadow-[3px_3px_0px_var(--hister-coral)]" href={getSearchUrl(config.searchUrl, query)}>
             <ExternalLink class="size-4" />
             Search
           </Button>
-        </div>
+        </section>
       {:else if query}
         <div class="flex items-center justify-center py-16">
           <span class="font-inter text-text-brand-muted">Searching...</span>
         </div>
       {/if}
-    </div>
+    </ScrollArea>
   </div>
 {:else}
   <div class="flex-1 flex flex-col items-center justify-center gap-10 py-4 md:py-12 px-4 md:px-12 overflow-y-auto relative">
@@ -763,12 +751,11 @@
     <div bind:this={searchBoxEl} class="search-box-gradient w-full max-w-[1200px] p-[3px] shadow-[4px_4px_0px_var(--hister-coral)]">
       <div class="h-10 md:h-14 flex items-center gap-3 pl-4 bg-card-surface">
         <Search class="size-6 text-text-brand-muted" />
-        <input
-          type="text"
-          bind:this={inputEl}
+        <Input
+          bind:ref={inputEl}
           bind:value={query}
           placeholder="Search ..."
-          class="flex-1 h-full bg-transparent font-inter md:text-lg text-text-brand placeholder:text-text-brand-muted outline-none border-0 min-w-0"
+          class="flex-1 h-full bg-transparent font-inter md:text-lg text-text-brand placeholder:text-text-brand-muted border-0 shadow-none focus-visible:ring-0 p-0 min-w-0"
         />
         <div class="w-2.5 h-2.5 mr-4 shrink-0 pulse-dot {connected ? 'bg-hister-teal' : 'bg-hister-rose'}" title={connected ? 'Connected' : 'Disconnected'}></div>
       </div>
@@ -776,7 +763,7 @@
 
     <div bind:this={hintEl} class="flex items-center gap-2 font-inter text-xs text-text-brand-muted">
       <span>Pro tip: Press</span>
-      <kbd bind:this={kbdEl} class="inline-block bg-muted-surface border-[2px] border-border-brand-muted px-2 py-0.5 font-fira text-xs font-semibold text-text-brand-secondary">/</kbd>
+      <Kbd bind:ref={kbdEl} class="bg-muted-surface border-[2px] border-border-brand-muted px-2 py-0.5 font-fira text-xs font-semibold text-text-brand-secondary rounded-none">/</Kbd>
       <span>to focus search anywhere</span>
     </div>
 
@@ -784,21 +771,24 @@
       <div bind:this={chipsContainerEl} class="flex flex-wrap gap-3 items-center justify-center relative">
         {#each recentSearches as search, i}
           {@const chip = chipColors[i % chipColors.length]}
-          <button
-            class="border-[2px] {chip.border} {chip.bg} px-3.5 py-1.5 font-inter text-sm font-semibold {chip.text} cursor-pointer hover:opacity-90 hover:scale-105 hover:-translate-y-0.5 transition-all duration-200 bg-transparent"
+          <Button
+            variant="outline"
+            class="border-[2px] {chip.border} {chip.bg} px-3.5 py-1.5 font-inter text-sm font-semibold {chip.text} hover:opacity-90 hover:scale-105 hover:-translate-y-0.5 transition-all duration-200 h-auto rounded-none"
             onclick={() => clickChip(search)}
             oncontextmenu={(e) => showChipContextMenu(e, search)}
           >
             {search}
-          </button>
+          </Button>
         {/each}
-        <button
-          class="border-[2px] border-hister-rose/40 px-2.5 py-1.5 font-inter text-xs font-semibold text-hister-rose/60 cursor-pointer hover:text-hister-rose hover:border-hister-rose hover:bg-hister-rose/10 transition-all duration-200 bg-transparent"
+        <Button
+          variant="ghost"
+          size="sm"
+          class="border-[2px] border-hister-rose/40 px-2.5 py-1.5 font-inter text-xs font-semibold text-hister-rose/60 hover:text-hister-rose hover:border-hister-rose hover:bg-hister-rose/10 transition-all duration-200 h-auto rounded-none"
           onclick={deleteAllRecentSearches}
           title="Clear all recent searches"
         >
           &times; clear
-        </button>
+        </Button>
       </div>
     {/if}
 
@@ -813,19 +803,21 @@
         class="fixed z-50 border-[2px] border-border-brand bg-card-surface shadow-[4px_4px_0px_var(--hister-indigo)] py-1 min-w-[160px]"
         style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
       >
-        <button
-          class="w-full flex items-center gap-2 px-3 py-2 text-left font-inter text-sm text-text-brand hover:bg-muted-surface bg-transparent border-0 cursor-pointer"
+        <Button
+          variant="ghost"
+          class="w-full justify-start gap-2 px-3 py-2 font-inter text-sm text-text-brand hover:bg-muted-surface h-auto rounded-none"
           onclick={() => { clickChip(contextMenuSearch!); contextMenuSearch = null; }}
         >
           <Search class="size-3.5" /> Search "{contextMenuSearch}"
-        </button>
-        <div class="h-px bg-border-brand-muted mx-2"></div>
-        <button
-          class="w-full flex items-center gap-2 px-3 py-2 text-left font-inter text-sm text-hister-rose hover:bg-hister-rose/10 bg-transparent border-0 cursor-pointer"
+        </Button>
+        <Separator class="bg-border-brand-muted mx-2" />
+        <Button
+          variant="ghost"
+          class="w-full justify-start gap-2 px-3 py-2 font-inter text-sm text-hister-rose hover:bg-hister-rose/10 h-auto rounded-none"
           onclick={() => deleteRecentSearch(contextMenuSearch!)}
         >
           <Trash2 class="size-3.5" /> Remove
-        </button>
+        </Button>
       </div>
     {/if}
 
