@@ -22,13 +22,13 @@ type Token struct {
 }
 
 type Lexer struct {
-	input string
+	input []rune
 	pos   int
 	char  rune
 }
 
 func New(input string) *Lexer {
-	l := &Lexer{input: input}
+	l := &Lexer{input: []rune(input)}
 	l.readChar()
 	return l
 }
@@ -54,7 +54,7 @@ func (l *Lexer) readChar() {
 	if l.pos >= len(l.input) {
 		l.char = 0
 	} else {
-		l.char = rune(l.input[l.pos])
+		l.char = l.input[l.pos]
 	}
 	l.pos++
 }
@@ -63,7 +63,7 @@ func (l *Lexer) peekChar() rune {
 	if l.pos >= len(l.input) {
 		return 0
 	}
-	return rune(l.input[l.pos])
+	return l.input[l.pos]
 }
 
 func (l *Lexer) skipWhitespace() {
@@ -148,7 +148,7 @@ func parseAlternationParts(value string) ([]Token, error) {
 	var sb strings.Builder
 	depth := 0
 
-	for i, ch := range value {
+	for _, ch := range value {
 		if ch == '(' {
 			depth++
 			sb.WriteRune(ch)
@@ -165,22 +165,12 @@ func parseAlternationParts(value string) ([]Token, error) {
 		} else {
 			sb.WriteRune(ch)
 		}
-
-		if i == len(value)-1 {
-			optStr := strings.TrimSpace(sb.String())
-			if optStr != "" {
-				token := Token{Type: TokenWord, Value: optStr}
-				parts = append(parts, token)
-			}
-		}
 	}
 
-	if len(parts) == 0 {
-		optStr := strings.TrimSpace(sb.String())
-		if optStr != "" {
-			token := Token{Type: TokenWord, Value: optStr}
-			parts = append(parts, token)
-		}
+	optStr := strings.TrimSpace(sb.String())
+	if optStr != "" {
+		token := Token{Type: TokenWord, Value: optStr}
+		parts = append(parts, token)
 	}
 
 	return parts, nil
