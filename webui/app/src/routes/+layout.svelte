@@ -32,30 +32,30 @@
 
 <header class="h-16 px-6 bg-page-bg border-b-[2px] border-border-brand flex items-center justify-between shadow-[4px_4px_0px_var(--hister-indigo)]">
   <h1 class="flex items-center gap-2">
-    <img src="/static/logo.png" alt="Hister logo" class="h-8 w-8" />
-    <a data-sveltekit-reload href="/" class="font-outfit text-xl font-extrabold text-text-brand no-underline hover:underline">
+    <img src="static/logo.png" alt="Hister logo" class="h-8 w-8" />
+    <a data-sveltekit-reload href="./" class="font-outfit text-xl font-extrabold text-text-brand no-underline hover:underline">
       Hister
     </a>
   </h1>
   <nav class="flex items-center gap-6">
     <a
-      class:underline={$page.url.pathname === '/history'}
+      class:underline={$page.url.pathname === new URL('history', $page.url).pathname}
       class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
-      href="/history"
+      href="history"
     >
       History
     </a>
     <a
-      class:underline={$page.url.pathname === '/rules'}
+      class:underline={$page.url.pathname === new URL('rules', $page.url).pathname}
       class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
-      href="/rules"
+      href="rules"
     >
       Rules
     </a>
     <a
-      class:underline={$page.url.pathname === '/add'}
+      class:underline={$page.url.pathname === new URL('add', $page.url).pathname}
       class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
-      href="/add"
+      href="add"
     >
       Add
     </a>
@@ -76,11 +76,11 @@
 </main>
 
 <footer class="h-12 px-6 bg-page-bg border-t-[2px] border-border-brand flex items-center justify-center gap-4 text-sm">
-  <a href="/help" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">Help</a>
+  <a href="help" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">Help</a>
   <span class="text-text-brand-muted">|</span>
-  <a href="/about" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">About</a>
+  <a href="about" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">About</a>
   <span class="text-text-brand-muted">|</span>
-  <a href="/api" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">API</a>
+  <a href="api" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">API</a>
   <span class="text-text-brand-muted">|</span>
   <a href="https://github.com/asciimoo/hister/" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline" target="_blank" rel="noopener">GitHub</a>
 </footer>

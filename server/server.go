@@ -122,7 +122,37 @@ func registerEndpoints(cfg *config.Config) http.Handler {
 	}
 	// SPA catch-all: serve index.html for any path not matched above
 	mux.HandleFunc("/", createHandler(cfg, serveSPA))
+	// If base_url contains a non-root path prefix (e.g. https://x.com/subfolder),
+	// accept requests both with and without that prefix.
+	basePrefix := cfg.BasePathPrefix()
+	if basePrefix != "" {
+		return withOptionalBasePathPrefix(basePrefix, mux)
+	}
 	return mux
+}
+
+func withOptionalBasePathPrefix(prefix string, next http.Handler) http.Handler {
+	prefix = strings.TrimSuffix(prefix, "/")
+	if prefix == "" || prefix == "/" {
+		return next
+	}
+	if !strings.HasPrefix(prefix, "/") {
+		prefix = "/" + prefix
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		if p == prefix || strings.HasPrefix(p, prefix+"/") {
+			r2 := r.Clone(r.Context())
+			r2.URL.Path = strings.TrimPrefix(p, prefix)
+			if r2.URL.Path == "" {
+				r2.URL.Path = "/"
+			}
+			r2.RequestURI = r2.URL.RequestURI()
+			next.ServeHTTP(w, r2)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func createHandler(cfg *config.Config, h func(*webContext)) func(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +192,8 @@ func withCSRF(handler endpointHandler) endpointHandler {
 			return
 		}
 		method := c.Request.Method
-		safeRequest := strings.HasPrefix(c.Request.Header.Get("Origin"), c.Config.BaseURL("/")) || c.Request.Header.Get("Origin") == "same-origin"
+		origin := c.Request.Header.Get("Origin")
+		safeRequest := c.Config.IsSameHost(origin) || origin == "same-origin"
 		if method != http.MethodGet && method != http.MethodHead && !safeRequest {
 			sToken, ok := session.Values[tokName].(string)
 			if !ok {
@@ -271,6 +302,8 @@ func serveSPA(c *webContext) {
 // serveConfig returns app configuration as JSON and refreshes CSRF token.
 func serveConfig(c *webContext) {
 	type configResponse struct {
+		BaseURL             string            `json:"baseUrl"`
+		BasePath            string            `json:"basePath"`
 		WsURL               string            `json:"wsUrl"`
 		SearchURL           string            `json:"searchUrl"`
 		OpenResultsOnNewTab bool              `json:"openResultsOnNewTab"`
@@ -281,6 +314,8 @@ func serveConfig(c *webContext) {
 		hotkeys = make(map[string]string)
 	}
 	c.JSON(configResponse{
+		BaseURL:             c.Config.BaseURL(""),
+		BasePath:            c.Config.BasePathPrefix(),
 		WsURL:               c.Config.WebSocketURL(),
 		SearchURL:           c.Config.App.SearchURL,
 		OpenResultsOnNewTab: c.Config.App.OpenResultsOnNewTab,
