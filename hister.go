@@ -4,18 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/asciimoo/hister/client"
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/server"
 	"github.com/asciimoo/hister/server/indexer"
@@ -131,25 +130,10 @@ var searchCmd = &cobra.Command{
 			return
 		}
 		qs := strings.Join(args, " ")
-		client := &http.Client{Timeout: 5 * time.Second}
-		req, err := newHisterRequest("GET", "/search?q="+url.QueryEscape(qs), nil)
+		c := newClient()
+		res, err := c.Search(qs)
 		if err != nil {
-			exit(1, "Failed to create request: "+err.Error())
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		resp, err := client.Do(req)
-		if err != nil {
-			exit(1, "Failed to send request to hister: "+err.Error())
-		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			exit(1, err.Error())
-		}
-		var res *indexer.Results
-		err = json.Unmarshal(body, &res)
-		if err != nil {
-			exit(1, err.Error())
+			exit(1, "Search failed: "+err.Error())
 		}
 		for _, r := range res.Documents {
 			fmt.Printf("%s\n%s\n\n", r.Title, r.URL)
@@ -177,27 +161,14 @@ var deleteCmd = &cobra.Command{
 	Long:  "Remove one or more pages from the index",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		c := newClient()
 		for _, u := range args {
 			if u == "" {
 				log.Warn().Msg("URL must not be empty")
 				continue
 			}
-			formData := url.Values{
-				"url": {u},
-			}
-			client := &http.Client{Timeout: 5 * time.Second}
-			req, err := newHisterRequest("POST", "/delete", strings.NewReader(formData.Encode()))
-			if err != nil {
-				exit(1, "Failed to create request: "+err.Error())
-			}
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			resp, err := client.Do(req)
-			if err != nil {
-				exit(1, "Failed to send request to hister: "+err.Error())
-			}
-			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
-				exit(1, fmt.Sprintf("failed to delete url: Invalid status code (%d)", resp.StatusCode))
+			if err := c.DeleteDocument(u); err != nil {
+				exit(1, "Failed to delete URL: "+err.Error())
 			}
 		}
 	},
@@ -438,7 +409,7 @@ func yesNoPrompt(label string, def bool) bool {
 //}
 
 func indexURL(u string) error {
-	client := &http.Client{
+	httpClient := &http.Client{
 		// Websites can be slow or unreachable, we don't want to wait too long for each of them, especially if we are indexing a lot of URLs during import.
 		Timeout: 5 * time.Second,
 	}
@@ -446,12 +417,12 @@ func indexURL(u string) error {
 		log.Warn().Msg("URL must not be empty")
 		return nil
 	}
-	req, err := newRequest("GET", u, nil)
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return errors.New(`failed to download file: ` + err.Error())
 	}
-	req.Header.Set("User-Agent", "Hister")
-	r, err := client.Do(req)
+	req.Header.Set("User-Agent", UserAgent)
+	r, err := httpClient.Do(req)
 	if err != nil {
 		return errors.New(`failed to download file: ` + err.Error())
 	}
@@ -482,23 +453,9 @@ func indexURL(u string) error {
 			log.Warn().Err(err).Str("URL", d.URL).Msg("failed to download favicon")
 		}
 	}
-	dj, err := json.Marshal(d)
-	if err != nil {
-		return errors.New(`failed to encode document to JSON: ` + err.Error())
-	}
-	histerClient := &http.Client{}
-	req, err = newHisterRequest("POST", "/add", bytes.NewBuffer(dj))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("content-Type", "application/json")
-	resp, err := histerClient.Do(req)
-	if err != nil {
-		return errors.New(`failed to send page to hister: ` + err.Error())
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("failed to send page to hister: Invalid status code (%d)", resp.StatusCode)
+	c := newClient()
+	if err := c.AddDocumentJSON(d); err != nil {
+		return fmt.Errorf("failed to send page to hister: %w", err)
 	}
 	return nil
 }
@@ -549,7 +506,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 	}
 	defer rows.Close()
 	i := 1
-	client := &http.Client{}
+	c := newClient()
 	for rows.Next() {
 		var u string
 		err = rows.Scan(&u)
@@ -559,18 +516,12 @@ func importHistory(cmd *cobra.Command, args []string) {
 		if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
 			continue
 		}
-		req, err := newHisterRequest("GET", "/document?url="+url.QueryEscape(u), nil)
-		if err != nil {
-			log.Warn().Err(err).Str("URL", u).Msg("Failed to create request, skipping ")
-			continue
-		}
-		resp, err := client.Do(req)
+		exists, err := c.DocumentExists(u)
 		if err != nil {
 			log.Warn().Err(err).Str("URL", u).Msg("Failed to get info about URL, skipping")
 			continue
 		}
-		resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
+		if exists {
 			// skip already added URLs
 			continue
 		}
@@ -589,22 +540,8 @@ func importHistory(cmd *cobra.Command, args []string) {
 	//q += fmt.Sprintf(" AND %s >= datetime('now', 'localtime', '-1 month')", vf)
 }
 
-func newRequest(method, u string, payload io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest(method, u, payload)
-	if err != nil {
-		return req, err
-	}
-	req.Header.Set("User-Agent", UserAgent)
-	return req, nil
-}
-
-func newHisterRequest(method, u string, payload io.Reader) (*http.Request, error) {
-	req, err := newRequest(method, cfg.BaseURL(u), payload)
-	if err != nil {
-		return req, err
-	}
-	req.Header.Set("Origin", "hister://")
-	return req, nil
+func newClient() *client.Client {
+	return client.New(cfg.BaseURL(""), client.WithUserAgent(UserAgent))
 }
 
 func main() {

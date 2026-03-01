@@ -9,7 +9,6 @@ import (
 
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/ui/model"
-	"github.com/asciimoo/hister/ui/network"
 	"github.com/asciimoo/hister/ui/render"
 	"github.com/asciimoo/hister/ui/theme"
 
@@ -167,8 +166,7 @@ func Mouse(m *model.Model, msg tea.MouseMsg) tea.Cmd {
 					return tea.Batch(cmds...)
 				} else if u := m.GetSelectedURL(); u != "" {
 					browser.OpenURL(u)
-					baseURL := m.Cfg.BaseURL("")
-					return network.PostHistory(baseURL, m.TextInput.Value(), u, m.GetSelectedTitle())
+					return m.PostHistoryCmd(u)
 				}
 			} else {
 				m.SelectedIdx = idx
@@ -289,8 +287,7 @@ func mouseOverlay(m *model.Model, msg tea.MouseMsg) tea.Cmd {
 						m.State = m.PrevState
 						if pattern != "" {
 							m.RulesData.Priority = append(m.RulesData.Priority, pattern)
-							baseURL := m.Cfg.BaseURL("")
-							return network.PostRules(baseURL, strings.Join(m.RulesData.Skip, "\n"), strings.Join(m.RulesData.Priority, "\n"))
+							return m.SaveRulesCmd()
 						}
 					}
 					return nil
@@ -527,7 +524,6 @@ func mouseNonSearchTab(m *model.Model, msg tea.MouseMsg) tea.Cmd {
 }
 
 func submitAdd(m *model.Model) tea.Cmd {
-	baseURL := m.Cfg.BaseURL("")
 	u := strings.TrimSpace(m.AddInputs[0].Value())
 	if u == "" {
 		m.AddStatus = "URL is required"
@@ -540,7 +536,7 @@ func submitAdd(m *model.Model) tea.Cmd {
 	title := strings.TrimSpace(m.AddInputs[1].Value())
 	text := strings.TrimSpace(m.AddInputs[2].Value())
 	m.AddStatus = "Adding..."
-	return network.PostAdd(baseURL, u, title, text)
+	return m.AddPageCmd(u, title, text)
 }
 
 func mouseTabBar(m *model.Model, msg tea.MouseMsg) tea.Cmd {

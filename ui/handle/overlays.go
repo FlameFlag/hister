@@ -11,7 +11,6 @@ import (
 
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/ui/model"
-	"github.com/asciimoo/hister/ui/network"
 	"github.com/asciimoo/hister/ui/render"
 	"github.com/asciimoo/hister/ui/theme"
 
@@ -236,18 +235,17 @@ func ContextMenuKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 
 func executeContextMenuAction(m *model.Model) tea.Cmd {
 	m.State = m.PrevState
-	baseURL := m.Cfg.BaseURL("")
 	switch m.MenuSelIdx {
 	case model.MenuOpen:
 		if u := m.GetSelectedURL(); u != "" {
 			browser.OpenURL(u)
-			return network.PostHistory(baseURL, m.TextInput.Value(), u, m.GetSelectedTitle())
+			return m.PostHistoryCmd(u)
 		}
 	case model.MenuDelete:
 		if u := m.GetSelectedURL(); u != "" {
 			m.OpenDeleteDialog("Delete Result", u, -1, func() tea.Cmd {
 				return tea.Batch(
-					network.DeleteURL(baseURL, u),
+					m.DeleteURLCmd(u),
 					doSearch(m),
 				)
 			})
@@ -290,8 +288,7 @@ func PrioritizeInputKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 		m.State = m.PrevState
 		if pattern != "" {
 			m.RulesData.Priority = append(m.RulesData.Priority, pattern)
-			baseURL := m.Cfg.BaseURL("")
-			return network.PostRules(baseURL, strings.Join(m.RulesData.Skip, "\n"), strings.Join(m.RulesData.Priority, "\n"))
+			return m.SaveRulesCmd()
 		}
 		return nil
 	}

@@ -7,7 +7,6 @@ package handle
 import (
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/ui/model"
-	"github.com/asciimoo/hister/ui/network"
 	"github.com/asciimoo/hister/ui/render"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -52,8 +51,7 @@ func InputKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 				return tea.Batch(cmds...)
 			} else if u := m.GetSelectedURL(); u != "" {
 				browser.OpenURL(u)
-				baseURL := m.Cfg.BaseURL("")
-				return tea.Batch(m.FlashHint(config.ActionOpenResult), network.PostHistory(baseURL, m.TextInput.Value(), u, m.GetSelectedTitle()))
+				return tea.Batch(m.FlashHint(config.ActionOpenResult), m.PostHistoryCmd(u))
 			}
 		}
 		return m.FlashHint(config.ActionOpenResult)
@@ -101,8 +99,7 @@ func ResultsKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 			return tea.Batch(cmds...)
 		} else if u := m.GetSelectedURL(); u != "" {
 			browser.OpenURL(u)
-			baseURL := m.Cfg.BaseURL("")
-			return tea.Batch(m.FlashHint(config.ActionOpenResult), network.PostHistory(baseURL, m.TextInput.Value(), u, m.GetSelectedTitle()))
+			return tea.Batch(m.FlashHint(config.ActionOpenResult), m.PostHistoryCmd(u))
 		}
 		return m.FlashHint(config.ActionOpenResult)
 	}

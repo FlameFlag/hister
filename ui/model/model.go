@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/asciimoo/hister/client"
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/ui/theme"
@@ -33,6 +34,7 @@ type Model struct {
 	State     ViewState
 	PrevState ViewState
 	Cfg       *config.Config
+	Client    *client.Client
 	Results   *indexer.Results
 
 	// Dimensions and readiness
@@ -176,6 +178,7 @@ func InitialModel(cfg *config.Config) *Model {
 		State:              StateInput,
 		PrevState:          StateInput,
 		Cfg:                cfg,
+		Client:             client.New(cfg.BaseURL("")),
 		SelectedIdx:        -1,
 		DialogReturnTab:    -1,
 		Limit:              10,
@@ -415,6 +418,72 @@ func (m *Model) FindResultAtY(contentY int) int {
 		}
 	}
 	return -1
+}
+
+func (m *Model) PostHistoryCmd(u string) tea.Cmd {
+	q, title := m.TextInput.Value(), m.GetSelectedTitle()
+	return func() tea.Msg {
+		m.Client.PostHistory(q, u, title)
+		return nil
+	}
+}
+
+func (m *Model) SaveRulesCmd() tea.Cmd {
+	skip := strings.Join(m.RulesData.Skip, "\n")
+	priority := strings.Join(m.RulesData.Priority, "\n")
+	return func() tea.Msg {
+		return RulesSavedMsg{Err: m.Client.SaveRules(skip, priority)}
+	}
+}
+
+func (m *Model) FetchHistoryCmd() tea.Cmd {
+	return func() tea.Msg {
+		items, _ := m.Client.FetchHistory()
+		return HistoryFetchedMsg{Items: items}
+	}
+}
+
+func (m *Model) FetchRulesCmd() tea.Cmd {
+	return func() tea.Msg {
+		data, _ := m.Client.FetchRules()
+		if data == nil {
+			return RulesFetchedMsg{}
+		}
+		return RulesFetchedMsg{Data: *data}
+	}
+}
+
+func (m *Model) AddPageCmd(u, title, text string) tea.Cmd {
+	return func() tea.Msg {
+		return AddResultMsg{Err: m.Client.AddPage(u, title, text)}
+	}
+}
+
+func (m *Model) AddAliasCmd(keyword, value string) tea.Cmd {
+	return func() tea.Msg {
+		return RulesSavedMsg{Err: m.Client.AddAlias(keyword, value)}
+	}
+}
+
+func (m *Model) DeleteAliasCmd(alias string) tea.Cmd {
+	return func() tea.Msg {
+		return RulesSavedMsg{Err: m.Client.DeleteAlias(alias)}
+	}
+}
+
+func (m *Model) DeleteURLCmd(u string) tea.Cmd {
+	return func() tea.Msg {
+		m.Client.DeleteDocument(u)
+		return nil
+	}
+}
+
+func (m *Model) DeleteHistoryEntryCmd(query, url string) tea.Cmd {
+	return func() tea.Msg {
+		m.Client.DeleteHistoryEntry(query, url)
+		items, _ := m.Client.FetchHistory()
+		return HistoryFetchedMsg{Items: items}
+	}
 }
 
 func newInput(placeholder string, charLimit int, width int, st theme.Styles) textinput.Model {

@@ -1,0 +1,53 @@
+package client
+
+import (
+	"encoding/json"
+	"strings"
+)
+
+func (c *Client) FetchHistory() ([]HistoryEntry, error) {
+	req, err := c.newRequest("GET", "/api/history", nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var items []HistoryEntry
+	err = json.NewDecoder(resp.Body).Decode(&items)
+	return items, err
+}
+
+func (c *Client) PostHistory(query, urlStr, title string) error {
+	body := historyRequest{URL: urlStr, Title: title, Query: query}
+	data, _ := json.Marshal(body)
+	req, err := c.newRequest("POST", "/api/history", strings.NewReader(string(data)))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
+
+func (c *Client) DeleteHistoryEntry(query, urlStr string) error {
+	body := historyRequest{URL: urlStr, Query: query, Delete: true}
+	data, _ := json.Marshal(body)
+	req, err := c.newRequest("POST", "/api/history", strings.NewReader(string(data)))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
