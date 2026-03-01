@@ -16,7 +16,7 @@
   <p><code>"free software" url:*wikipedia.org*</code>: Search for the phrase "free software" only in URLs containing wikipedia.org.</p>
   <p><code>golang template -url:*stackoverflow*</code>: Search sites containing both "golang" and "template" but the website's URL should not contain "stackoverflow".</p>
   <h2>Search Aliases</h2>
-  <p>Queries can become long and complex quickly. Aliases can be defined in the <a href="/rules">rules</a> page to shorten common query parts.</p>
+  <p>Queries can become long and complex quickly. Aliases can be defined in the <a href="rules">rules</a> page to shorten common query parts.</p>
   <h3>Examples</h3>
   <p><code>go</code> alias for <code>(go|golang)</code> matches either "go" or "golang" if you type "go".</p>
   <p><code>!so</code> alias for <code>url:*stackoverflow.com*</code> matches only sites where the URL contains "stackoverflow.com".</p>

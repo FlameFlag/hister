@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -564,10 +565,41 @@ func (c *Config) Host() string {
 }
 
 func (c *Config) WebSocketURL() string {
-	if strings.HasPrefix(c.BaseURL("/"), "https://") {
-		return fmt.Sprintf("wss://%s/search", c.Host())
+	bu, err := url.Parse(c.Server.BaseURL)
+	if err != nil {
+		return ""
 	}
-	return fmt.Sprintf("ws://%s/search", c.Host())
+	scheme := "ws"
+	if bu.Scheme == "https" {
+		scheme = "wss"
+	}
+	basePath := strings.TrimSuffix(bu.Path, "/")
+	if basePath == "/" {
+		basePath = ""
+	}
+	wsPath := path.Join(basePath, "/search")
+	if !strings.HasPrefix(wsPath, "/") {
+		wsPath = "/" + wsPath
+	}
+	bu.Scheme = scheme
+	bu.Path = wsPath
+	bu.RawQuery = ""
+	bu.Fragment = ""
+	return bu.String()
+}
+
+// BasePathPrefix returns the URL path component of Server.BaseURL without a trailing slash.
+// It returns "" when Server.BaseURL points to the domain root.
+func (c *Config) BasePathPrefix() string {
+	u, err := url.Parse(c.Server.BaseURL)
+	if err != nil {
+		return ""
+	}
+	p := strings.TrimSuffix(u.Path, "/")
+	if p == "/" {
+		return ""
+	}
+	return p
 }
 
 func (c *Config) LoadRules() error {

@@ -18,7 +18,7 @@ export function setCsrf(tok: string): void {
 
 export async function fetchConfig(): Promise<AppConfig> {
   if (_config) return _config;
-  const res = await fetch('/api/config');
+  const res = await fetch('api/config');
   const tok = res.headers.get('X-CSRF-Token');
   if (tok) _csrf = tok;
   _config = await res.json();
@@ -35,7 +35,7 @@ export async function apiFetch(
   if (_csrf && options.method && options.method.toUpperCase() !== 'GET') {
     headers['X-CSRF-Token'] = _csrf;
   }
-  const res = await fetch("/api"+url, { ...options, headers });
+  const res = await fetch("api"+url, { ...options, headers });
   const newTok = res.headers.get('X-CSRF-Token');
   if (newTok) _csrf = newTok;
   return res;

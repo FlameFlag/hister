@@ -298,7 +298,7 @@
                     variant="ghost"
                     size="sm"
                     class="text-xs font-inter text-text-brand-muted shrink-0 hover:text-hister-indigo gap-1.5 h-7 px-2 no-underline"
-                    href="/?q={encodeURIComponent(item.query)}"
+                    href="./?q={encodeURIComponent(item.query)}"
                   >
                     <Search class="size-3" />
                     Search

@@ -27,7 +27,7 @@
 
   onMount(async () => {
     try {
-      const res = await apiFetch('/api', {
+      const res = await apiFetch('', {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) endpoints = await res.json();
