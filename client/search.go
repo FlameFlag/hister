@@ -18,6 +18,9 @@ func (c *Client) Search(query string) (*indexer.Results, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if err := checkStatus(resp); err != nil {
+		return nil, err
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -36,6 +37,18 @@ func New(baseURL string, opts ...Option) *Client {
 		o(c)
 	}
 	return c
+}
+
+func checkStatus(resp *http.Response) error {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
+	}
+	body, _ := io.ReadAll(resp.Body)
+	msg := strings.TrimSpace(string(body))
+	if msg == "" {
+		msg = resp.Status
+	}
+	return fmt.Errorf("%s", msg)
 }
 
 // builds an http.Request with Origin: hister:// set for CSRF bypass.

@@ -16,6 +16,9 @@ func (c *Client) FetchRules() (*RulesResponse, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if err := checkStatus(resp); err != nil {
+		return nil, err
+	}
 	var data RulesResponse
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	return &data, err
@@ -32,8 +35,8 @@ func (c *Client) SaveRules(skip, priority string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
-	return nil
+	defer resp.Body.Close()
+	return checkStatus(resp)
 }
 
 func (c *Client) AddAlias(keyword, value string) error {
@@ -47,8 +50,8 @@ func (c *Client) AddAlias(keyword, value string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
-	return nil
+	defer resp.Body.Close()
+	return checkStatus(resp)
 }
 
 func (c *Client) DeleteAlias(alias string) error {
@@ -62,6 +65,6 @@ func (c *Client) DeleteAlias(alias string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
-	return nil
+	defer resp.Body.Close()
+	return checkStatus(resp)
 }

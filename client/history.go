@@ -15,6 +15,9 @@ func (c *Client) FetchHistory() ([]HistoryEntry, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if err := checkStatus(resp); err != nil {
+		return nil, err
+	}
 	var items []HistoryEntry
 	err = json.NewDecoder(resp.Body).Decode(&items)
 	return items, err
@@ -32,8 +35,8 @@ func (c *Client) PostHistory(query, urlStr, title string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
-	return nil
+	defer resp.Body.Close()
+	return checkStatus(resp)
 }
 
 func (c *Client) DeleteHistoryEntry(query, urlStr string) error {
@@ -48,6 +51,6 @@ func (c *Client) DeleteHistoryEntry(query, urlStr string) error {
 	if err != nil {
 		return err
 	}
-	resp.Body.Close()
-	return nil
+	defer resp.Body.Close()
+	return checkStatus(resp)
 }

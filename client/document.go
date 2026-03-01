@@ -3,8 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -27,10 +25,7 @@ func (c *Client) AddDocumentJSON(doc *indexer.Document) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-	return nil
+	return checkStatus(resp)
 }
 
 func (c *Client) AddPage(u, title, text string) error {
@@ -45,15 +40,7 @@ func (c *Client) AddPage(u, title, text string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		msg := strings.TrimSpace(string(body))
-		if msg == "" {
-			msg = resp.Status
-		}
-		return fmt.Errorf("%s", msg)
-	}
-	return nil
+	return checkStatus(resp)
 }
 
 func (c *Client) DocumentExists(u string) (bool, error) {
@@ -81,8 +68,5 @@ func (c *Client) DeleteDocument(u string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-	return nil
+	return checkStatus(resp)
 }
