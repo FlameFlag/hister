@@ -48,7 +48,7 @@ func checkStatus(resp *http.Response) error {
 	if msg == "" {
 		msg = resp.Status
 	}
-	return fmt.Errorf("%s", msg)
+	return fmt.Errorf("invalid status code (%d): %s", resp.StatusCode, msg)
 }
 
 // builds an http.Request with Origin: hister:// set for CSRF bypass.
