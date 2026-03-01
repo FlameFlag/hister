@@ -174,6 +174,11 @@ func withCSRF(handler endpointHandler) endpointHandler {
 			handler(c)
 			return
 		}
+		// Allow requests coming from the same site
+		if c.Request.Header.Get("Sec-Fetch-Site") == "same-origin" {
+			handler(c)
+			return
+		}
 		// Allow /add requests from the addons
 		if c.Request.URL.Path == "/add" {
 			if strings.HasPrefix(c.Request.Header.Get("Origin"), "moz-extension://") {
