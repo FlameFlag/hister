@@ -102,6 +102,10 @@ func (l *Lexer) readQuoted() (Token, error) {
 		l.readChar()
 	}
 
+	if l.char == 0 {
+		return Token{Type: TokenQuoted, Value: builder.String()}, nil
+	}
+
 	if l.char != '"' {
 		return Token{}, fmt.Errorf("unclosed quoted string")
 	}
