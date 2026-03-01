@@ -7,6 +7,7 @@ package model
 import (
 	"time"
 
+	"github.com/asciimoo/hister/client"
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/gorilla/websocket"
@@ -53,21 +54,10 @@ type RulesFetchedMsg struct{ Data RulesResponse }
 type AddResultMsg struct{ Err error }
 type RulesSavedMsg struct{ Err error }
 
-// is a single item from the history API
-type HistoryEntry struct {
-	Query string `json:"query"`
-	Title string `json:"title"`
-	URL   string `json:"url"`
-}
+type HistoryEntry = client.HistoryEntry
 
-// holds skip/priority patterns and aliases from the rules API
-type RulesResponse struct {
-	Skip     []string          `json:"skip"`
-	Priority []string          `json:"priority"`
-	Aliases  map[string]string `json:"aliases"`
-}
+type RulesResponse = client.RulesResponse
 
-// represents a clickable region in the hints bar
 type HintRegion struct {
 	X0, X1 int
 	Action config.Action

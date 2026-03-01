@@ -64,7 +64,7 @@ func DispatchCommonAction(m *model.Model, action config.Action) (tea.Cmd, bool) 
 		if u := m.GetSelectedURL(); u != "" {
 			m.OpenDeleteDialog("Delete Result", u, -1, func() tea.Cmd {
 				return tea.Batch(
-					network.DeleteURL(m.Cfg.BaseURL(""), u),
+					m.DeleteURLCmd(u),
 					doSearch(m),
 				)
 			})
@@ -85,8 +85,7 @@ func ExecuteAction(m *model.Model, action config.Action) tea.Cmd {
 		if m.SelectedIdx >= 0 {
 			if u := m.GetSelectedURL(); u != "" {
 				browser.OpenURL(u)
-				baseURL := m.Cfg.BaseURL("")
-				return tea.Batch(m.FlashHint(config.ActionOpenResult), network.PostHistory(baseURL, m.TextInput.Value(), u, m.GetSelectedTitle()))
+				return tea.Batch(m.FlashHint(config.ActionOpenResult), m.PostHistoryCmd(u))
 			}
 		}
 		return m.FlashHint(config.ActionOpenResult)
@@ -120,7 +119,6 @@ func SwitchTab(m *model.Model, action config.Action) tea.Cmd {
 	}
 	m.TextInput.Blur()
 	m.State = model.StateResults
-	baseURL := m.Cfg.BaseURL("")
 	var cmd tea.Cmd
 	switch m.ActiveTab {
 	case model.TabSearch:
@@ -128,13 +126,13 @@ func SwitchTab(m *model.Model, action config.Action) tea.Cmd {
 		cmd = m.TextInput.Focus()
 	case model.TabHistory:
 		m.HistoryLoading = true
-		cmd = network.FetchHistory(baseURL)
+		cmd = m.FetchHistoryCmd()
 	case model.TabRules:
 		m.RulesLoading = true
 		m.RulesFormFocus = model.RulesFieldList
 		m.RulesEditingIdx = -1
 		m.BlurAllRulesInputs()
-		cmd = network.FetchRules(baseURL)
+		cmd = m.FetchRulesCmd()
 	case model.TabAdd:
 		m.AddInputs[0].Focus()
 		m.AddFocusIdx = 0

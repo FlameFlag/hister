@@ -112,7 +112,7 @@ func Update(m *model.Model, msg tea.Msg) tea.Cmd {
 	case model.RulesSavedMsg:
 		if msg.Err == nil {
 			m.RulesLoading = true
-			return network.FetchRules(m.Cfg.BaseURL(""))
+			return m.FetchRulesCmd()
 		}
 
 	case model.ResultsMsg:

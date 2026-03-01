@@ -9,7 +9,6 @@ import (
 
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/ui/model"
-	"github.com/asciimoo/hister/ui/network"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/browser"
@@ -66,9 +65,8 @@ func HistoryKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 	case config.ActionDeleteResult:
 		if m.HistoryIdx >= 0 && m.HistoryIdx < len(m.HistoryItems) {
 			h := m.HistoryItems[m.HistoryIdx]
-			baseURL := m.Cfg.BaseURL("")
 			m.OpenDeleteDialog("Delete History Entry", h.URL, model.TabHistory, func() tea.Cmd {
-				return network.DeleteHistoryEntry(baseURL, h.Query, h.URL)
+				return m.DeleteHistoryEntryCmd(h.Query, h.URL)
 			})
 		}
 		return m.FlashHint(config.ActionDeleteResult)
@@ -79,11 +77,9 @@ func HistoryKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 }
 
 func RulesKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
-	baseURL := m.Cfg.BaseURL("")
-
 	// If a form input is focused (0-3), handle text input
 	if m.RulesFormFocus < model.RulesFieldList {
-		return rulesFormKeys(m, msg, baseURL)
+		return rulesFormKeys(m, msg)
 	}
 
 	// List navigation (RulesFormFocus == 4)
@@ -189,17 +185,17 @@ func RulesKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 					case 0:
 						if idx < len(m.RulesData.Skip) {
 							m.RulesData.Skip = append(m.RulesData.Skip[:idx], m.RulesData.Skip[idx+1:]...)
-							return network.PostRules(baseURL, strings.Join(m.RulesData.Skip, "\n"), strings.Join(m.RulesData.Priority, "\n"))
+							return m.SaveRulesCmd()
 						}
 					case 1:
 						if idx < len(m.RulesData.Priority) {
 							m.RulesData.Priority = append(m.RulesData.Priority[:idx], m.RulesData.Priority[idx+1:]...)
-							return network.PostRules(baseURL, strings.Join(m.RulesData.Skip, "\n"), strings.Join(m.RulesData.Priority, "\n"))
+							return m.SaveRulesCmd()
 						}
 					case 2:
 						keys := m.SortedAliasKeys()
 						if idx < len(keys) {
-							return network.PostDeleteAlias(baseURL, keys[idx])
+							return m.DeleteAliasCmd(keys[idx])
 						}
 					}
 					return nil
@@ -209,12 +205,12 @@ func RulesKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 		return m.FlashHint(config.ActionDeleteResult)
 	case config.ActionToggleSort:
 		m.RulesLoading = true
-		return network.FetchRules(baseURL)
+		return m.FetchRulesCmd()
 	}
 	return nil
 }
 
-func rulesFormKeys(m *model.Model, msg tea.KeyMsg, baseURL string) tea.Cmd {
+func rulesFormKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 	action := config.Action(m.Cfg.Hotkeys.TUI[msg.String()])
 	switch action {
 	case config.ActionOpenResult:
@@ -228,7 +224,7 @@ func rulesFormKeys(m *model.Model, msg tea.KeyMsg, baseURL string) tea.Cmd {
 				} else {
 					m.RulesData.Skip = append(m.RulesData.Skip, pattern)
 				}
-				cmd = network.PostRules(baseURL, strings.Join(m.RulesData.Skip, "\n"), strings.Join(m.RulesData.Priority, "\n"))
+				cmd = m.SaveRulesCmd()
 			}
 			m.RulesSkipInput.SetValue("")
 		case model.RulesFieldPriority:
@@ -239,7 +235,7 @@ func rulesFormKeys(m *model.Model, msg tea.KeyMsg, baseURL string) tea.Cmd {
 				} else {
 					m.RulesData.Priority = append(m.RulesData.Priority, pattern)
 				}
-				cmd = network.PostRules(baseURL, strings.Join(m.RulesData.Skip, "\n"), strings.Join(m.RulesData.Priority, "\n"))
+				cmd = m.SaveRulesCmd()
 			}
 			m.RulesPriorityInput.SetValue("")
 		case model.RulesFieldAliasKey, model.RulesFieldAliasVal:
@@ -251,13 +247,13 @@ func rulesFormKeys(m *model.Model, msg tea.KeyMsg, baseURL string) tea.Cmd {
 					if m.RulesEditingIdx < len(keys) {
 						oldKey := keys[m.RulesEditingIdx]
 						if oldKey != keyword {
-							cmd = tea.Batch(network.PostDeleteAlias(baseURL, oldKey), network.PostAddAlias(baseURL, keyword, value))
+							cmd = tea.Batch(m.DeleteAliasCmd(oldKey), m.AddAliasCmd(keyword, value))
 						} else {
-							cmd = network.PostAddAlias(baseURL, keyword, value)
+							cmd = m.AddAliasCmd(keyword, value)
 						}
 					}
 				} else {
-					cmd = network.PostAddAlias(baseURL, keyword, value)
+					cmd = m.AddAliasCmd(keyword, value)
 				}
 			}
 			m.RulesAliasKeyInput.SetValue("")
@@ -319,7 +315,6 @@ func rulesFormKeys(m *model.Model, msg tea.KeyMsg, baseURL string) tea.Cmd {
 }
 
 func AddKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
-	baseURL := m.Cfg.BaseURL("")
 	action := config.Action(m.Cfg.Hotkeys.TUI[msg.String()])
 	switch action {
 	case config.ActionToggleFocus:
@@ -348,7 +343,7 @@ func AddKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 			title := strings.TrimSpace(m.AddInputs[1].Value())
 			text := strings.TrimSpace(m.AddInputs[2].Value())
 			m.AddStatus = "Adding..."
-			return network.PostAdd(baseURL, u, title, text)
+			return m.AddPageCmd(u, title, text)
 		}
 		if m.AddFocusIdx < len(m.AddInputs) {
 			m.AddInputs[m.AddFocusIdx].Blur()
