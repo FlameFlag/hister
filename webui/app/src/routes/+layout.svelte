@@ -71,7 +71,7 @@
   </Button>
 </header>
 
-<main class="flex flex-col overflow-hidden">
+<main class="flex flex-col overflow-clip">
   {@render children()}
 </main>
 

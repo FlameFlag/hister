@@ -559,7 +559,7 @@
 
 {#if isSearching}
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="search flex items-center gap-3 h-10 md:h-14 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
+    <div class="search flex items-center gap-3 shrink-0 h-10 md:h-14 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
       <Search class="size-4 md:size-6 text-text-brand-muted" />
       <Input
         bind:ref={inputEl}
@@ -575,7 +575,7 @@
     </span>
     {/if}
 
-    <ScrollArea class="flex-1">
+    <ScrollArea class="flex-1 min-h-0">
       <div class="w-full overflow-x-hidden px-4 md:px-12 py-2 space-y-3">
       {#if hasResults}
         <div class="flex items-center justify-between">
