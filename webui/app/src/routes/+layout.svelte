@@ -2,10 +2,11 @@
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import { Button } from '@hister/components/ui/button';
-  import { Sun } from 'lucide-svelte';
+  import { Sun, Moon } from 'lucide-svelte';
   import "../style.css";
 
   let { children } = $props();
+  let theme = $state("");
 
   const navItems = [
     { label: 'History', href: 'history' },
@@ -13,7 +14,7 @@
     { label: 'Add', href: 'add' }
   ];
 
-  function applyTheme(theme: string) {
+  function applyTheme() {
     document.documentElement.setAttribute('data-theme', theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -23,16 +24,15 @@
   }
 
   onMount(() => {
-    const theme = localStorage.getItem('theme') ||
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    applyTheme(theme);
+    theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme();
   });
 
   function toggleTheme() {
     const current = document.documentElement.getAttribute('data-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    applyTheme(next);
-    localStorage.setItem('theme', next);
+    theme = current === 'dark' ? 'light' : 'dark';
+    applyTheme();
+    localStorage.setItem('theme', theme);
   }
 </script>
 
@@ -60,7 +60,7 @@
     title="Toggle theme"
     onclick={toggleTheme}
   >
-    <Sun class="size-6" />
+    {#if theme ==='dark' }<Sun class="size-6" />{:else}<Moon class="size-6" />{/if}
   </Button>
 </header>
 
