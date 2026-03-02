@@ -7,6 +7,12 @@
 
   let { children } = $props();
 
+  const navItems = [
+    { label: 'History', href: 'history' },
+    { label: 'Rules', href: 'rules' },
+    { label: 'Add', href: 'add' }
+  ];
+
   function applyTheme(theme: string) {
     document.documentElement.setAttribute('data-theme', theme);
     if (theme === 'dark') {
@@ -30,35 +36,22 @@
   }
 </script>
 
-<header class="h-16 px-6 bg-page-bg border-b-[2px] border-border-brand flex items-center justify-between shadow-[4px_4px_0px_var(--hister-indigo)]">
+<header class="h-16 px-6 bg-brutal-bg border-b-[3px] border-brutal-border flex items-center justify-between sticky top-0 z-50">
   <h1 class="flex items-center gap-2">
     <img src="static/logo.png" alt="Hister logo" class="h-8 w-8" />
-    <a data-sveltekit-reload href="./" class="font-outfit text-xl font-extrabold text-text-brand no-underline hover:underline">
+    <a data-sveltekit-reload href="./" class="font-space text-[28px] tracking-[2px] font-extrabold text-text-brand no-underline hover:underline uppercase">
       Hister
     </a>
   </h1>
   <nav class="flex items-center gap-6">
-    <a
-      class:underline={$page.url.pathname === new URL('history', $page.url).pathname}
-      class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
-      href="history"
-    >
-      History
-    </a>
-    <a
-      class:underline={$page.url.pathname === new URL('rules', $page.url).pathname}
-      class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
-      href="rules"
-    >
-      Rules
-    </a>
-    <a
-      class:underline={$page.url.pathname === new URL('add', $page.url).pathname}
-      class="font-inter text-sm font-semibold text-text-brand-secondary hover:text-text-brand no-underline hover:underline"
-      href="add"
-    >
-      Add
-    </a>
+    {#each navItems as item (item.href)}
+      <a
+        class="font-space text-[13px] tracking-[1.5px] font-semibold no-underline hover:underline uppercase {$page.url.pathname === new URL(item.href, $page.url).pathname ? 'text-text-brand font-bold' : 'text-text-brand-secondary hover:text-text-brand'}"
+        href={item.href}
+      >
+        {item.label}
+      </a>
+    {/each}
   </nav>
   <Button
     variant="ghost"
@@ -75,12 +68,9 @@
   {@render children()}
 </main>
 
-<footer class="h-12 px-6 bg-page-bg border-t-[2px] border-border-brand flex items-center justify-center gap-4 text-sm">
-  <a href="help" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">Help</a>
-  <span class="text-text-brand-muted">|</span>
-  <a href="about" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">About</a>
-  <span class="text-text-brand-muted">|</span>
-  <a href="api" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline">API</a>
-  <span class="text-text-brand-muted">|</span>
-  <a href="https://github.com/asciimoo/hister/" class="font-inter text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline" target="_blank" rel="noopener">GitHub</a>
+<footer class="h-12 px-6 bg-brutal-bg border-t-[3px] border-brutal-border flex items-center justify-center gap-6 text-sm">
+  <a href="help" class="font-space text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase">Help</a>
+  <a href="about" class="font-space text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase">About</a>
+  <a href="api" class="font-space text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase">API</a>
+  <a href="https://github.com/asciimoo/hister/" class="font-space text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase" target="_blank" rel="noopener">GitHub</a>
 </footer>
