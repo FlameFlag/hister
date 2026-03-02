@@ -539,14 +539,6 @@ func (c *Config) BaseURL(u string) string {
 	return c.Server.BaseURL + u
 }
 
-func (c *Config) BasePath() string {
-	bu, err := c.baseURLParsed()
-	if err != nil {
-		return ""
-	}
-	return bu.Path
-}
-
 func (c *Config) IsSameHost(h string) bool {
 	bu, err := c.baseURLParsed()
 	if err != nil {

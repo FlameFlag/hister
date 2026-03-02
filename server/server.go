@@ -215,7 +215,7 @@ func withCSRF(handler endpointHandler) endpointHandler {
 			return
 		}
 		// Allow add requests from the addons
-		if c.Request.URL.Path == c.Config.BasePath()+"/add" || c.Request.URL.Path == c.Config.BasePath()+"/api/add" {
+		if c.Request.URL.Path == c.Config.BasePathPrefix()+"/add" || c.Request.URL.Path == c.Config.BasePathPrefix()+"/api/add" {
 			if strings.HasPrefix(c.Request.Header.Get("Origin"), "moz-extension://") {
 				handler(c)
 				return
