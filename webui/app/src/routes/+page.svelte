@@ -757,7 +757,7 @@
     </ScrollArea>
   </div>
 {:else}
-  <div class="flex-1 flex flex-col items-center justify-center gap-10 py-4 md:py-12 px-4 md:px-12 overflow-y-auto relative">
+  <div class="flex-1 flex flex-col items-center gap-5 md:gap-10 py-4 md:py-12 px-4 md:px-12 overflow-y-auto relative">
 
     <h1
       bind:this={heroTitleEl}
@@ -789,7 +789,7 @@
       </div>
     </div>
 
-    <div bind:this={hintEl} class="hidden md:flex items-center gap-2 font-inter text-xs text-text-brand-muted">
+    <div bind:this={hintEl} class="hidden md:flex items-center gap-1 md:gap-2 font-inter text-xs text-text-brand-muted">
       <span>Pro tip: Press</span>
       <Kbd bind:ref={kbdEl} class="bg-muted-surface border-[2px] border-border-brand-muted px-2 py-0.5 font-fira text-xs font-semibold text-text-brand-secondary rounded-none">/</Kbd>
       <span>to focus search anywhere</span>
@@ -849,19 +849,19 @@
       </div>
     {/if}
 
-    <div bind:this={statsRowEl} class="flex items-center gap-8 flex-col md:flex-row">
+    <div bind:this={statsRowEl} class="flex items-center gap-3 md:gap-8 flex-col md:flex-row">
       <div class="flex items-center gap-2 text-hister-indigo border-[3px] border-brutal-border px-4 py-2 shadow-[3px_3px_0_var(--brutal-shadow)]">
-        <History class="size-[18px]" />
+        <History class="size-[12px] md:size-[18px]" />
         <span class="font-outfit text-xl font-extrabold">{displayHistoryCount}</span>
         <span class="font-inter text-sm">indexed pages</span>
       </div>
       <div class="flex items-center gap-2 text-hister-teal border-[3px] border-brutal-border px-4 py-2 shadow-[3px_3px_0_var(--brutal-shadow)]">
-        <Shield class="size-[18px]" />
+        <Shield class="size-[12px] md:size-[18px]" />
         <span class="font-outfit text-xl font-extrabold">{displayRulesCount}</span>
         <span class="font-inter text-sm">active rules</span>
       </div>
       <div class="flex items-center gap-2 text-hister-coral border-[3px] border-brutal-border px-4 py-2 shadow-[3px_3px_0_var(--brutal-shadow)]">
-        <Link2 class="size-[18px]" />
+        <Link2 class="size-[12px] md:size-[18px]" />
         <span class="font-outfit text-xl font-extrabold">{displayAliasesCount}</span>
         <span class="font-inter text-sm">aliases</span>
       </div>
