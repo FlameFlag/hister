@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"database/sql"
+	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -122,7 +124,7 @@ var searchCmd = &cobra.Command{
 	Short: "Command line search interface",
 	Long:  "Command line search interface.\nRun it without arguments to use the TUI interface or pass search terms as arguments to get results on the STDOUT.",
 	Args:  cobra.MinimumNArgs(0),
-	Run: func(_ *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			if err := ui.SearchTUI(cfg); err != nil {
 				exit(1, err.Error())
@@ -135,8 +137,36 @@ var searchCmd = &cobra.Command{
 		if err != nil {
 			exit(1, "Search failed: "+err.Error())
 		}
-		for _, r := range res.Documents {
-			fmt.Printf("%s\n%s\n\n", r.Title, r.URL)
+		format, _ := cmd.Flags().GetString("format")
+		switch format {
+		case "json":
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(res); err != nil {
+				exit(1, "Failed to encode JSON: "+err.Error())
+			}
+		case "csv":
+			w := csv.NewWriter(os.Stdout)
+			w.Write([]string{"title", "url", "domain", "score", "added", "language", "text"})
+			for _, r := range res.Documents {
+				w.Write([]string{
+					r.Title,
+					r.URL,
+					r.Domain,
+					strconv.FormatFloat(r.Score, 'f', -1, 64),
+					strconv.FormatInt(r.Added, 10),
+					r.Language,
+					r.Text,
+				})
+			}
+			w.Flush()
+			if err := w.Error(); err != nil {
+				exit(1, "Failed to write CSV: "+err.Error())
+			}
+		default:
+			for _, r := range res.Documents {
+				fmt.Printf("%s\n%s\n\n", r.Title, r.URL)
+			}
 		}
 	},
 }
@@ -226,6 +256,8 @@ func init() {
 	importCmd.Flags().IntP("min-visit", "m", 1, "only import URLs that were opened at least 'min-visit' times")
 
 	reindexCmd.Flags().BoolP("exclude-sensitive", "x", false, "don't add documents that contain sensitive content matched by config.SensitiveContentPatterns")
+
+	searchCmd.Flags().StringP("format", "f", "text", "output format: text, json, csv")
 
 	cobra.OnInitialize(initialize)
 
