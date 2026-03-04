@@ -322,6 +322,11 @@
       if (showHelp) { showHelp = false; e.preventDefault(); return; }
       if (contextMenuSearch) { contextMenuSearch = null; e.preventDefault(); return; }
       if (closePopup()) { e.preventDefault(); return; }
+      if (isSearching) {
+        query = '';
+        resultsShown = false;
+        return;
+      }
     }
     showActionsForResult = null;
     contextMenuSearch = null;
