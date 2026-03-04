@@ -295,11 +295,21 @@ export class KeyHandler {
           : e.key.toLowerCase();
 
     const action = this.actions[this.hotkeys[key]];
-    if (action) {
-      action(e, isInputFocus);
+    if (action && action(e, isInputFocus) !== true) {
       return true;
     }
-    return false;
+    switch(key) {
+      case "tab":
+        if(e.shiftKey) {
+          this.actions["select_previous_result"](e, isInputFocus);
+        } else {
+          this.actions["select_next_result"](e, isInputFocus);
+        }
+        break;
+      default:
+        break;
+    }
+    return true;
   }
 }
 

@@ -94,11 +94,6 @@
 
   let animationHandles: any[] = [];
 
-  const resultColors = [
-    'hister-indigo', 'hister-teal', 'hister-coral', 'hister-amber',
-    'hister-rose', 'hister-cyan', 'hister-lime'
-  ];
-
   const chipColors = [
     { border: 'border-hister-indigo', bg: 'bg-hister-indigo/10', text: 'text-hister-indigo' },
     { border: 'border-hister-teal', bg: 'bg-hister-teal/10', text: 'text-hister-teal' },
@@ -291,6 +286,8 @@
     if (isInputFocus && autocomplete && query !== autocomplete) {
       query = autocomplete;
       sendQuery(query);
+    } else {
+        return true;
     }
   }
 
@@ -328,10 +325,6 @@
     }
     showActionsForResult = null;
     contextMenuSearch = null;
-  }
-
-  function getResultColor(idx: number): string {
-    return resultColors[idx % resultColors.length];
   }
 
   function clickChip(q: string) {
