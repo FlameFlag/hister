@@ -2,22 +2,13 @@
     "name": "@hister/ext",
     "version": "0.10.0",
     "scripts": {
-        "clean": "rm -r dist/*",
-        "prebuild": "rm -rf dist/*",
-        "build": "NODE_ENV=production webpack --stats-error-details",
-        "dev": "webpack --stats-error-details --watch"
+        "clean": "rm -rf dist/*",
+        "build": "vite build",
+        "dev": "vite build --watch --mode development"
     },
     "devDependencies": {
         "@types/chrome": "^0.0.299",
-        "clean-webpack-plugin": "^4.0.0",
-        "copy-webpack-plugin": "^12.0.2",
-        "html-loader": "^5.1.0",
-        "html-webpack-plugin": "^5.6.3",
-        "mini-css-extract-plugin": "^2.9.2",
-        "terser-webpack-plugin": "^5.3.11",
-        "ts-loader": "^9.5.2",
-        "web-ext": "^9.3.0",
-        "webpack": "^5.97.1",
-        "webpack-cli": "^6.0.1"
+        "vite": "^6.2.0",
+        "web-ext": "^9.3.0"
     }
 }
