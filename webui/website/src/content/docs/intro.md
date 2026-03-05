@@ -34,3 +34,11 @@ However, if the Hister traffic is sent over a network, two *potential* concerns 
   This is only a problem if you don't trust the Hister server your clients are communicating with.
 - Hister only encrypts data it transfers if you use HTTPS.
   Accessing the server over a network **should** be done exclusively via HTTPS and never plain HTTP.
+
+## Technical details
+
+The Hister server never makes any requests itself; it expects clients to provide the (extracted) contents of the pages they want indexed, not just their URLs.
+In particular, this means that pages indexed via the browser extensions aren't affected by anti-bot checks... since they aren't performed by a bot!
+
+Indexing operations via the command-line tool (`hister index`, `hister import`...), however, are clearly bot-like (they advertise themselves as such!) so they can be rejected.
+The offending URLs can be visited manually from the browser afterwards.
