@@ -504,60 +504,77 @@ func indexURL(u string) error {
 }
 
 func importHistory(cmd *cobra.Command, args []string) {
+	// TODO: get skip rules from server
+
 	browser := args[0]
-	if browser != "firefox" && browser != "chrome" {
-		exit(1, "Invalid browser type it should be 'firefox' or 'chrome'")
+	var table string
+	switch browser {
+	case "firefox":
+		table = "moz_places"
+	case "chrome":
+		table = "urls"
+	default:
+		log.Fatal().Str("expected", "'firefox' or 'chrome'").Str("got", browser).Msg("Invalid browser type")
 	}
 	dbFile := args[1]
-	table := "urls"
-	if browser == "firefox" {
-		table = "moz_places"
-	}
+
 	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?immutable=1", dbFile))
 	if err != nil {
-		exit(1, "Failed to open database: "+err.Error())
+		log.Fatal().Err(err).Msg("Failed to open database")
 	}
 	defer db.Close()
-	q := fmt.Sprintf("SELECT DISTINCT url FROM %s WHERE 1=1", table)
+
+	// Fetch skip rules from the server.
+	c := newClient()
+	resp, err := c.FetchRules()
+	if err != nil {
+		log.Error().Err(err).Msg("Unable to obtain skip rules from server; using local ones instead")
+	} else {
+		// TODO: let the user know that their local rules are being overwritten?
+		cfg.Rules.Skip.ReStrs = resp.Skip
+		if err := cfg.Rules.Skip.Compile(); err != nil {
+			log.Fatal().Err(err).Msg("Unable to compile skip rules from server")
+		}
+	}
+
+	q := fmt.Sprintf("SELECT DISTINCT count(url) FROM %s WHERE url LIKE 'http://%%' OR url LIKE 'https://%%'", table)
 	if i, err := cmd.Flags().GetInt("min-visit"); err == nil && i > 1 {
 		q += fmt.Sprintf(" AND visit_count >= %d", i)
 	}
-
-	cq := strings.Replace(q, "DISTINCT url", "DISTINCT count(url)", 1)
-	row := db.QueryRow(cq)
+	// TODO: apply skip rules to get a more precise count?
+	row := db.QueryRow(q)
 	var count int
 	if err := row.Scan(&count); err != nil {
-		log.Debug().Str("query", cq).Msg("count query")
-		exit(1, "Failed to execute database query: "+err.Error())
+		log.Debug().Str("query", q).Msg("count query")
+		log.Fatal().Err(err).Msg("Failed to execute counting query")
 	}
 
 	if count < 1 {
-		exit(1, "No URLs found")
+		exit(1, "No URLs found to import")
 	}
 
 	if !yesNoPrompt(fmt.Sprintf("%d URLs found. Start import", count), true) {
 		return
 	}
 
+	q = strings.Replace(q, "count(url)", "url", 1)
 	q += " ORDER BY visit_count DESC"
 
 	fmt.Println(cliBoldStyle.Render("IMPORTING"))
 
-	rows, err := db.Query(q)
+	rows, err := db.Query(q, "url")
 	if err != nil {
-		exit(1, "Failed to execute database query: "+err.Error())
+		log.Fatal().Err(err).Msg("Failed to execute database query")
 	}
 	defer rows.Close()
-	i := 1
-	c := newClient()
+	i := 0
+	skipped := 0
 	for rows.Next() {
+		i += 1
 		var u string
 		err = rows.Scan(&u)
 		if err != nil {
-			exit(1, "Failed to retreive URL: "+err.Error())
-		}
-		if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
-			continue
+			log.Fatal().Err(err).Msg("Failed to execute database query")
 		}
 		if cfg.Rules.IsSkip(u) {
 			log.Debug().Str("URL", u).Msg("skip importing URL by rule")
@@ -566,6 +583,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 		exists, err := c.DocumentExists(u)
 		if err != nil {
 			log.Warn().Err(err).Str("URL", u).Msg("Failed to get info about URL, skipping")
+			skipped += 1
 			continue
 		}
 		if exists {
@@ -576,7 +594,10 @@ func importHistory(cmd *cobra.Command, args []string) {
 		if err := indexURL(u); err != nil {
 			log.Warn().Err(err).Msg("Failed to index URL")
 		}
-		i += 1
+	}
+
+	if skipped != 0 {
+		log.Info().Msgf("Skipped %d URLs", skipped)
 	}
 
 	// TODO optional date filter
