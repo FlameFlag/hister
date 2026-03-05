@@ -10,6 +10,7 @@
   let url = $state(defaultURL);
   let token = $state("");
   let indexingEnabled = $state(true);
+  let showTokenInput = $state(false);
   let message = $state("");
 
   chrome.storage.local.get(["histerURL", "histerToken", "indexingEnabled"], (data) => {
@@ -19,6 +20,7 @@
     url = data["histerURL"] || defaultURL;
     token = data["histerToken"] || "";
     indexingEnabled = data["indexingEnabled"] !== false;
+    showTokenInput = !token;
   });
 
   function save(e: Event) {
@@ -27,7 +29,12 @@
       .set({ histerURL: url, histerToken: token, indexingEnabled: indexingEnabled })
       .then(() => {
         message = "Settings saved";
+        showTokenInput = !token;
       });
+  }
+
+  function changeToken() {
+    showTokenInput = true;
   }
 
   function reindex() {
@@ -59,10 +66,19 @@
       <Input id="url" type="text" bind:value={url} placeholder="Server URL..." />
     </div>
 
-    <div class="space-y-1">
-      <Label for="token">Access token (optional)</Label>
-      <Input id="token" type="text" bind:value={token} placeholder="Token..." />
-    </div>
+    {#if showTokenInput}
+      <div class="space-y-1">
+        <Label for="token">Access token (optional)</Label>
+        <Input id="token" type="text" bind:value={token} placeholder="Token..." />
+      </div>
+    {:else}
+      <div class="space-y-1">
+        <Label>Access token</Label>
+        <Button type="button" variant="outline" onclick={changeToken} class="w-full">
+          Change token
+        </Button>
+      </div>
+    {/if}
 
     <div class="flex items-center justify-between">
       <Label for="indexing">Enable automatic indexing</Label>
