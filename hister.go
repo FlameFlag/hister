@@ -557,6 +557,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 	}
 	defer rows.Close()
 	i := 0
+	skipped := 0
 	for rows.Next() {
 		i += 1
 		var u string
@@ -571,6 +572,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 		exists, err := c.DocumentExists(u)
 		if err != nil {
 			log.Warn().Err(err).Str("URL", u).Msg("Failed to get info about URL, skipping")
+			skipped += 1
 			continue
 		}
 		if exists {
@@ -581,6 +583,10 @@ func importHistory(cmd *cobra.Command, args []string) {
 		if err := indexURL(u); err != nil {
 			log.Warn().Err(err).Msg("Failed to index URL")
 		}
+	}
+
+	if skipped != 0 {
+		log.Info().Msgf("Skipped %d URLs", skipped)
 	}
 
 	// TODO optional date filter
