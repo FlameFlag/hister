@@ -4,12 +4,6 @@
   import * as Card from '@hister/components/ui/card';
 
   let { data } = $props();
-
-  const categoryColors: Record<string, string> = {
-    'Getting Started': 'bg-hister-indigo',
-    Reference: 'bg-hister-teal',
-    Deployment: 'bg-hister-coral',
-  };
 </script>
 
 <svelte:head>
@@ -26,8 +20,8 @@
   {#each data.categories as category}
     <div class="mb-8">
       <div class="mb-3 flex items-center gap-2">
-        <div class="h-2.5 w-2.5 {categoryColors[category.name] ?? 'bg-brutal-border'}"></div>
-        <span class="font-space text-xs font-bold tracking-[2px] text-(--text-secondary) uppercase">
+        <div class="h-2.5 w-2.5 bg-hister-{category.color}"></div>
+        <span class="font-space text-xs font-bold tracking-[2px] text-[var(--text-secondary)] uppercase">
           {category.name}
         </span>
       </div>

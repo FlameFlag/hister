@@ -8,12 +8,6 @@
   const currentDoc = $derived(
     !isIndex ? data.docs.find((d) => page.url.pathname === `/docs/${d.slug}`) : null,
   );
-
-  const categoryColors: Record<string, string> = {
-    'Getting Started': 'bg-hister-indigo',
-    Reference: 'bg-hister-teal',
-    Deployment: 'bg-hister-coral',
-  };
 </script>
 
 {#if isIndex}
@@ -48,7 +42,7 @@
         {#each data.categories as category}
           <div class="flex flex-col gap-1">
             <div class="mb-1 flex items-center gap-2">
-              <div class="h-2 w-2 {categoryColors[category.name] ?? 'bg-brutal-border'}"></div>
+              <div class="h-2 w-2 bg-hister-{category.color}"></div>
               <span
                 class="font-space text-[10px] font-bold tracking-[2px] text-(--text-secondary) uppercase"
                 >{category.name}</span
