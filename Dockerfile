@@ -27,7 +27,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
 # Build static assets
 COPY . .
 
-RUN go generate
+RUN go generate ./...
 
 # Enable CGO and build the application for Linux
 RUN CGO_ENABLED=1 GOOS=linux go build \
