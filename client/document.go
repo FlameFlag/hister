@@ -44,7 +44,7 @@ func (c *Client) AddPage(u, title, text string) error {
 }
 
 func (c *Client) DocumentExists(u string) (bool, error) {
-	req, err := c.newRequest("GET", "/api/document?url="+url.QueryEscape(u), nil)
+	req, err := c.newRequest("HEAD", "/api/document?url="+url.QueryEscape(u), nil)
 	if err != nil {
 		return false, err
 	}

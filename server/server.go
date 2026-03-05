@@ -654,7 +654,12 @@ func serveGet(c *webContext) {
 		serve500(c)
 		return
 	}
-	c.JSON(doc)
+	// We skip generating the body on HEAD requests, since those only check the status.
+	// Note that we want to return the same status as a GET request, so **no faillible processing**
+	// is to be made inside of this block!
+	if c.Request.Method != "HEAD" {
+		c.JSON(doc)
+	}
 }
 
 func serveReadable(c *webContext) {
