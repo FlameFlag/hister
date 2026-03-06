@@ -1,5 +1,9 @@
 <script lang="ts">
   import { BrowserFrame } from '@hister/components';
+  
+  import landing_scrnshot from "$lib/assets/landing_screenshot.png";
+  import scrnshot from "$lib/assets/screenshot.png";
+  import demo from "$lib/assets/demo.gif";
 </script>
 
 <section class="bg-brutal-bg flex w-full flex-col items-center gap-12 px-6 py-12 md:px-12 md:py-16">
@@ -15,7 +19,7 @@
     </figcaption>
     <BrowserFrame>
       <img
-        src="/landing_screenshot.png"
+        src={landing_scrnshot}
         alt="Hister Web UI Landing Page"
         class="block h-auto w-full"
       />
@@ -23,7 +27,7 @@
   </figure>
   <figure class="m-0 flex w-full max-w-[1100px] flex-col items-center gap-6">
     <BrowserFrame>
-      <img src="/screenshot.png" alt="Hister Web UI" class="block h-auto w-full" />
+      <img src={scrnshot} alt="Hister Web UI" class="block h-auto w-full" />
     </BrowserFrame>
   </figure>
 
@@ -42,7 +46,7 @@
       tabBarClass="bg-[#161B22] border-b-2 border-[#30363D]"
       tabBarHeight="h-9"
     >
-      <img src="/demo.gif" alt="Hister Terminal UI" class="block h-auto w-full" />
+      <img src={demo} alt="Hister Terminal UI" class="block h-auto w-full" />
     </BrowserFrame>
   </figure>
 </section>

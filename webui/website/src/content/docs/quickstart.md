@@ -4,6 +4,10 @@ draft: false
 title: 'Quickstart'
 ---
 
+<script>
+import screenshot from "$lib/assets/landing_screenshot.png";
+</script>
+
 The simplest way to use Hister requires no configuration at all.
 
 ## Running the Server
@@ -43,7 +47,7 @@ In particular, they will never make requests to any site you are visiting (they 
 Type <http://localhost:4433> (or, equivalently, `http://127.0.0.1:4433`) into your browser's address bar, and you will access Hister's interface.
 There, you can perform searches, add indexing rules... feel free to look around!
 
-![Screenshot of Hister's landing page](/landing_screenshot.png)
+<img src={screenshot} alt="Screenshot of Hister's landing page" />
 
 As you visit more pages in your browser (with the extension enabled), the number of indexed pages should increase!
 (Just refresh the page to update it.)
