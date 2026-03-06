@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "serve:app": "npm -w @hister/app run serve --"
+    "serve:app": "npm -w @hister/app run serve --",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "workspaces": [
     "webui/app",
@@ -12,7 +14,10 @@
     "webui/ext"
   ],
   "devDependencies": {
-    "@types/node": "^25.3.0",
-    "@typescript-eslint/types": "^8.56.1"
+    "@types/node": "^25.3.4",
+    "@typescript-eslint/types": "^8.56.1",
+    "prettier": "^3.8.1",
+    "prettier-plugin-svelte": "^3.5.1",
+    "prettier-plugin-tailwindcss": "^0.7.2"
   }
 }
