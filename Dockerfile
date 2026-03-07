@@ -1,46 +1,53 @@
-FROM golang:1.24-bookworm AS builder
+# syntax=docker/dockerfile:1
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libc6-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Stage 1: Build frontend
+FROM node:22-alpine AS frontend
 
-# Switch workdir do build directory
+WORKDIR /app
+
+# Copy workspace package files first for layer caching
+COPY package.json package-lock.json ./
+COPY webui/app/package.json webui/app/
+COPY webui/components/package.json webui/components/
+COPY webui/website/package.json webui/website/
+
+RUN npm ci --workspaces
+
+COPY webui/ webui/
+
+RUN npm run build -w @hister/app
+
+# Stage 2: Build Go binary
+FROM golang:1.24-alpine AS builder
+
+RUN apk add --no-cache gcc musl-dev
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Install Node.js and npm for static asset build
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
-    apt-get install -y --no-install-recommends \
-    nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
-# Build static assets
 COPY . .
+COPY --from=frontend /app/webui/app/build/ server/static/app/
 
-RUN go generate ./...
-
-# Enable CGO and build the application for Linux
-RUN CGO_ENABLED=1 GOOS=linux go build \
-    -ldflags="-s -w" \
+RUN CGO_ENABLED=1 go build \
+    -tags netgo,osusergo \
+    -ldflags "-linkmode external -extldflags '-static' -s -w" \
     -o hister .
 
-# Release stage(distroless-nonroot)
+# Release stage (nonroot)
 # latest & vx.x.x
-FROM gcr.io/distroless/base-debian12:nonroot AS release
+FROM alpine:3.21 AS release
+
+LABEL org.opencontainers.image.title="Hister" \
+      org.opencontainers.image.description="Self-hosted browser history search engine" \
+      org.opencontainers.image.source="https://github.com/asciimoo/hister" \
+      org.opencontainers.image.licenses="AGPL-3.0"
+
 WORKDIR /hister
 
-COPY --from=builder /app/hister .
-
+RUN adduser -D -u 65532 hister && mkdir -p /hister/data && chown -R 65532:65532 /hister
+COPY --chown=65532:65532 --from=builder /app/hister .
 USER 65532:65532
 
 ENV HISTER_DATA_DIR=/hister/data
@@ -50,14 +57,18 @@ ENV HISTER__SERVER__BASE_URL=http://localhost:4433
 
 EXPOSE 4433
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO /dev/null http://localhost:4433/api/stats || exit 1
+
 ENTRYPOINT ["/hister/hister"]
 CMD ["listen"]
 
-# Release stage(distroless)
+# Release stage (root)
 # latest-root & vx.x.x-root
-FROM gcr.io/distroless/base-debian12 AS root
+FROM alpine:3.21 AS root
 WORKDIR /hister
 
+RUN mkdir -p /hister/data
 COPY --from=builder /app/hister .
 
 USER root
@@ -68,14 +79,19 @@ ENV HISTER__SERVER__ADDRESS=0.0.0.0:4433
 ENV HISTER__SERVER__BASE_URL=http://localhost:4433
 
 EXPOSE 4433
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO /dev/null http://localhost:4433/api/stats || exit 1
 
 ENTRYPOINT ["/hister/hister"]
 CMD ["listen"]
 
-# Release stage(distroless-debug)
+# Release stage (debug)
 # latest-debug & vx.x.x-debug
-FROM gcr.io/distroless/base-debian12:debug AS debug
+FROM alpine:3.21 AS debug
 WORKDIR /hister
+
+RUN apk add --no-cache curl bash && mkdir -p /hister/data
 
 COPY --from=builder /app/hister .
 
@@ -87,6 +103,9 @@ ENV HISTER__SERVER__ADDRESS=0.0.0.0:4433
 ENV HISTER__SERVER__BASE_URL=http://localhost:4433
 
 EXPOSE 4433
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget -qO /dev/null http://localhost:4433/api/stats || exit 1
 
 ENTRYPOINT ["/hister/hister"]
 CMD ["listen"]

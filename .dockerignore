@@ -37,6 +37,10 @@ LICENSE
 Dockerfile*
 compose.yml
 
+# Build Artifacts
+webui/app/build/
+webui/website/build/
+
 # Browser Extension & Nix
 ext/
 node_modules/
