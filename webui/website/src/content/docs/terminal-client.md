@@ -131,20 +131,3 @@ hotkeys:
 - `tab_search`/`tab_history`/`tab_rules`/`tab_add` - Switch tabs
 
 Note: After modifying `tui.yaml`, restart the `hister search` command to apply changes.
-
-## Troubleshooting
-
-### Server won't start
-
-- Check if port 4433 is already in use
-- Verify the configuration file syntax
-
-### Extension not connecting
-
-- Ensure the Hister server is running
-- Verify the extension is configured with the correct server URL
-- Check browser console for errors
-
-### Import fails
-
-- Ensure your server is running during import

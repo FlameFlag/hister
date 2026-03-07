@@ -7,7 +7,7 @@ export interface DocsCategory {
 export const docsStructure: DocsCategory[] = [
 	{
 		name: "Getting Started",
-		slugs: ["intro", "installing", "quickstart"],
+		slugs: ["intro", "installing", "quickstart", "troubleshooting"],
 		color: "indigo",
 	},
 	{
