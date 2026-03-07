@@ -4,21 +4,9 @@ draft: false
 title: 'Terminal Client'
 ---
 
-## Configuration
+See also [the configuration documentation](configuration).
 
-Hister can be configured using a YAML configuration file located at `~/.config/hister/config.yml`.
-
-### Generate Default Configuration
-
-To create a configuration file with default values:
-
-```bash
-./hister create-config ~/.config/hister/config.yml
-```
-
-**Important**: Restart the Hister server after modifying the configuration file.
-
-## Command Line Usage
+## Command-Line Usage
 
 View all available commands:
 
