@@ -94,30 +94,16 @@ server:
   base_url: 'https://hister.example.com' # Your public URL
 ```
 
-## Configuration via Environment Variables
-
-Hister can be fully configured using environment variables. This is the **recommended approach for containerized environments** (Docker, Kubernetes, etc.) as it avoids the need to manage configuration files inside the container or mounted volumes.
-
-### Environment Variable Format
-
-All configuration options can be set using environment variables with the prefix `HISTER__`. Nested keys are separated by double underscores (`__`).
-
-| Variable                   | Description                                                           |
-| -------------------------- | --------------------------------------------------------------------- |
-| `HISTER__SERVER__ADDRESS`  | The address and port the server binds to (default: `127.0.0.1:4433`)  |
-| `HISTER__SERVER__BASE_URL` | The external URL used to access Hister (e.g., `https://hister.com`)   |
-| `HISTER__SERVER__DATABASE` | The filename of the SQLite database (default: `db.sqlite3`)           |
-| `HISTER__APP__DIRECTORY`   | The directory where Hister stores its data (shorthand: `DATA_DIR`)    |
-| `HISTER__APP__LOG_LEVEL`   | Logging verbosity: `debug`, `info`, `warn`, `error` (default: `info`) |
-| `HISTER_PORT`              | Shorthand to override only the port in `server.address`               |
-
 ## Docker Setup
 
-Hister provides official Docker images for both AMD64 and ARM64 architectures. Using environment variables is the preferred way to configure Hister in Docker.
+Hister provides official Docker images for both AMD64 and ARM64 architectures.
 
 > **Note on Permissions**: The `latest` image runs as a **non-root user** (UID/GID 1000) by default for better security. Ensure the mounted volume (e.g., `./data`) has the correct permissions. If you need to run as root, use the `ghcr.io/asciimoo/hister:latest-root` image.
 
-### Generating Configuration via Docker
+### Configuring Hister in a Container
+
+Hister can be fully [configured using environment variables](configuration#environment-variables).
+This is the **recommended approach for containerized environments** (Docker, Kubernetes, etc.) as it avoids the need to manage configuration files inside the container or mounted volumes.
 
 If you prefer using a configuration file instead of environment variables, you can generate a default one using Docker:
 
