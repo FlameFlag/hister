@@ -1,7 +1,7 @@
 ---
 date: '2026-02-13T10:59:19+01:00'
 draft: false
-title: 'Getting Started'
+title: 'Terminal Client'
 ---
 
 ## Configuration
@@ -18,26 +18,6 @@ To create a configuration file with default values:
 
 **Important**: Restart the Hister server after modifying the configuration file.
 
-## Importing Existing Browser History
-
-You can import your existing browser history from Firefox or Chrome:
-
-### Firefox
-
-```bash
-./hister import firefox [db path]
-```
-
-On linux DB path can be usually found at `/home/[USER]/.mozilla/[PROFILE]/places.sqlite`
-
-### Chrome
-
-```bash
-./hister import chrome [db path]
-```
-
-On linux DB path can be usually found at `/home/[USER]/.config/chromium/Default/History`
-
 ## Command Line Usage
 
 View all available commands:
@@ -53,16 +33,6 @@ To manually index a specific URL:
 ```bash
 ./hister index https://example.com
 ```
-
-## Using Hister
-
-Once set up:
-
-1. **Browse the web** with the extension installed - pages are automatically indexed
-2. **Search your history** by visiting the Hister web interface
-3. **Use advanced queries** with the [Bleve query syntax](https://blevesearch.com/docs/Query-String-Query/)
-4. **Create keyword aliases** for frequently searched topics
-5. **Configure blacklists** to exclude unwanted content
 
 ## TUI (Terminal UI)
 
@@ -161,13 +131,6 @@ hotkeys:
 - `tab_search`/`tab_history`/`tab_rules`/`tab_add` - Switch tabs
 
 Note: After modifying `tui.yaml`, restart the `hister search` command to apply changes.
-
-## Next Steps
-
-- Explore the [advanced search syntax](https://blevesearch.com/docs/Query-String-Query/)
-- Configure blacklist, hotkeys, sensitive data patterns and priority rules in your config file
-- Set up keyword aliases for efficient searching
-- Import your existing browser history
 
 ## Troubleshooting
 

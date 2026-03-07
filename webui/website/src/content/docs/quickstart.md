@@ -54,3 +54,10 @@ As you visit more pages in your browser (with the extension enabled), the number
 If the number fails to increase, check that your browser extension is installed, enabled, and configured to the right URL.
 
 If you can't access the Web interface at all, check that [the server is running](#running-the-server).
+
+## Next Steps
+
+- [Import your existing browser history](importing-browser-history)
+- In the Web interface, set up ignoring and priority rules, as well as keyword aliases for efficient searching
+- Explore the [advanced search syntax](https://blevesearch.com/docs/Query-String-Query/)
+- Configure hotkeys and sensitive data patterns in your config file

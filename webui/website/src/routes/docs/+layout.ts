@@ -25,9 +25,9 @@ export async function load() {
   );
 
   const categories: DocCategory[] = docsStructure
-    .map(({ name, slugs }) => ({
-      name,
+    .map(({ slugs, ...props }) => ({
       docs: docs.filter((d) => slugs.includes(d.slug)),
+      ...props,
     }))
     .filter((c) => c.docs.length > 0);
 
