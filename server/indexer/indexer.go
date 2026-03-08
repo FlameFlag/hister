@@ -524,9 +524,14 @@ func createMapping(lang string) mapping.IndexMapping {
 
 	um := bleve.NewTextFieldMapping()
 	um.Analyzer = "url"
+	um.IncludeTermVectors = false
 
 	noIdxMap := bleve.NewTextFieldMapping()
+	noIdxMap.Store = true
 	noIdxMap.Index = false
+	noIdxMap.IncludeTermVectors = false
+	noIdxMap.IncludeInAll = false
+	noIdxMap.DocValues = false
 
 	docMapping := bleve.NewDocumentMapping()
 	docMapping.AddFieldMappingsAt("title", fm)
