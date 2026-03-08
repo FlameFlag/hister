@@ -62,6 +62,11 @@ type Results struct {
 	QuerySuggestion string            `json:"query_suggestion"`
 }
 
+type multiBatch struct {
+	indexer *indexer
+	batches map[string]*bleve.Batch
+}
+
 var (
 	i                   *indexer
 	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added"}
@@ -165,17 +170,18 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 	}
 	q := query.NewMatchAllQuery()
 	total := idx.Total()
-	pageSize := 20
+	batchSize := 20
 	page := 0
 	for {
 		req := bleve.NewSearchRequest(q)
-		req.Size = pageSize
-		req.From = page * pageSize
+		req.Size = batchSize
+		req.From = page * batchSize
 		req.Fields = allFields
 		res, err := idx.idx.Search(req)
 		if err != nil || len(res.Hits) < 1 {
 			break
 		}
+		b := newMultiBatch(tmpIdx)
 		for _, h := range res.Hits {
 			d := docFromHit(h)
 			log.Debug().Str("URL", d.URL).Msg("Indexing")
@@ -199,14 +205,19 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 				continue
 			}
 			d.Added = origDate
-			if err := tmpIdx.AddDocument(d); err != nil {
+			if err := b.Add(d); err != nil {
 				tmpIdx.Close()
 				os.RemoveAll(tmpBasePath)
 				return err
 			}
 		}
+		if err := b.Save(); err != nil {
+			tmpIdx.Close()
+			os.RemoveAll(tmpBasePath)
+			return err
+		}
 		page += 1
-		log.Info().Msg(fmt.Sprintf("Reindexed [%d/%d]", page*pageSize, total))
+		log.Info().Msg(fmt.Sprintf("Reindexed [%d/%d]", page*batchSize, total))
 	}
 	idx.Close()
 	tmpIdx.Close()
@@ -255,20 +266,24 @@ func (i *indexer) AddDocument(d *Document) error {
 			return err
 		}
 	}
-	if d.Language == UnknownLanguage || d.Language == "" {
-		return i.indexers[defaultIndexerName].Index(d.URL, d)
+	return i.getOrCreate(d.Language).Index(d.URL, d)
+}
+
+func (i *indexer) getOrCreate(lang string) bleve.Index {
+	if lang == UnknownLanguage || lang == "" {
+		return i.indexers[defaultIndexerName]
 	}
-	idxName := fmt.Sprintf(langIndexerName, d.Language)
+	idxName := fmt.Sprintf(langIndexerName, lang)
 	idx, ok := i.indexers[idxName]
 	if !ok {
-		err := i.addIndexer(idxName, d.Language)
+		err := i.addIndexer(idxName, lang)
 		if err != nil {
 			log.Warn().Err(err).Str("Name", idxName).Msg("Failed to create language indexer")
-			return i.indexers[defaultIndexerName].Index(d.URL, d)
+			return i.indexers[defaultIndexerName]
 		}
 		idx, _ = i.indexers[idxName]
 	}
-	return idx.Index(d.URL, d)
+	return idx
 }
 
 func (i *indexer) addIndexer(name, lang string) error {
@@ -286,6 +301,31 @@ func (i *indexer) Close() {
 	for _, idx := range i.indexers {
 		idx.Close()
 	}
+}
+
+func newMultiBatch(i *indexer) *multiBatch {
+	return &multiBatch{
+		indexer: i,
+		batches: make(map[string]*bleve.Batch),
+	}
+}
+
+func (b *multiBatch) Add(d *Document) error {
+	idx := b.indexer.getOrCreate(d.Language)
+	if _, ok := b.batches[d.Language]; !ok {
+		b.batches[d.Language] = idx.NewBatch()
+	}
+	return b.batches[d.Language].Index(d.URL, d)
+}
+
+func (b *multiBatch) Save() error {
+	for l, lb := range b.batches {
+		idx := b.indexer.getOrCreate(l)
+		if err := idx.Batch(lb); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func Delete(u string) error {
