@@ -107,11 +107,6 @@
   <Card.Root
     class="border-brutal-border gap-0 rounded-none border-0 border-b-[3px] py-0 shadow-none"
   >
-    <Card.Header class="bg-muted-surface border-brutal-border border-b-[3px] px-5 py-2.5">
-      <Card.Title class="font-outfit text-text-brand text-xs font-bold tracking-widest uppercase"
-        >Connection</Card.Title
-      >
-    </Card.Header>
     <Card.Content class="space-y-4 p-5">
       <form onsubmit={save} class="space-y-4">
         <SettingsInput
