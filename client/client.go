@@ -56,13 +56,13 @@ func checkStatus(resp *http.Response) error {
 	return fmt.Errorf("invalid status code (%d): %s", resp.StatusCode, msg)
 }
 
-// builds an http.Request with Origin: hister:// set for CSRF bypass.
 func closeBody(resp *http.Response, errp *error) {
 	if cerr := resp.Body.Close(); cerr != nil && *errp == nil {
 		*errp = fmt.Errorf("closing response body: %w", cerr)
 	}
 }
 
+// builds an http.Request with Origin: hister:// set for CSRF bypass.
 func (c *Client) newRequest(method, path string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, c.baseURL+path, body)
 	if err != nil {
