@@ -4,7 +4,84 @@ draft: false
 title: 'Running as a Service'
 ---
 
-To keep Hister running in the background and start it automatically on boot, you can set it up as a system service. Below are instructions for macOS (launchctl) and Linux (systemd).
+To keep Hister running in the background and start it automatically on boot, you can set it up as a system service. Below are instructions for Linux (systemd) and macOS (launchctl).
+
+## Linux (systemd)
+
+### 1. Create the service file
+
+Create `~/.config/systemd/user/hister.service`:
+
+```ini
+[Unit]
+Description=Hister Search Engine
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/path/to/hister listen
+Restart=on-failure
+RestartSec=5
+
+# Optional: override config values
+# Environment=HISTER__APP__LOG_LEVEL=error
+
+# Optional: use a specific config file
+# ExecStart=/path/to/hister --config /path/to/config.yml listen
+
+[Install]
+WantedBy=default.target
+```
+
+Replace `/path/to/hister` with the actual path to the hister binary.
+
+### 2. Enable and start the service
+
+```bash
+# Reload systemd to pick up the new service file
+systemctl --user daemon-reload
+
+# Enable the service to start on login
+systemctl --user enable hister
+
+# Start the service now
+systemctl --user start hister
+```
+
+To have user services start at boot (even before logging in):
+
+```bash
+sudo loginctl enable-linger $USER
+```
+
+### 3. Managing the service
+
+```bash
+# Check status
+systemctl --user status hister
+
+# View logs
+journalctl --user -u hister -f
+
+# Restart (e.g. after updating the binary or config)
+systemctl --user restart hister
+
+# Stop
+systemctl --user stop hister
+
+# Disable (stop starting on login)
+systemctl --user disable hister
+```
+
+### Updating the binary
+
+After building or installing a new version of hister, restart the service:
+
+```bash
+systemctl --user restart hister
+```
+
+---
 
 ## macOS (launchctl)
 
@@ -83,79 +160,3 @@ After building or installing a new version of hister, restart the service to pic
 launchctl kickstart -k gui/$(id -u)/org.hister.search
 ```
 
----
-
-## Linux (systemd)
-
-### 1. Create the service file
-
-Create `~/.config/systemd/user/hister.service`:
-
-```ini
-[Unit]
-Description=Hister Search Engine
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/path/to/hister listen
-Restart=on-failure
-RestartSec=5
-
-# Optional: override config values
-# Environment=HISTER__APP__LOG_LEVEL=error
-
-# Optional: use a specific config file
-# ExecStart=/path/to/hister --config /path/to/config.yml listen
-
-[Install]
-WantedBy=default.target
-```
-
-Replace `/path/to/hister` with the actual path to the hister binary.
-
-### 2. Enable and start the service
-
-```bash
-# Reload systemd to pick up the new service file
-systemctl --user daemon-reload
-
-# Enable the service to start on login
-systemctl --user enable hister
-
-# Start the service now
-systemctl --user start hister
-```
-
-To have user services start at boot (even before logging in):
-
-```bash
-sudo loginctl enable-linger $USER
-```
-
-### 3. Managing the service
-
-```bash
-# Check status
-systemctl --user status hister
-
-# View logs
-journalctl --user -u hister -f
-
-# Restart (e.g. after updating the binary or config)
-systemctl --user restart hister
-
-# Stop
-systemctl --user stop hister
-
-# Disable (stop starting on login)
-systemctl --user disable hister
-```
-
-### Updating the binary
-
-After building or installing a new version of hister, restart the service:
-
-```bash
-systemctl --user restart hister
-```
