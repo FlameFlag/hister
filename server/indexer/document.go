@@ -28,6 +28,8 @@ type Document struct {
 	skipSensitiveCheck bool
 }
 
+var quoteUnescaper = strings.NewReplacer("&#34;", `"`, "&#39;", `'`)
+
 func (d *Document) extractHTML() error {
 	return Extract(d)
 }
@@ -113,7 +115,8 @@ func (d *Document) Process(ld LanguageDetector) error {
 	if err := d.extractHTML(); err != nil {
 		return err
 	}
-	d.Title = strings.ReplaceAll(sanitizer.Sanitize(d.Title), "&#34;", `"`)
+
+	d.Title = quoteUnescaper.Replace(sanitizer.Sanitize(d.Title))
 
 	d.Language = ld.DetectLanguage(d.Text)
 
