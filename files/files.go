@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/asciimoo/hister/config"
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog/log"
 )
@@ -27,10 +28,47 @@ func ExpandHome(path string) string {
 	return path
 }
 
+// MatchesFilters reports whether a filename passes the given filetype, pattern, and exclude filters.
+func MatchesFilters(name string, filetypes, patterns, excludes []string) bool {
+	if len(excludes) > 0 {
+		for _, pattern := range excludes {
+			if matched, _ := filepath.Match(pattern, name); matched {
+				return false
+			}
+		}
+	}
+	if len(filetypes) > 0 {
+		ext := strings.TrimPrefix(filepath.Ext(name), ".")
+		if !slices.Contains(filetypes, ext) {
+			return false
+		}
+	}
+	if len(patterns) > 0 {
+		for _, pattern := range patterns {
+			if matched, _ := filepath.Match(pattern, name); matched {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
+
 // Debounce so we don't spam the index as write events can file multiple times before closing a file after editing
 const debounceTime = 200 * time.Millisecond
 
-func WatchDirectories(dirs []string, callback func(string)) {
+// findMatchingDir returns the Directory config whose expanded path contains filePath, or nil.
+func findMatchingDir(dirs []config.Directory, filePath string) *config.Directory {
+	for i := range dirs {
+		dirPath := filepath.Clean(ExpandHome(dirs[i].Path))
+		if strings.HasPrefix(filePath, dirPath+"/") || filePath == dirPath {
+			return &dirs[i]
+		}
+	}
+	return nil
+}
+
+func WatchDirectories(dirs []config.Directory, callback func(string)) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to start file watcher")
@@ -53,10 +91,14 @@ func WatchDirectories(dirs []string, callback func(string)) {
 					return
 				}
 				if event.Has(fsnotify.Write) {
-					if debounceTimer, ok := debounced[event.Name]; ok {
-						debounceTimer.Reset(debounceTime)
-					} else {
-						debounced[event.Name] = *time.NewTimer(debounceTime)
+					if dir := findMatchingDir(dirs, event.Name); dir != nil {
+						if MatchesFilters(filepath.Base(event.Name), dir.Filetypes, dir.Patterns, dir.Excludes) {
+							if debounceTimer, ok := debounced[event.Name]; ok {
+								debounceTimer.Reset(debounceTime)
+							} else {
+								debounced[event.Name] = *time.NewTimer(debounceTime)
+							}
+						}
 					}
 				}
 				if event.Has(fsnotify.Create) {
@@ -64,8 +106,10 @@ func WatchDirectories(dirs []string, callback func(string)) {
 					if err == nil {
 						if st.IsDir() && !slices.Contains(watcher.WatchList(), event.Name) {
 							watcher.Add(event.Name)
-						} else {
-							callback(event.Name)
+						} else if dir := findMatchingDir(dirs, event.Name); dir != nil {
+							if MatchesFilters(filepath.Base(event.Name), dir.Filetypes, dir.Patterns, dir.Excludes) {
+								callback(event.Name)
+							}
 						}
 					}
 				}
@@ -78,12 +122,12 @@ func WatchDirectories(dirs []string, callback func(string)) {
 		}
 	}()
 	for _, dir := range dirs {
-		dir = ExpandHome(dir)
-		err = watcher.Add(dir)
+		expanded := ExpandHome(dir.Path)
+		err = watcher.Add(expanded)
 		if err != nil {
-			log.Error().Err(err).Str("path", dir).Msg("Failed to add path to file watcher")
+			log.Error().Err(err).Str("path", expanded).Msg("Failed to add path to file watcher")
 		}
-		err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		err = filepath.WalkDir(expanded, func(path string, d fs.DirEntry, err error) error {
 			if d.IsDir() {
 				watcher.Add(path)
 			}

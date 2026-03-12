@@ -123,6 +123,7 @@ func (d *Document) Process(ld LanguageDetector) error {
 		pu.RawQuery = q.Encode()
 		d.URL = pu.String()
 	}
+	d.Type = Web
 	d.Domain = pu.Host
 	if err := d.extractHTML(); err != nil {
 		return err

@@ -63,10 +63,17 @@ type Server struct {
 	Database string `yaml:"database" mapstructure:"database"`
 }
 
+type Directory struct {
+	Path      string   `yaml:"path" mapstructure:"path"`
+	Filetypes []string `yaml:"filetypes" mapstructure:"filetypes"`
+	Patterns  []string `yaml:"patterns" mapstructure:"patterns"`
+	Excludes  []string `yaml:"excludes" mapstructure:"excludes"`
+}
+
 type Indexer struct {
-	DetectLanguages bool     `yaml:"detect_languages" mapstructure:"detect_languages"`
-	Directories     []string `yaml:"directories" mapstructure:"directories"`
-	MaxFileSize     int64    `yaml:"max_file_size_mb" mapstructure:"max_file_size_mb"`
+	DetectLanguages bool        `yaml:"detect_languages" mapstructure:"detect_languages"`
+	Directories     []Directory `yaml:"directories" mapstructure:"directories"`
+	MaxFileSize     int64       `yaml:"max_file_size_mb" mapstructure:"max_file_size_mb"`
 }
 
 type Hotkeys struct {

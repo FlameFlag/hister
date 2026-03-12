@@ -742,8 +742,8 @@ func serveFile(c *webContext) {
 	// Verify the file is within a configured directory
 	allowed := false
 	for _, dir := range c.Config.Indexer.Directories {
-		dir = filepath.Clean(files.ExpandHome(dir))
-		if strings.HasPrefix(filePath, dir+"/") || filePath == dir {
+		expandedDir := filepath.Clean(files.ExpandHome(dir.Path))
+		if strings.HasPrefix(filePath, expandedDir+"/") || filePath == expandedDir {
 			allowed = true
 			break
 		}

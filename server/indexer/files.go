@@ -8,22 +8,23 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
 	"github.com/rs/zerolog/log"
 )
 
 var maxFileSize int64 = 1024 * 1024 // 1MB default
 
-func IndexAll(dirs []string) {
+func IndexAll(dirs []config.Directory) {
 	for _, dir := range dirs {
-		dir = files.ExpandHome(dir)
-		if err := indexDirectory(dir); err != nil {
-			log.Error().Err(err).Str("directory", dir).Msg("Failed to index directory")
+		expanded := files.ExpandHome(dir.Path)
+		if err := indexDirectory(expanded, dir); err != nil {
+			log.Error().Err(err).Str("directory", expanded).Msg("Failed to index directory")
 		}
 	}
 }
 
-func indexDirectory(dir string) error {
+func indexDirectory(dir string, cfg config.Directory) error {
 	info, err := os.Stat(dir)
 	if err != nil {
 		return fmt.Errorf("cannot access directory: %w", err)
@@ -49,6 +50,9 @@ func indexDirectory(dir string) error {
 			return nil
 		}
 		if strings.HasPrefix(d.Name(), ".") {
+			return nil
+		}
+		if !files.MatchesFilters(d.Name(), cfg.Filetypes, cfg.Patterns, cfg.Excludes) {
 			return nil
 		}
 		if err := IndexFile(path); err != nil {

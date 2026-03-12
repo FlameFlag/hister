@@ -34,6 +34,9 @@ server:
 
 indexer:
   detect_languages: true
+  directories:
+    - path: '~/notes'
+      filetypes: ['txt', 'md']
 
 hotkeys:
   web:
@@ -88,10 +91,23 @@ TUI settings are configured in a separate `tui.yaml` file located in the same di
 
 ## `indexer` Section
 
-| Key                | Type     | Default | Description                                                                                                                                                      |
-| ------------------ | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `detect_languages` | bool     | `true`  | Enable automatic language detection for indexed pages. See [Language Detection](#language-detection) for details on memory/CPU impact and reindexing requirements. |
-| `directories`      | string[] | (none)  | List of local directories to index. See [Local Directory Indexing](#local-directory-indexing) for details.                                                        |
+| Key                | Type          | Default | Description                                                                                                                                                      |
+| ------------------ | ------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `detect_languages` | bool          | `true`  | Enable automatic language detection for indexed pages. See [Language Detection](#language-detection) for details on memory/CPU impact and reindexing requirements. |
+| `directories`      | Directory[]   | (none)  | List of local directories to index. See [Local Directory Indexing](#local-directory-indexing) for details.                                                        |
+
+### Directory Entry
+
+Each entry in `directories` is an object with the following keys:
+
+| Key         | Type     | Default | Description                                                                                          |
+| ----------- | -------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `path`      | string   | —       | **(required)** Directory path to index. Paths starting with `~/` are expanded to your home directory. |
+| `filetypes` | string[] | (none)  | Only index files with these extensions (without the dot). e.g. `['txt', 'md']`.                      |
+| `patterns`  | string[] | (none)  | Only index files whose names match at least one glob pattern. e.g. `['doc_*', 'README*']`.           |
+| `excludes`  | string[] | (none)  | Skip files whose names match any of these glob patterns. e.g. `['*secret*', '*.tmp']`.               |
+
+When multiple filters are specified, they are applied in order: excludes first, then filetypes, then patterns. A file must pass all specified filters to be indexed. When a filter is omitted, it is not applied (all files pass).
 
 ## Local Directory Indexing
 
@@ -100,12 +116,16 @@ The `indexer.directories` option lets you index local files so they appear along
 ```yaml
 indexer:
   directories:
-    - '~/notes'
-    - '~/Documents/wiki'
-    - '/path/to/project'
+    - path: '~/notes'
+      filetypes: ['txt', 'md']
+      patterns: ['doc_*']
+      excludes: ['*secret*']
+    - path: '~/Documents/wiki'
+    - path: '/path/to/project'
+      filetypes: ['go', 'py', 'js']
 ```
 
-Paths starting with `~/` are expanded to your home directory. Files are indexed recursively, with the following rules:
+Files are indexed recursively, with the following rules:
 
 - Hidden files and directories (starting with `.`) are skipped
 - Binary files are skipped
