@@ -60,6 +60,10 @@ func getTokenQuery(t Token) (query.Query, bool) {
 		textq.SetBoost(weights["text"])
 		return bleve.NewDisjunctionQuery(titleq, textq), negated
 	case TokenWord:
+		if strings.HasPrefix(t.Value, "-") {
+			negated = true
+			t.Value = t.Value[1:]
+		}
 		var field string
 		for f := range weights {
 			if strings.HasPrefix(t.Value, f+":") {
@@ -89,11 +93,6 @@ func getTokenQuery(t Token) (query.Query, bool) {
 			q.SetField(field)
 			q.SetBoost(weights[field])
 			return q, negated
-		}
-
-		if strings.HasPrefix(t.Value, "-") {
-			negated = true
-			t.Value = t.Value[1:]
 		}
 
 		qs := []query.Query{}
