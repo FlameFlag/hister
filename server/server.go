@@ -12,12 +12,14 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/asciimoo/hister/config"
+	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/server/static"
@@ -536,6 +538,14 @@ func doSearch(query *indexer.Query, cfg *config.Config) (*indexer.Results, error
 	if oq != "" {
 		res.QuerySuggestion = model.GetQuerySuggestion(oq)
 	}
+	if len(cfg.Indexer.Directories) > 0 {
+		for _, doc := range res.Documents {
+			if strings.HasPrefix(doc.URL, "file://") {
+				filePath := strings.TrimPrefix(doc.URL, "file://")
+				doc.URL = cfg.BaseURL("/api/file?path=") + url.QueryEscape(filePath)
+			}
+		}
+	}
 	duration := float32(time.Since(start).Milliseconds()) / 1000.
 	res.SearchDuration = fmt.Sprintf("%.3f seconds", duration)
 	return res, nil
@@ -713,6 +723,51 @@ func serveReadable(c *webContext) {
 		"title":   title,
 		"content": htmlContent.String(),
 	})
+}
+
+func serveFile(c *webContext) {
+	filePath := c.Request.URL.Query().Get("path")
+	if filePath == "" {
+		http.Error(c.Response, "missing path parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Resolve to absolute and clean the path to prevent traversal
+	filePath = filepath.Clean(filePath)
+	if !filepath.IsAbs(filePath) {
+		http.Error(c.Response, "path must be absolute", http.StatusBadRequest)
+		return
+	}
+
+	// Verify the file is within a configured directory
+	allowed := false
+	for _, dir := range c.Config.Indexer.Directories {
+		expandedDir := filepath.Clean(files.ExpandHome(dir.Path))
+		if strings.HasPrefix(filePath, expandedDir+"/") || filePath == expandedDir {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		http.Error(c.Response, "file not in configured directories", http.StatusForbidden)
+		return
+	}
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		http.Error(c.Response, "file not found", http.StatusNotFound)
+		return
+	}
+
+	ext := filepath.Ext(filePath)
+	mimeType := mime.TypeByExtension(ext)
+	if mimeType == "" {
+		mimeType = "text/plain; charset=utf-8"
+	}
+	c.Response.Header().Set("Content-Type", mimeType)
+	if _, err := c.Response.Write(content); err != nil {
+		log.Warn().Err(err).Msg("failed to write file response")
+	}
 }
 
 func serveAPI(c *webContext) {

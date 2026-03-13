@@ -179,6 +179,22 @@ func init() {
 			Description:  "Search engine statistics",
 		},
 		{
+			Name:         "File",
+			Path:         "/api/file",
+			Method:       GET,
+			CSRFRequired: false,
+			Handler:      serveFile,
+			Description:  "Serve local file content",
+			Args: []*EndpointArg{
+				{
+					Name:        "path",
+					Type:        "string",
+					Required:    true,
+					Description: "Absolute path to the file",
+				},
+			},
+		},
+		{
 			Name:         "API",
 			Path:         "/api",
 			Method:       GET,

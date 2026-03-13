@@ -34,6 +34,9 @@ server:
 
 indexer:
   detect_languages: true
+  directories:
+    - path: '~/notes'
+      filetypes: ['txt', 'md']
 
 hotkeys:
   web:
@@ -88,9 +91,50 @@ TUI settings are configured in a separate `tui.yaml` file located in the same di
 
 ## `indexer` Section
 
-| Key               | Type | Default | Description                                                                                                                                                      |
-| ----------------- | ---- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `detect_languages` | bool | `true`  | Enable automatic language detection for indexed pages. See [Language Detection](#language-detection) for details on memory/CPU impact and reindexing requirements. |
+| Key                | Type          | Default | Description                                                                                                                                                      |
+| ------------------ | ------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `detect_languages` | bool          | `true`  | Enable automatic language detection for indexed pages. See [Language Detection](#language-detection) for details on memory/CPU impact and reindexing requirements. |
+| `directories`      | Directory[]   | (none)  | List of local directories to index. See [Local Directory Indexing](#local-directory-indexing) for details.                                                        |
+
+### Directory Entry
+
+Each entry in `directories` is an object with the following keys:
+
+| Key         | Type     | Default | Description                                                                                          |
+| ----------- | -------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `path`      | string   | —       | **(required)** Directory path to index. Paths starting with `~/` are expanded to your home directory. |
+| `filetypes` | string[] | (none)  | Only index files with these extensions (without the dot). e.g. `['txt', 'md']`.                      |
+| `patterns`  | string[] | (none)  | Only index files whose names match at least one glob pattern. e.g. `['doc_*', 'README*']`.           |
+| `excludes`  | string[] | (none)  | Skip files whose names match any of these glob patterns. e.g. `['*secret*', '*.tmp']`.               |
+
+When multiple filters are specified, they are applied in order: excludes first, then filetypes, then patterns. A file must pass all specified filters to be indexed. When a filter is omitted, it is not applied (all files pass).
+
+## Local Directory Indexing
+
+The `indexer.directories` option lets you index local files so they appear alongside your browser history in search results. Files are indexed automatically when the server starts, running in the background so the server is available immediately.
+
+```yaml
+indexer:
+  directories:
+    - path: '~/notes'
+      filetypes: ['txt', 'md']
+      patterns: ['doc_*']
+      excludes: ['*secret*']
+    - path: '~/Documents/wiki'
+    - path: '/path/to/project'
+      filetypes: ['go', 'py', 'js']
+```
+
+Files are indexed recursively, with the following rules:
+
+- Hidden files and directories (starting with `.`) are skipped
+- Binary files are skipped
+- Files larger than 1 MB are skipped
+- Files matching `sensitive_content_patterns` are skipped
+
+On subsequent server starts, only files that have been modified since they were last indexed are re-processed. File results appear with the domain `local` and are served through the Hister web interface directly.
+
+No reindex is required when adding or removing directories — simply update the config and restart the server.
 
 ## Access Token
 

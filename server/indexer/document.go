@@ -7,10 +7,20 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/rs/zerolog/log"
+)
+
+type DocType int
+
+const (
+	Web DocType = iota
+	Local
 )
 
 type Document struct {
@@ -22,6 +32,7 @@ type Document struct {
 	Favicon            string  `json:"favicon"`
 	Score              float64 `json:"score"`
 	Added              int64   `json:"added"`
+	Type               DocType `json:"type"`
 	Language           string  `json:"language"`
 	faviconURL         string
 	processed          bool
@@ -89,6 +100,9 @@ func (d *Document) Process(ld LanguageDetector) error {
 	if err != nil {
 		return err
 	}
+	if pu.Scheme == "file" {
+		return d.processFile(ld, pu)
+	}
 	if pu.Scheme == "" || pu.Host == "" {
 		return errors.New("invalid URL: missing scheme/host")
 	}
@@ -109,6 +123,7 @@ func (d *Document) Process(ld LanguageDetector) error {
 		pu.RawQuery = q.Encode()
 		d.URL = pu.String()
 	}
+	d.Type = Web
 	d.Domain = pu.Host
 	if err := d.extractHTML(); err != nil {
 		return err
@@ -116,6 +131,34 @@ func (d *Document) Process(ld LanguageDetector) error {
 
 	d.Language = ld.DetectLanguage(d.Text)
 
+	d.processed = true
+	return nil
+}
+
+func (d *Document) processFile(ld LanguageDetector, pu *url.URL) error {
+	if ld == nil {
+		ld = NewNullLanguageDetector()
+	}
+	if d.Text == "" {
+		content, err := os.ReadFile(pu.Path)
+		if err != nil {
+			return fmt.Errorf("cannot read file: %w", err)
+		}
+		if !utf8.Valid(content) {
+			return errors.New("binary file")
+		}
+		d.Text = string(content)
+	}
+	if !d.skipSensitiveCheck && sensitiveContentRe != nil && sensitiveContentRe.MatchString(d.Text) {
+		return ErrSensitiveContent
+	}
+	d.Type = Local
+	d.Domain = "local"
+	d.Title = filepath.Base(pu.Path)
+	if d.Added == 0 {
+		d.Added = time.Now().Unix()
+	}
+	d.Language = ld.DetectLanguage(d.Text)
 	d.processed = true
 	return nil
 }
