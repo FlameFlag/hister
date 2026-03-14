@@ -7,13 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"unicode/utf8"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
-
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -21,12 +20,8 @@ var (
 	ErrBinaryFile   = errors.New("binary file")
 	ErrFileTooLarge = errors.New("file too large")
 
-	maxFileSize atomic.Int64
+	maxFileSize int64 = 1024 * 1024 // 1MB default
 )
-
-func init() {
-	maxFileSize.Store(1024 * 1024) // 1MB default
-}
 
 func IndexAll(dirs []config.Directory) {
 	for _, dir := range dirs {
@@ -89,7 +84,7 @@ func IndexFile(path string) error {
 	if info.Size() == 0 {
 		return ErrEmptyFile
 	}
-	if info.Size() > maxFileSize.Load() {
+	if info.Size() > maxFileSize {
 		return fmt.Errorf("%w: %d bytes", ErrFileTooLarge, info.Size())
 	}
 
