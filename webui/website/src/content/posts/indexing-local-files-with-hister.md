@@ -12,6 +12,7 @@ One of the most exciting features we've added to Hister is the ability to automa
 If you're like most developers and knowledge workers, you have important information scattered across two worlds: web pages you've browsed and local files on your computer. Before this feature, you'd need to use separate tools to search these two sources. With Hister's file indexing, everything lives in one searchable index.
 
 Imagine searching for "authentication implementation" and getting results from:
+
 - Stack Overflow pages you visited
 - Your project's auth code files
 - That README you wrote about setting up OAuth
@@ -26,6 +27,7 @@ Hister's file indexing is designed to be simple and automatic. When the server s
 ### What Gets Indexed
 
 By default, Hister indexes text-based files that are:
+
 - Under 1MB in size (configurable)
 - Valid UTF-8 text
 - Not hidden (files starting with `.` are skipped)
@@ -113,4 +115,3 @@ We'd like to improve the file indexing feature by:
 Local file indexing is available now in Hister. Update your configuration, restart your server, and start searching your local files alongside your browsing history. Check out the [configuration documentation](/docs/configuration) for complete setup instructions.
 
 Have ideas for improving file indexing? Join the discussion on [GitHub](https://github.com/asciimoo/hister) or reach out on social media. We'd love to hear how you're using this feature!
-
