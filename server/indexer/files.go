@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/rs/zerolog/log"
@@ -23,7 +22,7 @@ var (
 	maxFileSize int64 = 1024 * 1024 // 1MB default
 )
 
-func IndexAll(dirs []config.Directory) {
+func IndexAll(dirs []*config.Directory) {
 	for _, dir := range dirs {
 		expanded := files.ExpandHome(dir.Path)
 		if err := indexDirectory(expanded, dir); err != nil {
@@ -32,7 +31,7 @@ func IndexAll(dirs []config.Directory) {
 	}
 }
 
-func indexDirectory(dir string, cfg config.Directory) error {
+func indexDirectory(dir string, cfg *config.Directory) error {
 	info, err := os.Stat(dir)
 	if err != nil {
 		return fmt.Errorf("cannot access directory: %w", err)
@@ -57,10 +56,7 @@ func indexDirectory(dir string, cfg config.Directory) error {
 			}
 			return nil
 		}
-		if !cfg.IncludeHidden && strings.HasPrefix(d.Name(), ".") {
-			return nil
-		}
-		if !files.MatchesFilters(d.Name(), cfg.Filetypes, cfg.Patterns, cfg.Excludes) {
+		if !cfg.IsMatching(d.Name()) {
 			return nil
 		}
 		if err := IndexFile(path); err != nil {

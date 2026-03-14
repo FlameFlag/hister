@@ -31,41 +31,15 @@ func ExpandHome(path string) string {
 	return path
 }
 
-// MatchesFilters reports whether a filename passes the given filetype, pattern, and exclude filters.
-func MatchesFilters(name string, filetypes, patterns, excludes []string) bool {
-	if len(excludes) > 0 {
-		for _, pattern := range excludes {
-			if matched, _ := filepath.Match(pattern, name); matched {
-				return false
-			}
-		}
-	}
-	if len(filetypes) > 0 {
-		ext := strings.TrimPrefix(filepath.Ext(name), ".")
-		if !slices.Contains(filetypes, ext) {
-			return false
-		}
-	}
-	if len(patterns) > 0 {
-		for _, pattern := range patterns {
-			if matched, _ := filepath.Match(pattern, name); matched {
-				return true
-			}
-		}
-		return false
-	}
-	return true
-}
-
 // Debounce so we don't spam the index as write events can file multiple times before closing a file after editing
 const debounceTime = 200 * time.Millisecond
 
 // findMatchingDir returns the Directory config whose expanded path contains filePath, or nil.
-func findMatchingDir(dirs []config.Directory, filePath string) *config.Directory {
+func findMatchingDir(dirs []*config.Directory, filePath string) *config.Directory {
 	for i := range dirs {
 		dirPath := filepath.Clean(ExpandHome(dirs[i].Path))
 		if strings.HasPrefix(filePath, dirPath+"/") || filePath == dirPath {
-			return &dirs[i]
+			return dirs[i]
 		}
 	}
 	return nil
@@ -111,7 +85,7 @@ func ShouldSkipDir(name string, excludes []string, includeHidden bool) bool {
 
 // walkAndWatch registers all subdirectories of each configured directory with
 // the fsnotify watcher, skipping hidden dirs and user-configured excludes.
-func walkAndWatch(watcher *fsnotify.Watcher, dirs []config.Directory) {
+func walkAndWatch(watcher *fsnotify.Watcher, dirs []*config.Directory) {
 	for _, dir := range dirs {
 		expanded := ExpandHome(dir.Path)
 		if err := watcher.Add(expanded); err != nil {
@@ -139,9 +113,9 @@ func walkAndWatch(watcher *fsnotify.Watcher, dirs []config.Directory) {
 
 // handleWrite debounces a file-write event and invokes the callback after the
 // debounce period.
-func handleWrite(event fsnotify.Event, dirs []config.Directory, mu *sync.Mutex, debounced map[string]*time.Timer, callback func(string)) {
+func handleWrite(event fsnotify.Event, dirs []*config.Directory, mu *sync.Mutex, debounced map[string]*time.Timer, callback func(string)) {
 	dir := findMatchingDir(dirs, event.Name)
-	if dir == nil || !MatchesFilters(filepath.Base(event.Name), dir.Filetypes, dir.Patterns, dir.Excludes) {
+	if dir == nil || !dir.IsMatching(event.Name) {
 		return
 	}
 	name := event.Name
@@ -161,7 +135,7 @@ func handleWrite(event fsnotify.Event, dirs []config.Directory, mu *sync.Mutex, 
 
 // handleCreate processes a file or directory creation event: new directories
 // are added to the watcher, new files matching filters are passed to the callback.
-func handleCreate(event fsnotify.Event, dirs []config.Directory, watcher *fsnotify.Watcher, callback func(string)) {
+func handleCreate(event fsnotify.Event, dirs []*config.Directory, watcher *fsnotify.Watcher, callback func(string)) {
 	st, err := os.Stat(event.Name)
 	if err != nil {
 		return
@@ -179,13 +153,13 @@ func handleCreate(event fsnotify.Event, dirs []config.Directory, watcher *fsnoti
 		return
 	}
 	dir := findMatchingDir(dirs, event.Name)
-	if dir == nil || !MatchesFilters(filepath.Base(event.Name), dir.Filetypes, dir.Patterns, dir.Excludes) {
+	if dir == nil || !dir.IsMatching(event.Name) {
 		return
 	}
 	callback(event.Name)
 }
 
-func WatchDirectories(ctx context.Context, dirs []config.Directory, callback func(string)) error {
+func WatchDirectories(ctx context.Context, dirs []*config.Directory, callback func(string)) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("failed to create file watcher: %w", err)

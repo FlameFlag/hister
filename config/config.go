@@ -73,9 +73,9 @@ type Directory struct {
 }
 
 type Indexer struct {
-	DetectLanguages bool        `yaml:"detect_languages" mapstructure:"detect_languages"`
-	Directories     []Directory `yaml:"directories" mapstructure:"directories"`
-	MaxFileSize     int64       `yaml:"max_file_size_mb" mapstructure:"max_file_size_mb"`
+	DetectLanguages bool         `yaml:"detect_languages" mapstructure:"detect_languages"`
+	Directories     []*Directory `yaml:"directories" mapstructure:"directories"`
+	MaxFileSize     int64        `yaml:"max_file_size_mb" mapstructure:"max_file_size_mb"`
 }
 
 type Hotkeys struct {
@@ -823,4 +823,33 @@ func (h Hotkeys) ToJSON() template.JS {
 		return template.JS("")
 	}
 	return template.JS(b)
+}
+
+func (d *Directory) IsMatching(name string) bool {
+	name = filepath.Base(name)
+	if !d.IncludeHidden && strings.HasPrefix(name, ".") {
+		return false
+	}
+	if len(d.Excludes) > 0 {
+		for _, pattern := range d.Excludes {
+			if matched, _ := filepath.Match(pattern, name); matched {
+				return false
+			}
+		}
+	}
+	if len(d.Filetypes) > 0 {
+		ext := strings.TrimPrefix(filepath.Ext(name), ".")
+		if !slices.Contains(d.Filetypes, ext) {
+			return false
+		}
+	}
+	if len(d.Patterns) > 0 {
+		for _, pattern := range d.Patterns {
+			if matched, _ := filepath.Match(pattern, name); matched {
+				return true
+			}
+		}
+		return false
+	}
+	return true
 }
