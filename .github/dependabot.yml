@@ -7,7 +7,7 @@ updates:
     groups:
       go-deps:
         patterns:
-          - "*"
+          - '*'
 
   - package-ecosystem: npm
     directory: /
@@ -16,7 +16,7 @@ updates:
     groups:
       go-deps:
         patterns:
-          - "*"
+          - '*'
 
   - package-ecosystem: github-actions
     directory: /
@@ -25,4 +25,4 @@ updates:
     groups:
       go-deps:
         patterns:
-          - "*"
+          - '*'

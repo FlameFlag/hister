@@ -91,21 +91,21 @@ TUI settings are configured in a separate `tui.yaml` file located in the same di
 
 ## `indexer` Section
 
-| Key                | Type          | Default | Description                                                                                                                                                      |
-| ------------------ | ------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `detect_languages` | bool          | `true`  | Enable automatic language detection for indexed pages. See [Language Detection](#language-detection) for details on memory/CPU impact and reindexing requirements. |
-| `directories`      | Directory[]   | (none)  | List of local directories to index. See [Local Directory Indexing](#local-directory-indexing) for details.                                                        |
+| Key                | Type        | Default | Description                                                                                                                                                        |
+| ------------------ | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `detect_languages` | bool        | `true`  | Enable automatic language detection for indexed pages. See [Language Detection](#language-detection) for details on memory/CPU impact and reindexing requirements. |
+| `directories`      | Directory[] | (none)  | List of local directories to index. See [Local Directory Indexing](#local-directory-indexing) for details.                                                         |
 
 ### Directory Entry
 
 Each entry in `directories` is an object with the following keys:
 
-| Key         | Type     | Default | Description                                                                                          |
-| ----------- | -------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| Key         | Type     | Default | Description                                                                                           |
+| ----------- | -------- | ------- | ----------------------------------------------------------------------------------------------------- |
 | `path`      | string   | ""      | **(required)** Directory path to index. Paths starting with `~/` are expanded to your home directory. |
-| `filetypes` | string[] | (none)  | Only index files with these extensions (without the dot). e.g. `['txt', 'md']`.                      |
-| `patterns`  | string[] | (none)  | Only index files whose names match at least one glob pattern. e.g. `['doc_*', 'README*']`.           |
-| `excludes`  | string[] | (none)  | Skip files whose names match any of these glob patterns. e.g. `['*secret*', '*.tmp']`.               |
+| `filetypes` | string[] | (none)  | Only index files with these extensions (without the dot). e.g. `['txt', 'md']`.                       |
+| `patterns`  | string[] | (none)  | Only index files whose names match at least one glob pattern. e.g. `['doc_*', 'README*']`.            |
+| `excludes`  | string[] | (none)  | Skip files whose names match any of these glob patterns. e.g. `['*secret*', '*.tmp']`.                |
 
 When multiple filters are specified, they are applied in order: excludes first, then filetypes, then patterns. A file must pass all specified filters to be indexed. When a filter is omitted, it is not applied (all files pass).
 

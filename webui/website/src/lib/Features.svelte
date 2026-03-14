@@ -25,7 +25,7 @@
       {
         icon: FileText,
         title: 'Full-text Indexing',
-        desc: "Search through the actual content of web pages and your local files.",
+        desc: 'Search through the actual content of web pages and your local files.',
         bg: 'bg-brutal-card',
         textColor: 'text-[var(--text-primary)]',
         descColor: 'text-[var(--text-secondary)]',

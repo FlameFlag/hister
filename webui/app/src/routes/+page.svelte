@@ -611,7 +611,8 @@
 <svelte:window onkeydown={handleKeydown} onpopstate={handlePopState} />
 
 <Dialog.Root bind:open={showPopup}>
-  <Dialog.Content escapeKeydownBehavior="ignore"
+  <Dialog.Content
+    escapeKeydownBehavior="ignore"
     class="border-border-brand bg-card-surface max-h-[80vh] max-w-2xl overflow-auto rounded-none border-[3px] p-6 shadow-[6px_6px_0px_var(--hister-indigo)]"
   >
     <Dialog.Header class="border-border-brand-muted border-b-[3px] pb-4">
@@ -711,16 +712,16 @@
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger>
                   {#snippet child({ props })}
-                  <Button
-                    {...props}
-                    variant="ghost"
-                    size="sm"
-                    class="font-inter text-text-brand-muted hover:text-hister-indigo gap-1 text-xs"
-                  >
-                    <Filter class="size-3" />
-                    Search Actions
-                    <ChevronDown class="size-3" />
-                  </Button>
+                    <Button
+                      {...props}
+                      variant="ghost"
+                      size="sm"
+                      class="font-inter text-text-brand-muted hover:text-hister-indigo gap-1 text-xs"
+                    >
+                      <Filter class="size-3" />
+                      Search Actions
+                      <ChevronDown class="size-3" />
+                    </Button>
                   {/snippet}
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content
@@ -728,12 +729,16 @@
                 >
                   <div class="space-y-3">
                     <div class="space-y-2">
-                      <p class="font-inter text-text-brand-muted flex items-center gap-1.5 text-xs font-semibold">
+                      <p
+                        class="font-inter text-text-brand-muted flex items-center gap-1.5 text-xs font-semibold"
+                      >
                         <Calendar class="size-3" />
                         Date Filter
                       </p>
                       <div class="flex flex-col gap-2">
-                        <label class="font-inter text-text-brand-secondary flex items-center gap-1.5 text-xs">
+                        <label
+                          class="font-inter text-text-brand-secondary flex items-center gap-1.5 text-xs"
+                        >
                           From:
                           <Input
                             type="date"
@@ -741,7 +746,9 @@
                             class="border-border-brand-muted bg-card-surface text-text-brand font-fira focus-visible:border-hister-indigo h-7 flex-1 border-[2px] px-2 text-xs shadow-none focus-visible:ring-0"
                           />
                         </label>
-                        <label class="font-inter text-text-brand-secondary flex items-center gap-1.5 text-xs">
+                        <label
+                          class="font-inter text-text-brand-secondary flex items-center gap-1.5 text-xs"
+                        >
                           To:
                           <Input
                             type="date"
@@ -753,7 +760,9 @@
                     </div>
                     <Separator class="bg-border-brand-muted" />
                     <div class="space-y-2">
-                      <p class="font-inter text-text-brand-muted flex items-center gap-1.5 text-xs font-semibold">
+                      <p
+                        class="font-inter text-text-brand-muted flex items-center gap-1.5 text-xs font-semibold"
+                      >
                         <Download class="size-3" />
                         Export Results
                       </p>
@@ -821,7 +830,7 @@
               {@const favSrc = getFaviconSrc(r.favicon, r.url)}
               <article
                 data-result
-                class="flex w-full gap-3 overflow-hidden py-3.5 transition-all duration-150 scroll-my-[6em]"
+                class="flex w-full scroll-my-[6em] gap-3 overflow-hidden py-3.5 transition-all duration-150"
                 style={i === highlightIdx
                   ? 'background: linear-gradient(90deg, transparent, rgba(90, 138, 138, 0.12), transparent); border-left: 3px solid var(--hister-teal); padding-left: 0.75rem;'
                   : ''}
@@ -932,7 +941,7 @@
               {@const favSrc = getFaviconSrc(r.favicon, r.url)}
               <article
                 data-result
-                class="flex w-full gap-3 overflow-hidden py-3.5 transition-all duration-150 scroll-my-[6em]"
+                class="flex w-full scroll-my-[6em] gap-3 overflow-hidden py-3.5 transition-all duration-150"
                 style={idx === highlightIdx
                   ? `background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--${color}) 12%, transparent), transparent); border-left: 3px solid var(--${color}); padding-left: 0.75rem;`
                   : ''}
@@ -982,7 +991,7 @@
                     >
                     {#if r.added}
                       <span
-                        class="font-inter text-text-brand-muted whitespace-nowrap text-xs md:text-sm"
+                        class="font-inter text-text-brand-muted text-xs whitespace-nowrap md:text-sm"
                         title={formatTimestamp(r.added)}>· {formatRelativeTime(r.added)}</span
                       >
                     {/if}

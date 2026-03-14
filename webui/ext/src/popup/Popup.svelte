@@ -109,18 +109,10 @@
   >
     <Card.Content class="space-y-4 p-5">
       <form onsubmit={save} class="space-y-4">
-        <SettingsInput
-          label="Server URL"
-          bind:value={url}
-          placeholder="Server URL..."
-        />
+        <SettingsInput label="Server URL" bind:value={url} placeholder="Server URL..." />
 
         {#if showTokenInput}
-          <SettingsInput
-            label="Access Token"
-            bind:value={token}
-            placeholder="Token..."
-          />
+          <SettingsInput label="Access Token" bind:value={token} placeholder="Token..." />
         {:else}
           <div class="space-y-2">
             <Label class="font-outfit text-text-brand text-sm font-bold">Access Token</Label>

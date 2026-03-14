@@ -7,7 +7,7 @@
     value = $bindable(),
     placeholder = '',
     description = '',
-    type = 'text'
+    type = 'text',
   }: {
     label: string;
     value: string;
