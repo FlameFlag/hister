@@ -391,6 +391,11 @@
         e.preventDefault();
         return;
       }
+      if (showActionsForResult) {
+        showActionsForResult = null;
+        e.preventDefault();
+        return;
+      }
       if (closePopup()) {
         e.preventDefault();
         return;
@@ -401,7 +406,6 @@
         return;
       }
     }
-    showActionsForResult = null;
     contextMenuSearch = null;
   }
 
