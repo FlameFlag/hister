@@ -171,7 +171,7 @@ The `indexer.detect_languages` option (default: `true`) controls automatic langu
 hister reindex
 ```
 
-The reindex operation will rebuild all indexes according to the new setting. With language detection disabled, all documents are indexed using a single default analyzer, reducing memory overhead and simplifying the indexing process at the cost of potentially less accurate search results for non-English content.
+The reindex operation will rebuild all indexes according to the new setting. With language detection disabled, all documents are indexed using a single default analyzer, reducing memory overhead and simplifying the indexing process at the cost of potentially less accurate search results.
 
 ## `hotkeys.web` Section
 

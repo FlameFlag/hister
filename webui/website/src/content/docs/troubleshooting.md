@@ -31,6 +31,29 @@ If the main text loads, but seems jumbled up, and (most) images don't load, chec
 
 - Ensure your Hister server is running and up to date
 
+## Memory Management
+
+If Hister is consuming too much memory, especially with large browsing histories or many indexed documents, you can reduce memory usage by disabling language detection.
+
+### Reducing Memory Usage
+
+Set `detect_languages: false` in the `indexer` section of your configuration file:
+
+```yaml
+indexer:
+  detect_languages: false
+```
+
+This setting disables automatic language detection for indexed pages, which reduces memory consumption by using a single default analyzer instead of maintaining separate language-specific indexes. This comes at the cost of potentially less accurate search results.
+
+**Important**: After changing this setting, you must run a full reindex:
+
+```bash
+hister reindex
+```
+
+The reindex operation will rebuild all indexes according to the new setting, compacting your existing data to a single index.
+
 ## Debugging the Web Extension
 
 The Web extension's logs will not be visible in the default browser console.
