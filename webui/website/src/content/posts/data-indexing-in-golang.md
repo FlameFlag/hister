@@ -66,7 +66,7 @@ func main() {
 	query := bleve.NewMatchQuery("Hister search engine")
 	req := bleve.NewSearchRequest(query)
 	req.Fields = []string{"Title", "URL"} // which stored fields to return
-	req.Size = 10                          // maximum number of hits
+	req.Size = 10                         // maximum number of hits
 
 	results, err := index.Search(req)
 	if err != nil {
@@ -162,6 +162,8 @@ for _, keyword := range strings.Fields(queryString) {
     // WildcardQuery matches the keyword anywhere inside the URL string.
     // The 10x boost means a URL match raises the document's score
     // significantly compared to a plain text match.
+    //
+    // The boost number 10 is arbitrary, adjust it to your needs
     urlq := bleve.NewWildcardQuery("*" + keyword + "*")
     urlq.SetField("url")
     urlq.SetBoost(10)
@@ -173,6 +175,8 @@ for _, keyword := range strings.Fields(queryString) {
 
     // Title matches are given 50x weight. A keyword found in the title
     // is a very strong signal of relevance.
+    //
+    // The boost number 50 is arbitrary, adjust it to your needs
     titleq := bleve.NewMatchQuery(keyword)
     titleq.SetField("title")
     titleq.SetBoost(50)
@@ -253,7 +257,7 @@ A few things to keep in mind:
 
 ## Handling Multiple Indexes
 
-Bleve can transparently manage multiple indexes at the same time through [IndexAlias](https://pkg.go.dev/github.com/blevesearch/bleve/v2#IndexAlias). An alias is a virtual index that fans a query out to several real indexes and merges their results back into a single ranked list, all transparently, with no changes needed to your query code.
+Bleve can transparently manage multiple indexes at the same time through [IndexAlias](https://pkg.go.dev/github.com/blevesearch/bleve/v2#IndexAlias). An alias is a virtual index that fans a query out to several real indexes and merges their results back into a single ranked list.
 
 This is particularly useful when you want to maintain separate indexes for different languages. Each language gets its own index with a tailored analyzer (English stemming, French stop-words, custom tokenization, etc.), but a single alias lets you search all of them at once:
 
@@ -313,12 +317,12 @@ config := map[string]any{
 index, err := bleve.OpenUsing("my.bleve", config)
 ```
 
-These settings live in the Scorch storage backend, which is Bleve's default. Consult the [persister source](https://github.com/blevesearch/bleve/blob/0e05d0a710030f9895c5f0ab6ef5e7db6012839d/index/scorch/persister.go#L67) for the full list of available options and their default values.
+These settings live in the Scorch storage backend, which is Bleve's default. Consult the [persister source](https://github.com/blevesearch/bleve/blob/master/index/scorch/persister.go#L67) for the full list of available options and their default values.
 
 
 ## Conclusion
 
-Bleve is one of Go's hidden gems that deserves more attention. It lets you add production-quality full-text search to your application without spinning up a separate service, without complex infrastructure, and with far more flexibility than most hosted solutions offer. The default configuration gets you up and running in minutes, while the custom mapping system, composable query primitives, and Scorch tuning options give you the depth to handle demanding, real-world workloads.
+Bleve is one of Go's hidden gems that deserves more attention. It lets you add full-text search to your application, without complex infrastructure. The default configuration gets you up and running in minutes, while the custom mapping system, composable query primitives, performance, debugging options and deep custimzation provides a great toolset to solve specific problems optimally.
 
 The official documentation has gaps, but the GitHub issues and real-life open-source projects fill them in well. Check out our [indexer package](https://github.com/asciimoo/hister/tree/master/server/indexer) to see all of the above concepts working together in a production codebase.
 
