@@ -42,7 +42,7 @@
       }
       url = data['histerURL'] || defaultURL;
       token = data['histerToken'] || '';
-      customHeaders = data['histerCustomHeaders'] || [];
+      customHeaders = Array.isArray(data['histerCustomHeaders']) ? data['histerCustomHeaders'] : [];
       indexingEnabled = data['indexingEnabled'] !== false;
       showTokenInput = !token;
 
@@ -89,7 +89,7 @@
           .json()
           .then(() => {
             chrome.storage.local
-              .set({ histerURL: url, histerToken: token, histerCustomHeaders: customHeaders })
+              .set({ histerURL: url, histerToken: token, histerCustomHeaders: $state.snapshot(customHeaders) })
               .then(() => {
                 setSuccessMessage('Settings saved');
                 showTokenInput = !token;
