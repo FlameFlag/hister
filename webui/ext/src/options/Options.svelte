@@ -21,7 +21,7 @@
     }
     url = data['histerURL'] || defaultURL;
     token = data['histerToken'] || '';
-    customHeaders = data['histerCustomHeaders'] || [];
+    customHeaders = Array.isArray(data['histerCustomHeaders']) ? data['histerCustomHeaders'] : [];
   });
 
   function addHeader() {
@@ -36,7 +36,7 @@
     e.preventDefault();
     const headersToSave = customHeaders.filter((h) => h.name.trim() !== '');
     chrome.storage.local
-      .set({ histerURL: url, histerToken: token, histerCustomHeaders: headersToSave })
+      .set({ histerURL: url, histerToken: token, histerCustomHeaders: $state.snapshot(headersToSave) })
       .then(() => {
         customHeaders = headersToSave;
         message = 'Settings saved';
