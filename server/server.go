@@ -933,6 +933,7 @@ func serveBatch(c *webContext) {
 		return
 	}
 
+	batch := indexer.NewMultiBatch()
 	results := make([]batchOpResult, len(req.Ops))
 	for i, op := range req.Ops {
 		switch op.Op {
@@ -946,7 +947,7 @@ func serveBatch(c *webContext) {
 				results[i] = batchOpResult{Status: http.StatusNotAcceptable, Error: "url skipped by rules"}
 				continue
 			}
-			if err := indexer.Add(d); err != nil {
+			if err := batch.Add(d); err != nil {
 				log.Error().Err(err).Str("URL", op.URL).Msg("batch add error")
 				results[i] = batchOpResult{Status: http.StatusInternalServerError, Error: "internal error"}
 			} else {
@@ -957,7 +958,7 @@ func serveBatch(c *webContext) {
 				results[i] = batchOpResult{Status: http.StatusBadRequest, Error: "missing url"}
 				continue
 			}
-			if err := indexer.Delete(op.URL); err != nil {
+			if err := batch.Delete(op.URL); err != nil {
 				log.Error().Err(err).Str("URL", op.URL).Msg("batch delete error")
 				results[i] = batchOpResult{Status: http.StatusInternalServerError, Error: "internal error"}
 			} else {
@@ -977,6 +978,12 @@ func serveBatch(c *webContext) {
 		default:
 			results[i] = batchOpResult{Status: http.StatusBadRequest, Error: fmt.Sprintf("unknown op: %q", op.Op)}
 		}
+	}
+
+	if err := batch.Save(); err != nil {
+		log.Error().Err(err).Msg("batch save error")
+		c.JSONStatus(http.StatusInternalServerError, batchResponse{Error: "internal error"})
+		return
 	}
 
 	log.Debug().Int("ops", len(req.Ops)).Msg("batch request processed")

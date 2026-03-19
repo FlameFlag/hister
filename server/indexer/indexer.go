@@ -66,7 +66,7 @@ type Results struct {
 	PageKey         string            `json:"page_key"`
 }
 
-type multiBatch struct {
+type MultiBatch struct {
 	indexer *indexer
 	batches map[string]*bleve.Batch
 }
@@ -369,14 +369,18 @@ func (i *indexer) Close() {
 	}
 }
 
-func newMultiBatch(i *indexer) *multiBatch {
-	return &multiBatch{
-		indexer: i,
+func NewMultiBatch() *MultiBatch {
+	return newMultiBatch(i)
+}
+
+func newMultiBatch(idx *indexer) *MultiBatch {
+	return &MultiBatch{
+		indexer: idx,
 		batches: make(map[string]*bleve.Batch),
 	}
 }
 
-func (b *multiBatch) Add(d *Document) error {
+func (b *MultiBatch) Add(d *Document) error {
 	if !d.processed {
 		if err := d.Process(i.langDetector); err != nil {
 			return err
@@ -389,7 +393,17 @@ func (b *multiBatch) Add(d *Document) error {
 	return b.batches[d.Language].Index(d.URL, d)
 }
 
-func (b *multiBatch) Save() error {
+func (b *MultiBatch) Delete(u string) error {
+	// Delete from all language indices
+	for _, idx := range b.indexer.indexers {
+		if err := idx.Delete(u); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *MultiBatch) Save() error {
 	for l, lb := range b.batches {
 		idx := b.indexer.getOrCreate(l)
 		if err := idx.Batch(lb); err != nil {
