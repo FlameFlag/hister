@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -605,6 +606,46 @@ func serveAdd(c *webContext) {
 }
 
 func serveHistory(c *webContext) {
+	if c.Request.URL.Query().Get("opened") == "true" {
+		var lastID uint
+		if v := c.Request.URL.Query().Get("last_id"); v != "" {
+			if parsed, err := strconv.ParseUint(v, 10, 64); err == nil {
+				lastID = uint(parsed)
+			}
+		}
+		items, err := model.GetLatestHistoryItems(100, lastID)
+		if err != nil {
+			serve500(c)
+			return
+		}
+		type openedItem struct {
+			ID    uint   `json:"id"`
+			URL   string `json:"url"`
+			Title string `json:"title"`
+			Query string `json:"query"`
+			Added int64  `json:"added"`
+		}
+		type openedResponse struct {
+			Documents []*openedItem `json:"documents"`
+			LastID    uint          `json:"last_id"`
+		}
+		docs := make([]*openedItem, 0, len(items))
+		for _, item := range items {
+			docs = append(docs, &openedItem{
+				ID:    item.ID,
+				URL:   item.URL,
+				Title: item.Title,
+				Query: item.Query,
+				Added: item.UpdatedAt.Unix(),
+			})
+		}
+		var nextLastID uint
+		if len(docs) > 0 {
+			nextLastID = docs[len(docs)-1].ID
+		}
+		c.JSON(&openedResponse{Documents: docs, LastID: nextLastID})
+		return
+	}
 	ds := indexer.GetLatestDocuments(100, c.Request.URL.Query().Get("last"))
 	c.JSON(ds)
 }
@@ -815,7 +856,7 @@ func serveAPI(c *webContext) {
 }
 
 func serveStats(c *webContext) {
-	hs, _ := model.GetLatestHistoryItems(5)
+	hs, _ := model.GetLatestHistoryItems(5, 0)
 	c.JSON(map[string]any{
 		"doc_count":       indexer.DocumentCount(),
 		"rule_count":      c.Config.Rules.Count(),

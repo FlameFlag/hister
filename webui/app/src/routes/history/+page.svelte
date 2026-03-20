@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { fetchConfig, apiFetch } from '$lib/api';
   import type { HistoryItem } from '$lib/types';
   import { Button } from '@hister/components/ui/button';
@@ -16,8 +15,10 @@
   let error = $state('');
   let filter = $state('');
   let pageKey = $state('');
+  let openedLastID = $state(0);
   let activeGroup = $state('');
   let filterByDate = $state('');
+  let openedOnly = $state(false);
 
   const groupColors = [
     'hister-indigo',
@@ -140,11 +141,17 @@
     activeGroup = groups.length > 0 ? groups[0].key : '';
   }
 
-  async function loadItems(latest: string) {
+  async function loadItems(latest: string = '') {
+    loading = true;
     try {
       await fetchConfig();
       let url = '/history';
-      if (latest) {
+      if (openedOnly) {
+        url += '?opened=true';
+        if (latest) {
+          url += '&last_id=' + encodeURIComponent(latest);
+        }
+      } else if (latest) {
         url += '?last=' + encodeURIComponent(latest);
       }
       const res = await apiFetch(url, {
@@ -158,7 +165,11 @@
         } else {
           items.push(...resJSON.documents);
         }
-        pageKey = resJSON.page_key;
+        if (openedOnly) {
+          openedLastID = resJSON.last_id ?? 0;
+        } else {
+          pageKey = resJSON.page_key ?? '';
+        }
       }
     } catch (e) {
       error = String(e);
@@ -167,8 +178,19 @@
     }
   }
 
+  $effect(() => {
+    openedOnly;
+    openedLastID = 0;
+    pageKey = '';
+    loadItems();
+  });
+
   async function loadMore() {
-    loadItems(pageKey);
+    if (openedOnly) {
+      loadItems(String(openedLastID));
+    } else {
+      loadItems(pageKey);
+    }
   }
 
   async function deleteItem(item: HistoryItem) {
@@ -180,10 +202,6 @@
       error = String(e);
     }
   }
-
-  onMount(async () => {
-    loadItems();
-  });
 </script>
 
 <svelte:head>
@@ -195,6 +213,17 @@
 >
   <PageHeader color="hister-indigo" size="xs" class="min-w-0 shrink-0" truncate>History</PageHeader>
   <nav class="flex min-w-0 shrink-0 items-center gap-2 md:gap-3">
+    <label
+      class="font-inter text-text-brand-secondary flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-semibold select-none"
+    >
+      <input
+        type="checkbox"
+        bind:checked={openedOnly}
+        class="accent-hister-indigo size-3.5 cursor-pointer"
+      />
+      <span class="hidden md:inline">Show only opened results</span>
+      <span class="md:hidden">Opened</span>
+    </label>
     <div
       class="border-brutal-border bg-page-bg flex h-8 min-w-0 items-center gap-2 border-[3px] px-2 md:px-3"
     >
@@ -205,7 +234,7 @@
         class="font-inter text-text-brand placeholder:text-text-brand-muted h-full w-20 border-0 bg-transparent p-0 text-xs font-medium shadow-none focus-visible:ring-0 md:w-40"
       />
     </div>
-    {#if items.length > 0}
+    {#if (items.length > 0 && !openedOnly) || (openedOnly && openedLastID > 0)}
       <Button
         variant="outline"
         size="sm"
