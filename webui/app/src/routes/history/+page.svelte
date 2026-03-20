@@ -195,8 +195,16 @@
 
   async function deleteItem(item: HistoryItem) {
     try {
-      const data = new URLSearchParams({ url: item.url });
-      await apiFetch('/delete', { method: 'POST', body: data });
+      if (openedOnly) {
+        await apiFetch('/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: item.query, url: item.url, delete: true }),
+        });
+      } else {
+        const data = new URLSearchParams({ url: item.url });
+        await apiFetch('/delete', { method: 'POST', body: data });
+      }
       items = items.filter((i) => i.url !== item.url);
     } catch (e) {
       error = String(e);
