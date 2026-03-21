@@ -77,7 +77,7 @@ type MultiBatch struct {
 
 var (
 	i                   *indexer
-	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added", "type", "user_id"}
+	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added", "type", "user_id", "language", "properties_raw"}
 	ErrSensitiveContent          = errors.New("document contains sensitive data")
 	ErrEmptyFilter               = errors.New("delete query must not be empty")
 	sensitiveContentRe  *regexp.Regexp
@@ -342,6 +342,14 @@ func (i *indexer) AddDocument(d *Document) error {
 			return err
 		}
 	}
+	d.PrepareForIndex()
+	return i.getOrCreate(d.Language).Index(d.ID(), d)
+}
+
+// AddEnriched indexes a pre-enriched document, overwriting any existing
+// document with the same URL in the appropriate language index.
+func AddEnriched(d *Document) error {
+	d.PrepareForIndex()
 	return i.getOrCreate(d.Language).Index(d.ID(), d)
 }
 
@@ -441,6 +449,7 @@ func (b *MultiBatch) Add(d *Document) error {
 			return err
 		}
 	}
+	d.PrepareForIndex()
 	idx := b.indexer.getOrCreate(d.Language)
 	return b.getOrCreateBatch(idx.Name(), idx).Index(d.ID(), d)
 }
@@ -614,6 +623,9 @@ func docFromHit(h *search.DocumentMatch) *Document {
 	if s, ok := h.Fields["domain"].(string); ok {
 		d.Domain = s
 	}
+	if s, ok := h.Fields["language"].(string); ok {
+		d.Language = s
+	}
 	if t, ok := h.Fields["added"].(float64); ok {
 		d.Added = int64(t)
 	}
@@ -622,6 +634,10 @@ func docFromHit(h *search.DocumentMatch) *Document {
 	}
 	if t, ok := h.Fields["user_id"].(float64); ok {
 		d.UserID = uint(t)
+	}
+	if s, ok := h.Fields["properties_raw"].(string); ok {
+		d.PropertiesRaw = s
+		d.LoadProperties()
 	}
 	return d
 }
@@ -721,6 +737,7 @@ func createMapping(lang string) mapping.IndexMapping {
 	docMapping.AddFieldMappingsAt("added", bleve.NewNumericFieldMapping())
 	docMapping.AddFieldMappingsAt("type", bleve.NewNumericFieldMapping())
 	docMapping.AddFieldMappingsAt("user_id", bleve.NewNumericFieldMapping())
+	docMapping.AddFieldMappingsAt("properties_raw", noIdxMap)
 
 	im.DefaultMapping = docMapping
 
