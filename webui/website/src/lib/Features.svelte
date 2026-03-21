@@ -66,7 +66,7 @@
         icon: Puzzle,
         title: 'Browser Extensions',
         desc: 'Available for <a class="underline" href="https://chromewebstore.google.com/detail/hister/cciilamhchpmbdnniabclekddabkifhb">Chrome</a> and <a class="underline" href="https://addons.mozilla.org/en-US/firefox/addon/hister/">Firefox</a> to automatically index websites you visit.',
-        bg: 'bg-hister-lime',
+        bg: 'bg-hister-teal',
         textColor: 'text-white',
         descColor: 'text-white/80',
         iconBg: 'bg-white/20',
@@ -96,10 +96,10 @@
     icon: Terminal,
     title: 'SEARCH ALIASES',
     desc: 'Create custom keyword shortcuts to simplify complex or frequently used queries.',
-    bg: 'bg-hister-cyan',
+    bg: 'bg-hister-indigo',
     textColor: 'text-white',
     descColor: 'text-white/80',
-    iconBg: 'bg-[#f5f5f5]',
+    iconBg: 'bg-[var(--card-surface)]',
     iconColor: 'text-hister-teal',
   };
 </script>

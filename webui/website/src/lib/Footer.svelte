@@ -49,7 +49,7 @@
     <nav class="flex flex-wrap gap-16">
       {#each linkCols as col}
         <ul class="m-0 flex list-none flex-col gap-3 p-0">
-          <li class="font-space text-[11px] font-bold tracking-[2px] text-[#e0e0e0] uppercase">
+          <li class="font-space text-[11px] font-bold tracking-[2px] text-[var(--text-primary)] uppercase">
             {col.title}
           </li>
           {#each col.links as link}

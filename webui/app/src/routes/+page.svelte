@@ -703,7 +703,7 @@
       <Tooltip.Provider delayDuration={0}>
         <Tooltip.Root>
           <Tooltip.Trigger>
-            <div class="h-3 w-3 shrink-0 {connected ? 'bg-hister-lime' : 'bg-hister-rose'}"></div>
+            <div class="h-3 w-3 shrink-0 {connected ? 'bg-hister-teal' : 'bg-hister-rose'}"></div>
           </Tooltip.Trigger>
           <Tooltip.Portal>
             <Tooltip.Content>
@@ -955,7 +955,7 @@
           {#if lastResults?.documents}
             {#each lastResults.documents as r, i}
               {@const idx = historyLen + i}
-              {@const color = 'hister-cyan'}
+              {@const color = 'hister-indigo'}
               {@const favSrc = getFaviconSrc(r.favicon, r.url)}
               <article
                 data-result
@@ -1116,8 +1116,7 @@
   >
     <h1
       bind:this={heroTitleEl}
-      class="font-outfit bg-clip-text text-5xl leading-none font-black tracking-[8px] text-transparent select-none md:text-9xl"
-      style="background-image: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal), var(--hister-indigo)); background-size: 300% 100%; background-position: 0% 50%;"
+      class="font-outfit text-foreground text-5xl leading-none font-black tracking-[8px] select-none md:text-9xl"
     >
       HISTER
     </h1>
@@ -1125,13 +1124,13 @@
     <p class="font-inter text-md text-text-brand-secondary md:text-lg">Your own search engine</p>
     <div
       bind:this={underlineEl}
-      class="h-[3px] w-48"
-      style="background: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal)); transform: scaleX(0); transform-origin: left;"
+      class="h-[3px] w-48 bg-hister-indigo"
+      style="transform: scaleX(0); transform-origin: left;"
     ></div>
 
     <div
       bind:this={searchBoxEl}
-      class="search-box-gradient w-full max-w-[1200px] p-[3px] shadow-[4px_4px_0px_var(--hister-coral)]"
+      class="w-full max-w-[1200px] border-[3px] border-brutal-border shadow-brutal"
     >
       <div class="bg-card-surface flex h-10 items-center gap-3 pl-4 md:h-14">
         <Search class="text-text-brand-muted size-6" />
@@ -1144,7 +1143,7 @@
         <Tooltip.Provider delayDuration={0}>
           <Tooltip.Root>
             <Tooltip.Trigger class="mr-4">
-              <div class="h-3 w-3 shrink-0 {connected ? 'bg-hister-lime' : 'bg-hister-rose'}"></div>
+              <div class="h-3 w-3 shrink-0 {connected ? 'bg-hister-teal' : 'bg-hister-rose'}"></div>
             </Tooltip.Trigger>
             <Tooltip.Portal>
               <Tooltip.Content>
@@ -1263,24 +1262,3 @@
   </div>
 {/if}
 
-<style>
-  .search-box-gradient {
-    background: linear-gradient(
-      90deg,
-      var(--hister-indigo),
-      var(--hister-coral),
-      var(--hister-teal),
-      var(--hister-indigo)
-    );
-    background-size: 300% 100%;
-    animation: gradient-slide 6s ease-in-out infinite alternate;
-  }
-  @keyframes gradient-slide {
-    0% {
-      background-position: 0% 50%;
-    }
-    100% {
-      background-position: 100% 50%;
-    }
-  }
-</style>

@@ -10,7 +10,7 @@
   <!-- Web UI -->
   <figure class="m-0 flex w-full max-w-[1100px] flex-col items-center gap-6">
     <figcaption class="flex items-center gap-4">
-      <span class="bg-hister-cyan h-10 w-1.5" aria-hidden="true"></span>
+      <span class="bg-hister-indigo h-10 w-1.5" aria-hidden="true"></span>
       <h2
         class="font-space text-3xl font-black tracking-[3px] text-[var(--text-primary)] md:text-5xl"
       >
@@ -30,7 +30,7 @@
   <!-- Terminal UI -->
   <figure class="m-0 flex w-full max-w-[1100px] flex-col items-center gap-6">
     <figcaption class="flex items-center gap-4">
-      <span class="bg-hister-lime h-10 w-1.5" aria-hidden="true"></span>
+      <span class="bg-hister-teal h-10 w-1.5" aria-hidden="true"></span>
       <h2
         class="font-space text-3xl font-black tracking-[3px] text-[var(--text-primary)] md:text-5xl"
       >

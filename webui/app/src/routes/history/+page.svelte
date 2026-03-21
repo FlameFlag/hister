@@ -35,8 +35,6 @@
     'hister-teal',
     'hister-amber',
     'hister-rose',
-    'hister-cyan',
-    'hister-lime',
   ];
 
   function getColorVar(color: string): string {
@@ -260,7 +258,7 @@
       <Button
         variant="outline"
         size="sm"
-        class="hover:bg-hister-cyan/30 font-inter brutal-press h-8 shrink-0 gap-1.5 border-[3px] text-xs font-semibold"
+        class="hover:bg-hister-indigo/30 font-inter brutal-press h-8 shrink-0 gap-1.5 border-[3px] text-xs font-semibold"
         onclick={loadMore}
       >
         <RotateCw class="size-3.5" />
@@ -403,7 +401,7 @@
                   <div class="w-0 min-w-0 flex-1 space-y-0.5">
                     <a
                       href={item.url}
-                      class="font-outfit text-hister-cyan block truncate font-bold no-underline hover:underline md:text-lg"
+                      class="font-outfit text-hister-indigo block truncate font-bold no-underline hover:underline md:text-lg"
                       target="_blank"
                       rel="noopener"
                     >
