@@ -2,10 +2,23 @@
   import { page } from '$app/stores';
   import { ModeWatcher, toggleMode, mode } from 'mode-watcher';
   import { Button } from '@hister/components/ui/button';
-  import { Sun, Moon } from 'lucide-svelte';
+  import * as DropdownMenu from '@hister/components/ui/dropdown-menu';
+  import { Sun, Moon, Palette, Check } from 'lucide-svelte';
+  import { THEMES, loadTheme, saveTheme, applyTheme, type ThemeId } from '$lib/theme';
+  import { onMount } from 'svelte';
   import '../style.css';
 
   let { children } = $props();
+  let currentTheme: ThemeId = $state('forest');
+
+  onMount(() => {
+    currentTheme = loadTheme();
+  });
+
+  $effect(() => {
+    applyTheme(currentTheme, mode.current);
+    saveTheme(currentTheme);
+  });
 
   const navItems = [
     { label: 'History', href: 'history' },
@@ -43,15 +56,56 @@
         </a>
       {/each}
     </nav>
-    <Button
-      variant="ghost"
-      size="icon"
-      class="text-text-brand-muted hover:text-hister-indigo size-8 shrink-0 transition-all hover:scale-110 md:size-10"
-      title="Toggle theme"
-      onclick={toggleMode}
-    >
-      {#if mode.current === 'dark'}<Sun class="size-6" />{:else}<Moon class="size-6" />{/if}
-    </Button>
+    <div class="flex shrink-0 items-center gap-1">
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger>
+          {#snippet child({ props })}
+            <Button
+              {...props}
+              variant="ghost"
+              size="icon"
+              class="text-text-brand-muted hover:text-hister-indigo size-8 shrink-0 transition-all hover:scale-110 md:size-10"
+              title="Accent theme"
+            >
+              <Palette class="size-5 md:size-6" />
+            </Button>
+          {/snippet}
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content align="end" class="w-44">
+            {#each THEMES as theme (theme.id)}
+              <DropdownMenu.Item
+                class="flex items-center gap-2.5 px-3 py-2"
+                onclick={() => (currentTheme = theme.id)}
+              >
+                <div class="flex gap-1">
+                  {#each theme.swatches as color}
+                    <span
+                      class="block size-3.5 border border-black/20"
+                      style="background:{color}"
+                    ></span>
+                  {/each}
+                </div>
+                <span class="font-space text-xs font-semibold tracking-wide">{theme.name}</span>
+                {#if currentTheme === theme.id}
+                  <Check class="ml-auto size-3.5" />
+                {/if}
+              </DropdownMenu.Item>
+            {/each}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        class="text-text-brand-muted hover:text-hister-indigo size-8 shrink-0 transition-all hover:scale-110 md:size-10"
+        title="Toggle theme"
+        onclick={toggleMode}
+      >
+        {#if mode.current === 'dark'}<Sun class="size-6" />{:else}<Moon class="size-6" />{/if}
+      </Button>
+    </div>
   </header>
 
   <main class="flex min-h-0 flex-1 flex-col overflow-clip">

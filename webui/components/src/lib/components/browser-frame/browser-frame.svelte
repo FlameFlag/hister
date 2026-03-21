@@ -3,7 +3,7 @@
   import { cn } from '../../utils.js';
 
   let {
-    bg = '#f5f5f5',
+    bg = '#F8F4EA',
     tabBarClass = 'bg-brutal-card border-b-2 border-brutal-border',
     tabBarHeight = 'h-11',
     class: className = '',
