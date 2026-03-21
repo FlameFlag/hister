@@ -21,7 +21,9 @@ import (
 
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
+	"github.com/asciimoo/hister/server/enricher"
 	"github.com/asciimoo/hister/server/indexer"
+	"github.com/asciimoo/hister/server/indexer/types"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/server/static"
 
@@ -39,6 +41,7 @@ var (
 	storeName        = "hister"
 	tokName          = "csrf_token"
 	staticTextFiles  map[string][]byte
+	enricherManager  *enricher.Manager
 )
 
 type historyItem struct {
@@ -151,6 +154,43 @@ func Listen(cfg *config.Config) {
 		HttpOnly: true,
 	}
 
+	if cfg.Enrichment.Enabled {
+		enricherManager = enricher.New(
+			cfg.Enrichment.Workers,
+			cfg.Enrichment.Timeout,
+			func(url string, result *enricher.Result, existing *enricher.ExistingDoc) error {
+				d := &indexer.Document{
+					URL:        url,
+					Title:      result.Title,
+					Text:       result.Text,
+					HTML:       result.StoredData,
+					Type:       types.Media,
+					Properties: result.Properties,
+				}
+				if existing != nil {
+					d.Domain = existing.Domain
+					d.Favicon = existing.Favicon
+					d.Added = existing.Added
+					d.Language = existing.Language
+				}
+				return indexer.AddEnriched(d)
+			},
+			func(url string) *enricher.ExistingDoc {
+				d := indexer.GetByURL(url)
+				if d == nil {
+					return nil
+				}
+				return &enricher.ExistingDoc{
+					Domain:   d.Domain,
+					Favicon:  d.Favicon,
+					Added:    d.Added,
+					Language: d.Language,
+				}
+			},
+		)
+		log.Info().Msg("Enrichment enabled")
+	}
+
 	// This is an ugly hack required to set the base path dynamically in svelte files.
 	// Svelte only supports build time specification of the base path and it accepts
 	// only absolute paths: https://github.com/sveltejs/kit/issues/9569#issuecomment-3202269382
@@ -169,6 +209,9 @@ func Listen(cfg *config.Config) {
 	err := http.ListenAndServe(cfg.Server.Address, handler)
 	if err != nil {
 		log.Error().Err(err).Msg("Webserver failed to listen on " + cfg.Server.Address)
+	}
+	if enricherManager != nil {
+		enricherManager.Close()
 	}
 }
 
@@ -594,6 +637,9 @@ func serveAdd(c *webContext) {
 			serve500(c)
 			return
 		}
+		if enricherManager != nil {
+			enricherManager.Enqueue(d.URL, d.Domain)
+		}
 		c.Response.WriteHeader(http.StatusCreated)
 	} else {
 		log.Debug().Str("url", d.URL).Msg("skip indexing")
@@ -737,6 +783,18 @@ func serveReadable(c *webContext) {
 		serve500(c)
 		return
 	}
+
+	// If this document was enriched, return structured properties
+	if enricher.IsStoredEnrichment(doc.HTML) {
+		enricherName, _ := enricher.ParseStoredEnricherName(doc.HTML)
+		c.JSON(map[string]any{
+			"title":      doc.Title,
+			"properties": doc.Properties,
+			"enricher":   enricherName,
+		})
+		return
+	}
+
 	pu, err := url.Parse(u)
 	if err != nil {
 		serve500(c)
@@ -755,7 +813,7 @@ func serveReadable(c *webContext) {
 	if r.Title() != "" {
 		title = r.Title()
 	}
-	c.JSON(map[string]string{
+	c.JSON(map[string]any{
 		"title":   title,
 		"content": htmlContent.String(),
 	})
@@ -1030,6 +1088,17 @@ func serveBatch(c *webContext) {
 		log.Error().Err(err).Msg("batch save error")
 		c.JSONStatus(http.StatusInternalServerError, batchResponse{Error: "internal error"})
 		return
+	}
+
+	if enricherManager != nil {
+		for i, op := range req.Ops {
+			if op.Op == batchOpAdd && results[i].Status == http.StatusCreated {
+				pu, err := url.Parse(op.URL)
+				if err == nil && pu.Host != "" {
+					enricherManager.Enqueue(op.URL, pu.Host)
+				}
+			}
+		}
 	}
 
 	log.Debug().Int("ops", len(req.Ops)).Msg("batch request processed")

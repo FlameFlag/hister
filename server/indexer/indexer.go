@@ -32,7 +32,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var Version = 3
+var Version = 4
 
 type indexer struct {
 	idx          bleve.IndexAlias       // used only for Search()
@@ -73,7 +73,7 @@ type MultiBatch struct {
 
 var (
 	i                   *indexer
-	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added"}
+	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added", "language", "properties_raw"}
 	ErrSensitiveContent          = errors.New("document contains sensitive data")
 	sensitiveContentRe  *regexp.Regexp
 	bleveConfig         map[string]any = map[string]any{
@@ -297,6 +297,14 @@ func (i *indexer) AddDocument(d *Document) error {
 			return err
 		}
 	}
+	d.PrepareForIndex()
+	return i.getOrCreate(d.Language).Index(d.URL, d)
+}
+
+// AddEnriched indexes a pre-enriched document, overwriting any existing
+// document with the same URL in the appropriate language index.
+func AddEnriched(d *Document) error {
+	d.PrepareForIndex()
 	return i.getOrCreate(d.Language).Index(d.URL, d)
 }
 
@@ -386,6 +394,7 @@ func (b *MultiBatch) Add(d *Document) error {
 			return err
 		}
 	}
+	d.PrepareForIndex()
 	idx := b.indexer.getOrCreate(d.Language)
 	if _, ok := b.batches[d.Language]; !ok {
 		b.batches[d.Language] = idx.NewBatch()
@@ -542,8 +551,15 @@ func docFromHit(h *search.DocumentMatch) *Document {
 	if s, ok := h.Fields["domain"].(string); ok {
 		d.Domain = s
 	}
+	if s, ok := h.Fields["language"].(string); ok {
+		d.Language = s
+	}
 	if t, ok := h.Fields["added"].(float64); ok {
 		d.Added = int64(t)
+	}
+	if s, ok := h.Fields["properties_raw"].(string); ok {
+		d.PropertiesRaw = s
+		d.LoadProperties()
 	}
 	return d
 }
@@ -630,6 +646,7 @@ func createMapping(lang string) mapping.IndexMapping {
 	docMapping.AddFieldMappingsAt("html", noIdxMap)
 	docMapping.AddFieldMappingsAt("added", bleve.NewNumericFieldMapping())
 	docMapping.AddFieldMappingsAt("type", bleve.NewNumericFieldMapping())
+	docMapping.AddFieldMappingsAt("properties_raw", noIdxMap)
 
 	im.DefaultMapping = docMapping
 
