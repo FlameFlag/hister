@@ -615,6 +615,9 @@ func importHistory(cmd *cobra.Command, args []string) {
 		table = "urls"
 		dbFiles = append(dbFiles, args[1])
 	default:
+		if len(args) > 0 {
+			log.Warn().Str("Browser", browser).Msg("Unknown browser, failing back to auto-detect")
+		}
 		table = "auto-detect"
 	}
 
