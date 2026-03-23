@@ -7,6 +7,31 @@ description: "How to search your local documents, notes, and code alongside your
 
 One of the most exciting features we've added to Hister is the ability to automatically index and search local files alongside your browser history. This means you can now find meeting notes, project documents, org files just as easily as you'd find a web page you visited last week.
 
+## Setting It Up
+
+Add an `indexer.directories` section to your Hister configuration:
+
+```yaml
+indexer:
+  directories:
+    - path: ~/Documents
+      filetypes: ['md', 'txt']
+    - path: ~/code/projects
+      filetypes: ['txt']
+      excludes: [, 'secret/*', '*key']
+    - path: ~/notes
+      patterns: ['*.org', 'doc_*', 'README']
+```
+
+Each directory configuration lets you specify:
+
+- **path**: The directory to index (supports `~` for home directory)
+- **filetypes**: File extensions to include (e.g., `md`, `txt`, `py`)
+- **patterns**: Glob patterns for more precise matching
+- **excludes**: Patterns to skip (like build directories or dependencies)
+
+Once configured, start your Hister server and it will automatically begin indexing.
+
 ## Why Index Local Files?
 
 If you're like most developers and knowledge workers, you have important information scattered across two worlds: web pages you've browsed and local files on your computer. Before this feature, you'd need to use separate tools to search these two sources. With Hister's file indexing, everything lives in one searchable index.
@@ -39,31 +64,6 @@ Later on we'd like to support other formats as well. (`pdf`, `docx`...)
 ### Smart Filtering
 
 Hidden files and directories (those starting with `.`) are automatically skipped to avoid indexing system files, git repositories' internal files, and build artifacts. You can also configure custom patterns to include only specific file types or exclude certain paths.
-
-## Setting It Up
-
-Getting started with file indexing is straightforward. Add an `indexer.directories` section to your Hister configuration:
-
-```yaml
-indexer:
-  directories:
-    - path: ~/Documents
-      filetypes: ['md', 'txt']
-    - path: ~/code/projects
-      filetypes: ['txt']
-      excludes: [, 'secret/*', '*key']
-    - path: ~/notes
-      patterns: ['*.org', 'doc_*', 'README']
-```
-
-Each directory configuration lets you specify:
-
-- **path**: The directory to index (supports `~` for home directory)
-- **filetypes**: File extensions to include (e.g., `md`, `txt`, `py`)
-- **patterns**: Glob patterns for more precise matching
-- **excludes**: Patterns to skip (like build directories or dependencies)
-
-Once configured, start your Hister server and it will automatically begin indexing.
 
 ## Searching Local Files
 
