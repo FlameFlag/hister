@@ -252,9 +252,6 @@ var indexCmd = &cobra.Command{
 	Long:  "Index one or more URLs",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if cfg.App.UserHandling {
-			exit(1, "Cannot use 'index' command when user_handling is enabled. Use the web interface or browser extension instead.")
-		}
 		for _, u := range args {
 			if err := indexURL(u); err != nil {
 				exit(1, "Failed to index URL: "+err.Error())
@@ -316,7 +313,7 @@ var createUserCmd = &cobra.Command{
 		if password != confirm {
 			exit(1, "passwords do not match")
 		}
-		if err := model.CreateUser(username, password); err != nil {
+		if _, err := model.CreateUser(username, password); err != nil {
 			exit(1, "Failed to create user: "+err.Error())
 		}
 		fmt.Println(cliSuccessStyle.Render("✓") + " User created: " + cliInfoStyle.Render(username))
@@ -374,6 +371,7 @@ func init() {
 	rootCmd.PersistentFlags().StringP("log-level", "l", "info", "set log level (possible options: error, warning, info, debug, trace)")
 	rootCmd.PersistentFlags().StringP("search-url", "s", dcfg.App.SearchURL, "set default search engine url")
 	rootCmd.PersistentFlags().StringP("server-url", "u", dcfg.Server.BaseURL, "hister server URL")
+	rootCmd.PersistentFlags().StringP("token", "t", "", "access token (overrides config access_token)")
 
 	rootCmd.AddCommand(listenCmd)
 	rootCmd.AddCommand(createConfigCmd)
@@ -467,6 +465,9 @@ func initConfig() {
 		if err := cfg.UpdateBaseURL(v); err != nil {
 			exit(1, "Failed to initialize config: "+err.Error())
 		}
+	}
+	if v, _ := rootCmd.PersistentFlags().GetString("token"); rootCmd.PersistentFlags().Changed("token") {
+		cfg.App.AccessToken = v
 	}
 }
 

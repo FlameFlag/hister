@@ -5,6 +5,7 @@
 package model
 
 import (
+	"crypto/rand"
 	"errors"
 
 	"golang.org/x/crypto/bcrypt"
@@ -20,18 +21,20 @@ type User struct {
 	CommonFields
 	Username string `gorm:"uniqueIndex" json:"username"`
 	Password string `json:"-"`
+	Token    string `json:"-"`
 }
 
-func CreateUser(username, password string) error {
+func CreateUser(username, password string) (*User, error) {
 	var existing User
 	if err := DB.Where("username = ?", username).First(&existing).Error; err == nil {
-		return ErrUserAlreadyExists
+		return nil, ErrUserAlreadyExists
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return DB.Create(&User{Username: username, Password: string(hash)}).Error
+	u := &User{Username: username, Password: string(hash), Token: rand.Text()}
+	return u, DB.Create(u).Error
 }
 
 func DeleteUser(username string) error {
@@ -52,6 +55,14 @@ func AuthenticateUser(username, password string) (*User, error) {
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password)); err != nil {
 		return nil, ErrInvalidPassword
+	}
+	return &u, nil
+}
+
+func GetUserByToken(token string) (*User, error) {
+	var u User
+	if err := DB.Where("token = ?", token).First(&u).Error; err != nil {
+		return nil, ErrUserNotFound
 	}
 	return &u, nil
 }

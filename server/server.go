@@ -283,6 +283,14 @@ func populateUserContext(c *webContext) {
 	if name, ok := session.Values["username"].(string); ok {
 		c.Username = name
 	}
+	if c.UserID == 0 {
+		if tok := c.Request.Header.Get("X-Access-Token"); tok != "" {
+			if u, err := model.GetUserByToken(tok); err == nil {
+				c.UserID = u.ID
+				c.Username = u.Username
+			}
+		}
+	}
 }
 
 func withUserAuth(handler endpointHandler) endpointHandler {
