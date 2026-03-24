@@ -56,6 +56,28 @@ func (c *Client) DocumentExists(u string) (_ bool, err error) {
 	return resp.StatusCode == http.StatusOK, nil
 }
 
+func (c *Client) Reindex(skipSensitive, detectLanguages bool) (err error) {
+	type reindexRequest struct {
+		SkipSensitive   bool `json:"skipSensitive"`
+		DetectLanguages bool `json:"detectLanguages"`
+	}
+	data, err := json.Marshal(reindexRequest{SkipSensitive: skipSensitive, DetectLanguages: detectLanguages})
+	if err != nil {
+		return err
+	}
+	req, err := c.newRequest("POST", "/api/reindex", bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp, &err)
+	return checkStatus(resp)
+}
+
 func (c *Client) DeleteDocument(u string) (err error) {
 	formData := url.Values{"url": {u}}
 	req, err := c.newRequest("POST", "/api/delete", strings.NewReader(formData.Encode()))

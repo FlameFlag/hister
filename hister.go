@@ -287,21 +287,15 @@ var deleteCmd = &cobra.Command{
 var reindexCmd = &cobra.Command{
 	Use:   "reindex",
 	Short: "Reindex",
-	Long:  `Recreate index - server should be stopped`,
-	PreRun: func(_ *cobra.Command, _ []string) {
-		initDB()
-	},
+	Long:  `Recreate index`,
 	Run: func(cmd *cobra.Command, args []string) {
 		skipSensitive := false
 		if b, err := cmd.Flags().GetBool("exclude-sensitive"); err == nil {
 			skipSensitive = b
 		}
-		err := indexer.Reindex(cfg.FullPath(""), cfg.Rules, skipSensitive, cfg.Indexer.DetectLanguages)
-		if err != nil {
-			exit(1, "Indexer error: "+err.Error())
-		}
-		if err := model.SetIndexerVersion(indexer.Version); err != nil {
-			exit(1, "Failed to update indexer version: "+err.Error())
+		c := newClient(client.WithTimeout(0))
+		if err := c.Reindex(skipSensitive, cfg.Indexer.DetectLanguages); err != nil {
+			exit(1, "Reindex error: "+err.Error())
 		}
 	},
 }
@@ -1005,11 +999,12 @@ func getDBPaths() []browserDB {
 	return dbFiles
 }
 
-func newClient() *client.Client {
+func newClient(extraOpts ...client.Option) *client.Client {
 	opts := []client.Option{client.WithUserAgent(UserAgent)}
 	if cfg.App.AccessToken != "" {
 		opts = append(opts, client.WithAccessToken(cfg.App.AccessToken))
 	}
+	opts = append(opts, extraOpts...)
 	return client.New(cfg.BaseURL(""), opts...)
 }
 

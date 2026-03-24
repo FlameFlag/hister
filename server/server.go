@@ -1039,6 +1039,30 @@ func serveBatch(c *webContext) {
 	c.JSON(batchResponse{Results: results})
 }
 
+type reindexRequest struct {
+	SkipSensitive   bool `json:"skipSensitive"`
+	DetectLanguages bool `json:"detectLanguages"`
+}
+
+func serveReindex(c *webContext) {
+	var req reindexRequest
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
+		serve500(c)
+		return
+	}
+	if err := indexer.Reindex(c.Config.FullPath(""), c.Config.Rules, req.SkipSensitive, req.DetectLanguages); err != nil {
+		log.Error().Err(err).Msg("reindex failed")
+		serve500(c)
+		return
+	}
+	if err := model.SetIndexerVersion(indexer.Version); err != nil {
+		log.Error().Err(err).Msg("failed to update indexer version")
+		serve500(c)
+		return
+	}
+	serve200(c)
+}
+
 func serveFavicon(c *webContext) {
 	i, err := iofs.ReadFile(appSubFS, "favicon.ico")
 	if err != nil {

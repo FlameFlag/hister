@@ -206,6 +206,18 @@ func init() {
 			},
 		},
 		{
+			Name:         "Reindex",
+			Path:         "/api/reindex",
+			Method:       POST,
+			CSRFRequired: true,
+			Handler:      serveReindex,
+			Description:  "Reindex all documents",
+			Args: []*EndpointArg{
+				{Name: "skipSensitive", Type: "bool", Required: false, Description: "Skip documents matching sensitive content patterns"},
+				{Name: "detectLanguages", Type: "bool", Required: false, Description: "Enable language detection during reindex"},
+			},
+		},
+		{
 			Name:         "API",
 			Path:         "/api",
 			Method:       GET,

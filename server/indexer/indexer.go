@@ -36,10 +36,11 @@ import (
 var Version = 3
 
 type indexer struct {
-	idx          bleve.IndexAlias       // used only for Search()
-	indexers     map[string]bleve.Index // default and language specific indexers
-	dir          string
-	langDetector LanguageDetector
+	idx               bleve.IndexAlias       // used only for Search()
+	indexers          map[string]bleve.Index // default and language specific indexers
+	dir               string
+	langDetector      LanguageDetector
+	reindexInProgress bool
 }
 
 const (
@@ -123,19 +124,19 @@ func initializeIndexer(basePath string, detectLanguages bool) (*indexer, error) 
 		}
 	}
 	idxPath := filepath.Join(basePath, defaultIndexerName)
-	idx, err := bleve.OpenUsing(idxPath, bleveConfig)
+	idx, err := bleve.OpenUsing(idxPath, bleveRuntimeConfig())
 	if err != nil {
 		if err.Error() == "timeout" {
 			return nil, errors.New("cannot open index: index is already opened - close other Hister instances and try again")
 		}
 		mapping := createMapping("default")
-		idx, err = bleve.NewUsing(idxPath, mapping, bleve.Config.DefaultIndexType, bleve.Config.DefaultMemKVStore, bleveConfig)
+		idx, err = bleve.NewUsing(idxPath, mapping, bleve.Config.DefaultIndexType, bleve.Config.DefaultKVStore, bleveRuntimeConfig())
 		if err != nil {
 			return nil, err
 		}
 	}
 	idx.SetName(defaultIndexerName)
-	i = &indexer{
+	i := &indexer{
 		idx: bleve.NewIndexAlias(idx),
 		indexers: map[string]bleve.Index{
 			defaultIndexerName: idx,
@@ -161,7 +162,7 @@ func initializeIndexer(basePath string, detectLanguages bool) (*indexer, error) 
 			log.Warn().Str("Index", fn).Msg("Language specific index database found while language detection is turned off. Run hister reindex to be able to use the content of this index.")
 			continue
 		}
-		langIdx, err := bleve.OpenUsing(filepath.Join(basePath, fn), bleveConfig)
+		langIdx, err := bleve.OpenUsing(filepath.Join(basePath, fn), bleveRuntimeConfig())
 		if err != nil {
 			return nil, err
 		}
@@ -173,10 +174,17 @@ func initializeIndexer(basePath string, detectLanguages bool) (*indexer, error) 
 }
 
 func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, detectLanguages bool) error {
-	idx, err := initializeIndexer(basePath, true)
-	if err != nil {
-		return err
+	// TODO store new documents in both indexes while running reindex to guarantee not losing any data.
+	if i.reindexInProgress {
+		return errors.New("Reindex is already running")
 	}
+	idx := i
+	idx.reindexInProgress = true
+	defer func() {
+		if idx != nil {
+			idx.reindexInProgress = false
+		}
+	}()
 	tmpBasePath := filepath.Join(basePath, "reindex")
 	if _, err := os.Stat(tmpBasePath); err == nil {
 		if err := os.RemoveAll(tmpBasePath); err != nil {
@@ -276,6 +284,10 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 	if renameError != nil {
 		return errors.New("failed to rename tmp indexes during the reindex, resolve the issue manually")
 	}
+	i, err = initializeIndexer(basePath, detectLanguages)
+	if err != nil {
+		return err
+	}
 	return os.RemoveAll(tmpBasePath)
 }
 
@@ -359,7 +371,7 @@ func (i *indexer) getOrCreate(lang string) bleve.Index {
 
 func (i *indexer) addIndexer(name, lang string) error {
 	mapping := createMapping(lang)
-	idx, err := bleve.NewUsing(filepath.Join(i.dir, name), mapping, bleve.Config.DefaultIndexType, bleve.Config.DefaultMemKVStore, bleveConfig)
+	idx, err := bleve.NewUsing(filepath.Join(i.dir, name), mapping, bleve.Config.DefaultIndexType, bleve.Config.DefaultKVStore, bleveRuntimeConfig())
 	if err != nil {
 		return err
 	}
@@ -373,6 +385,9 @@ func (i *indexer) Close() {
 		if err := idx.Close(); err != nil {
 			log.Warn().Err(err).Str("index", name).Msg("failed to close index")
 		}
+	}
+	if err := i.idx.Close(); err != nil {
+		log.Warn().Err(err).Msg("failed to close index alias")
 	}
 }
 
@@ -720,4 +735,12 @@ func tuiHighlighter(config map[string]any, cache *registry.Cache) (highlight.Hig
 		formatter,
 		simpleHighlighter.DefaultSeparator,
 	), nil
+}
+
+func bleveRuntimeConfig() map[string]any {
+	c := make(map[string]any, len(bleveConfig))
+	for k, v := range bleveConfig {
+		c[k] = v
+	}
+	return c
 }
