@@ -499,28 +499,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	}
 	matches := make([]*Document, len(res.Hits))
 	for j, v := range res.Hits {
-		d := &Document{
-			URL: v.ID,
-		}
-
-		if t, ok := v.Fragments["text"]; ok {
-			d.Text = t[0]
-		}
-		if t, ok := v.Fragments["title"]; ok {
-			d.Title = t[0]
-		} else {
-			s, ok := v.Fields["title"].(string)
-			if ok {
-				d.Title = s
-			}
-		}
-		if i, ok := v.Fields["favicon"].(string); ok {
-			d.Favicon = i
-		}
-		if t, ok := v.Fields["added"].(float64); ok {
-			d.Added = int64(t)
-		}
-		matches[j] = d
+		matches[j] = docFromHit(v)
 	}
 	r := &Results{
 		Total:     res.Total,
