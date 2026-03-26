@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/http/cookiejar"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/asciimoo/hister/client"
 	"github.com/asciimoo/hister/config"
+	"github.com/asciimoo/hister/crawler"
 	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server"
 	"github.com/asciimoo/hister/server/indexer"
@@ -249,15 +251,88 @@ var searchCmd = &cobra.Command{
 var indexCmd = &cobra.Command{
 	Use:   "index URL [URL...]",
 	Short: "Index URL [URL...]",
-	Long:  "Index one or more URLs",
+	Long:  "Index one or more URLs with optional recursive crawling and headless browser support",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		for _, u := range args {
-			if err := indexURL(u); err != nil {
-				exit(1, "Failed to index URL: "+err.Error())
+		opts := buildIndexOptions(cmd)
+
+		c := newClient()
+		cr := &crawler.Crawler{
+			Options: opts,
+			OnPage: func(u, html string) error {
+				d := &indexer.Document{
+					URL:  u,
+					HTML: html,
+				}
+				if err := d.Process(nil); err != nil {
+					return fmt.Errorf("failed to process document: %w", err)
+				}
+				if d.Favicon == "" {
+					if err := d.DownloadFavicon(opts.UserAgent); err != nil {
+						log.Warn().Err(err).Str("URL", d.URL).Msg("failed to download favicon")
+					}
+				}
+				if err := c.AddDocumentJSON(d); err != nil {
+					return fmt.Errorf("failed to send page to hister: %w", err)
+				}
+				return nil
+			},
+		}
+
+		if opts.SkipExisting {
+			cr.Options.ExistsFunc = func(u string) (bool, error) {
+				return c.DocumentExists(u)
 			}
 		}
+
+		if opts.Browser {
+			cr.Options.Fetcher = &crawler.HeadlessFetcher{Visible: true}
+		} else if opts.Headless {
+			cr.Options.Fetcher = &crawler.HeadlessFetcher{}
+		} else {
+			cr.Options.Fetcher = &crawler.HTTPFetcher{
+				Client: buildHTTPClient(opts),
+			}
+		}
+
+		if err := cr.Run(args); err != nil {
+			exit(1, "Failed to index: "+err.Error())
+		}
 	},
+}
+
+func buildIndexOptions(cmd *cobra.Command) crawler.Options {
+	opts := crawler.DefaultOptions()
+
+	rawHeaders, _ := cmd.Flags().GetStringSlice("header")
+	opts.Headers = crawler.ParseHeaders(rawHeaders)
+	opts.Cookies, _ = cmd.Flags().GetString("cookie")
+	opts.UserAgent, _ = cmd.Flags().GetString("user-agent")
+	if opts.UserAgent == "" {
+		opts.UserAgent = UserAgent
+	}
+	opts.Timeout, _ = cmd.Flags().GetDuration("timeout")
+	opts.Depth, _ = cmd.Flags().GetInt("depth")
+	opts.Include, _ = cmd.Flags().GetStringSlice("include")
+	opts.Exclude, _ = cmd.Flags().GetStringSlice("exclude")
+	opts.SameDomain, _ = cmd.Flags().GetBool("same-domain")
+	opts.MaxPages, _ = cmd.Flags().GetInt("max-pages")
+	opts.Delay, _ = cmd.Flags().GetDuration("delay")
+	opts.Concurrency, _ = cmd.Flags().GetInt("concurrency")
+	opts.IgnoreRobots, _ = cmd.Flags().GetBool("ignore-robots")
+	opts.SkipExisting, _ = cmd.Flags().GetBool("skip-existing")
+	opts.Headless, _ = cmd.Flags().GetBool("headless")
+	opts.Browser, _ = cmd.Flags().GetBool("browser")
+
+	return opts
+}
+
+func buildHTTPClient(opts crawler.Options) *http.Client {
+	jar, _ := cookiejar.New(nil)
+	return &http.Client{
+		Timeout: opts.Timeout,
+		Jar:     jar,
+	}
 }
 
 var deleteCmd = &cobra.Command{
@@ -512,6 +587,23 @@ func init() {
 	deleteUserCmd.Flags().Bool("purge", false, "also delete all indexed documents belonging to the user")
 
 	showUserCmd.Flags().Bool("token", false, "display the user's access token")
+
+	// index command flags
+	indexCmd.Flags().StringSliceP("header", "H", nil, `custom headers in curl format (repeatable, e.g. -H "Authorization: Bearer xxx")`)
+	indexCmd.Flags().String("cookie", "", `cookie string (e.g. "name=value; name2=value2")`)
+	indexCmd.Flags().String("user-agent", "", "override default User-Agent")
+	indexCmd.Flags().Duration("timeout", 5*time.Second, "HTTP request timeout")
+	indexCmd.Flags().IntP("depth", "d", 1, "crawl depth (1 = no recursion)")
+	indexCmd.Flags().StringSlice("include", nil, "URL patterns to include (regex, repeatable)")
+	indexCmd.Flags().StringSlice("exclude", nil, "URL patterns to exclude (regex, repeatable)")
+	indexCmd.Flags().Bool("same-domain", true, "restrict crawling to same domain")
+	indexCmd.Flags().Int("max-pages", 0, "max pages to index (0 = unlimited)")
+	indexCmd.Flags().Duration("delay", 1*time.Second, "delay between requests when crawling")
+	indexCmd.Flags().Int("concurrency", 5, "max parallel requests when crawling")
+	indexCmd.Flags().Bool("ignore-robots", false, "ignore robots.txt")
+	indexCmd.Flags().Bool("skip-existing", true, "skip URLs already in the index")
+	indexCmd.Flags().Bool("headless", false, "use headless Chrome to render JavaScript")
+	indexCmd.Flags().Bool("browser", false, "launch visible browser to render pages (bypasses anti-bot protections)")
 
 	reindexCmd.Flags().BoolP("exclude-sensitive", "x", false, "don't add documents that contain sensitive content matched by config.SensitiveContentPatterns")
 
@@ -773,14 +865,14 @@ func yesNoPrompt(label string, def bool) bool {
 //	}
 //}
 
+// indexURL is kept for backward compatibility (used by import).
 func indexURL(u string) error {
-	httpClient := &http.Client{
-		// Websites can be slow or unreachable, we don't want to wait too long for each of them, especially if we are indexing a lot of URLs during import.
-		Timeout: 5 * time.Second,
-	}
 	if u == "" {
 		log.Warn().Msg("URL must not be empty")
 		return nil
+	}
+	httpClient := &http.Client{
+		Timeout: 5 * time.Second,
 	}
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
