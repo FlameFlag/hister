@@ -40,6 +40,7 @@ buildGoModule (finalAttrs: {
       ../go.sum
       ../hister.go
       ../client
+      ../completion
       ../server
       ../config
       ../files

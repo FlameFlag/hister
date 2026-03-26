@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/asciimoo/hister/client"
+	"github.com/asciimoo/hister/completion"
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server"
@@ -516,6 +517,14 @@ func init() {
 	reindexCmd.Flags().BoolP("exclude-sensitive", "x", false, "don't add documents that contain sensitive content matched by config.SensitiveContentPatterns")
 
 	searchCmd.Flags().StringP("format", "f", "text", "output format: text, json, csv")
+
+	// Register flag completion functions for flags with known values
+	_ = rootCmd.RegisterFlagCompletionFunc("log-level", cobra.FixedCompletions(
+		[]string{"error", "warning", "info", "debug", "trace"}, cobra.ShellCompDirectiveNoFileComp,
+	))
+	_ = searchCmd.RegisterFlagCompletionFunc("format", cobra.FixedCompletions(
+		[]string{"text", "json", "csv"}, cobra.ShellCompDirectiveNoFileComp,
+	))
 
 	cobra.OnInitialize(initialize)
 
@@ -1251,6 +1260,20 @@ func newClient(extraOpts ...client.Option) *client.Client {
 }
 
 func main() {
+	// Initialize default completion command (bash/zsh/fish/powershell) and add nushell to it
+	rootCmd.InitDefaultCompletionCmd(os.Args[1:]...)
+	if completionCmd, _, err := rootCmd.Find([]string{"completion"}); err == nil && completionCmd.Name() == "completion" {
+		completionCmd.AddCommand(&cobra.Command{
+			Use:                   "nushell",
+			Short:                 "Generate the autocompletion script for nushell",
+			Long:                  completion.NushellHelp(rootCmd.Name()),
+			Args:                  cobra.NoArgs,
+			DisableFlagsInUseLine: true,
+			Run: func(cmd *cobra.Command, _ []string) {
+				completion.GenNushell(cmd.Root(), os.Stdout)
+			},
+		})
+	}
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
