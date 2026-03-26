@@ -95,7 +95,6 @@ type webContext struct {
 
 func init() {
 	gob.Register(uint(0))
-	gob.Register(false)
 	sub, err := iofs.Sub(static.FS, "app")
 	if err != nil {
 		panic(err)
@@ -290,9 +289,6 @@ func populateUserContext(c *webContext) {
 	if name, ok := session.Values["username"].(string); ok {
 		c.Username = name
 	}
-	if admin, ok := session.Values["is_admin"].(bool); ok {
-		c.IsAdmin = admin
-	}
 	if c.UserID == 0 {
 		if tok := c.Request.Header.Get("X-Access-Token"); tok != "" {
 			if u, err := model.GetUserByToken(tok); err == nil {
@@ -301,6 +297,10 @@ func populateUserContext(c *webContext) {
 				c.IsAdmin = u.IsAdmin
 			}
 		}
+		return
+	}
+	if u, err := model.GetUserByID(c.UserID); err == nil {
+		c.IsAdmin = u.IsAdmin
 	}
 }
 
@@ -514,7 +514,6 @@ func serveLogin(c *webContext) {
 	}
 	session.Values["user_id"] = user.ID
 	session.Values["username"] = user.Username
-	session.Values["is_admin"] = user.IsAdmin
 	if err := session.Save(c.Request, c.Response); err != nil {
 		serve500(c)
 		return
@@ -530,7 +529,6 @@ func serveLogout(c *webContext) {
 	}
 	delete(session.Values, "user_id")
 	delete(session.Values, "username")
-	delete(session.Values, "is_admin")
 	if err := session.Save(c.Request, c.Response); err != nil {
 		serve500(c)
 		return
