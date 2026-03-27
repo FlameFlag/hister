@@ -42,10 +42,11 @@ You can search within specific fields using the `field:value` syntax:
 
 - **title:** - Search in page titles only
 - **text:** - Search in page content only
-- **url:** - Search in URLs only
+- **url:** - Search in URLs only (bare file paths without `://` are automatically resolved to absolute `file://` URLs)
 - **domain:** - Search in domain names only
 - **language:** - Filter by detected language (e.g., `en`, `de`, `fr`. Use `unknown` for languages Hister doesn't support)
 - **type:** - Filter by document type (`web` for websites, `file` or `local` for local files)
+- **user_id:** - Filter by user ID (admin use; e.g., `user_id:3`)
 
 **Examples:**
 
@@ -91,6 +92,18 @@ type:web
 
 Finds web pages (indexed from URLs).
 
+```textplain
+user_id:3
+```
+
+Finds all documents belonging to user with ID 3 (admin only).
+
+```textplain
+url:/home/user/documents/report.pdf
+```
+
+Finds the local file at that path (resolved to an absolute `file://` URL automatically).
+
 ### Privacy & Security Examples
 
 ```textplain
@@ -99,6 +112,7 @@ title:"security audit" text:vulnerability
 url:*/privacy-policy
 domain:privacyguides.org text:encryption
 language:en type:web
+user_id:3 domain:example.com
 ```
 
 ## Wildcard Searches
@@ -347,6 +361,6 @@ domain:mozilla.org (firefox|thunderbird) "release notes"
 
 - Ensure quotes are properly closed
 - Check that parentheses are balanced
-- Verify field names are spelled correctly (title, text, url, domain, language, type)
+- Verify field names are spelled correctly (`title`, `text`, `url`, `domain`, `language`, `type`, `user_id`)
 - Remember searches are case-insensitive
 - For type filter, use "web" or "file" (also accepts "local" for files)
