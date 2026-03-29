@@ -18,7 +18,7 @@ COPY webui/ webui/
 RUN npm run build -w @hister/app
 
 # Stage 2: Build Go binary
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 RUN apk add --no-cache gcc musl-dev
 
