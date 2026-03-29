@@ -1,19 +1,32 @@
 <script lang="ts">
   import * as Card from '@hister/components/ui/card';
+  import Rss from '@lucide/svelte/icons/rss';
 
   let { data } = $props();
 </script>
 
 <svelte:head>
   <title>Posts | Hister</title>
+  <link rel="alternate" type="application/rss+xml" title="Hister Posts" href="/posts/rss.xml" />
 </svelte:head>
 
 <section class="mx-auto max-w-4xl px-6 py-12 md:px-12">
-  <h1
-    class="font-space mb-10 text-4xl font-black tracking-[-1px] text-(--text-primary) md:text-5xl"
-  >
-    POSTS
-  </h1>
+  <div class="mb-10 flex items-center justify-between">
+    <h1
+      class="font-space text-4xl font-black tracking-[-1px] text-(--text-primary) uppercase md:text-5xl"
+    >
+      Posts
+    </h1>
+    <a
+      href="/posts/rss.xml"
+      title="RSS feed"
+      aria-label="RSS feed"
+      data-sveltekit-reload
+      class="text-(--text-secondary) transition-colors hover:text-[#f26522]"
+    >
+      <Rss size={32} />
+    </a>
+  </div>
 
   <ul class="m-0 flex list-none flex-col gap-4 p-0">
     {#each data.posts as post}
