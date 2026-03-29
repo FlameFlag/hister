@@ -408,6 +408,7 @@ func (i *indexer) addIndexer(name, lang string) error {
 	}
 	idx.SetName(name)
 	i.indexers[name] = idx
+	i.idx.Add(idx)
 	return nil
 }
 
