@@ -1,5 +1,4 @@
 <script lang="ts">
-  import Chrome from '@lucide/svelte/icons/chrome';
   import Globe from '@lucide/svelte/icons/globe';
   import * as Card from '@hister/components/ui/card';
 
@@ -58,7 +57,7 @@
           rel="noopener noreferrer"
           class="bg-brutal-card flex-row items-center gap-4 p-5"
         >
-          <Chrome size={20} class="shrink-0 text-(--text-secondary)" />
+          <Globe size={20} class="shrink-0 text-(--text-secondary)" />
           <h2 class="font-space text-lg font-extrabold tracking-[0.5px] text-(--text-primary)">
             Chrome Extension
           </h2>
