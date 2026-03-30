@@ -5,6 +5,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,24 +14,12 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	//	"gorm.io/driver/postgres"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 )
 
-//// DBTypedef represents the type of database being used.
-//type DBTypedef int
-//
-//const (
-//	// Sqlite represents SQLite database type.
-//	Sqlite DBTypedef = iota
-//	// Psql represents PostgreSQL database type.
-//	Psql
-//)
-//
-//// ErrDBType is returned when an unknown database type is encountered.
-//const ErrDBType = errors.New("Unknown database type")
-//// DBType holds the type of the database being used.
-//var DBType = Sqlite
+// ErrDBType is returned when an unknown database type is encountered.
+var ErrDBType = errors.New("unknown database type")
 
 // DB is the global database instance.
 var DB *gorm.DB
@@ -43,28 +32,29 @@ func Init(c *config.Config) error {
 	} else {
 		dbCfg.Logger = logger.Default.LogMode(logger.Silent)
 	}
+	dbt, dsn := c.DatabaseConnection()
 	var err error
-	DB, err = gorm.Open(sqlite.Open(c.DatabaseConnection()), dbCfg)
-	if err != nil {
-		return err
+	switch dbt {
+	case config.Psql:
+		DB, err = gorm.Open(postgres.Open(dsn), dbCfg)
+		if err != nil {
+			return err
+		}
+	case config.Sqlite:
+		DB, err = gorm.Open(sqlite.Open(dsn), dbCfg)
+		if err != nil {
+			return err
+		}
+	default:
+		return ErrDBType
 	}
-	//switch c.DB.Type {
-	//case "postgresql", "postgres", "psql":
-	//	DB, err = gorm.Open(postgres.Open(c.DB.Connection), dbCfg)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	DBType = Psql
-	//default:
-	//	return ErrDBType
-	//}
 	err = migrate()
 	if err != nil {
-		return fmt.Errorf("custom migration of database '%s' has failed: %w", c.DatabaseConnection(), err)
+		return fmt.Errorf("custom migration of database '%s' has failed: %w", dsn, err)
 	}
 	err = automigrate()
 	if err != nil {
-		return fmt.Errorf("auto migration of database '%s' has failed: %w", c.DatabaseConnection(), err)
+		return fmt.Errorf("auto migration of database '%s' has failed: %w", dsn, err)
 	}
 	err = DB.SetupJoinTable(&History{}, "Links", &HistoryLink{})
 	if err != nil {

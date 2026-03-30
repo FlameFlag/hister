@@ -76,11 +76,36 @@ sensitive_content_patterns:
 
 ## `server` Section
 
-| Key        | Type   | Default                | Description                                                                                                  |
-| ---------- | ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `address`  | string | `127.0.0.1:4433`       | Host and port to listen on. Use `[::]:4433` or `0.0.0.0:4433` to listen on all interfaces.                   |
-| `base_url` | string | derived from `address` | Public URL of the Hister instance. Required when `address` uses `0.0.0.0`. Must match how you access Hister. |
-| `database` | string | `db.sqlite3`           | SQLite database filename (relative to `app.directory`).                                                      |
+| Key        | Type   | Default                | Description                                                                                                                          |
+| ---------- | ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `address`  | string | `127.0.0.1:4433`       | Host and port to listen on. Use `[::]:4433` or `0.0.0.0:4433` to listen on all interfaces.                                           |
+| `base_url` | string | derived from `address` | Public URL of the Hister instance. Required when `address` uses `0.0.0.0`. Must match how you access Hister.                         |
+| `database` | string | `db.sqlite3`           | Database connection. SQLite filename (relative to `app.directory`) or a PostgreSQL DSN. See [Database Backends](#database-backends). |
+
+## Database Backends
+
+Hister supports **SQLite** (default) and **PostgreSQL**.
+
+The `server.database` value determines which backend is used:
+
+- If the value contains `=` it is treated as a **PostgreSQL DSN**.
+- Otherwise it is treated as an **SQLite filename** relative to `app.directory`.
+
+### SQLite (default)
+
+```yaml
+server:
+  database: 'db.sqlite3'
+```
+
+### PostgreSQL
+
+```yaml
+server:
+  database: 'host=localhost user=hister password=hister dbname=hister port=5432 sslmode=disable TimeZone=Europe/Budapest'
+```
+
+Hister uses the standard PostgreSQL DSN key=value format. Adjust `host`, `user`, `password`, `dbname`, `port`, `sslmode`, and `TimeZone` to match your setup.
 
 ## TUI Settings
 

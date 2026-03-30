@@ -116,6 +116,16 @@ type Rule struct {
 	re     *regexp.Regexp
 }
 
+// DBTypedef represents the type of database being used.
+type DBTypedef int
+
+const (
+	// Sqlite represents SQLite database type.
+	Sqlite DBTypedef = iota
+	// Psql represents PostgreSQL database type.
+	Psql
+)
+
 type Aliases map[string]string
 
 type Action string
@@ -549,8 +559,11 @@ func (c *Config) RulesPath() string {
 	return c.FullPath("rules.json")
 }
 
-func (c *Config) DatabaseConnection() string {
-	return c.FullPath(c.Server.Database)
+func (c *Config) DatabaseConnection() (DBTypedef, string) {
+	if strings.Contains(c.Server.Database, "=") {
+		return Psql, c.Server.Database
+	}
+	return Sqlite, c.FullPath(c.Server.Database)
 }
 
 func (c *Config) Filename() string {
