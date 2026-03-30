@@ -630,7 +630,12 @@ func initIndex() {
 	if err != nil {
 		exit(1, "Failed to retrieve indexer version: "+err.Error())
 	}
-	if indexer.Version > v {
+	if v == -1 {
+		// Fresh installation — record current version, no reindex needed.
+		if err := model.SetIndexerVersion(indexer.Version); err != nil {
+			exit(1, "Failed to set indexer version: "+err.Error())
+		}
+	} else if indexer.Version > v {
 		log.Warn().Msg(cliWarningStyle.Render("There is a new indexer version. Run `hister reindex` to update your index."))
 	}
 	log.Debug().Msg("Indexer initialization complete")

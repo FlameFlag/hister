@@ -105,10 +105,9 @@ type IndexerVersion struct {
 func GetIndexerVersion() (int, error) {
 	var r IndexerVersion
 	if err := DB.Model(&IndexerVersion{}).First(&r).Error; err != nil {
-		r = IndexerVersion{0}
-		if err := DB.Create(&r).Error; err != nil {
-			return 0, err
-		}
+		// No record yet — fresh installation; report as -1 so callers can
+		// distinguish "never set" from version 0.
+		return -1, nil
 	}
 	return r.Version, nil
 }
