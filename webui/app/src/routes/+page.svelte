@@ -931,17 +931,30 @@
                     {/if}
                   </div>
                   <div class="w-0 min-w-0 flex-1 space-y-0.5">
-                    <a
-                      data-result-link
-                      href={r.url}
-                      class="font-outfit text-md text-hister-teal block w-full overflow-hidden font-semibold text-ellipsis whitespace-nowrap hover:underline md:text-xl"
-                      onclick={(e) => {
-                        e.preventDefault();
-                        openResult(r.url, r.title || '*title*', e.ctrlKey || e.metaKey);
-                      }}
-                    >
-                      {r.title || '*title*'}
-                    </a>
+                    <div class="flex items-center gap-1">
+                      <a
+                        data-result-link
+                        href={r.url}
+                        class="font-outfit text-md text-hister-teal min-w-0 flex-1 overflow-hidden font-semibold text-ellipsis whitespace-nowrap hover:underline md:text-xl"
+                        onclick={(e) => {
+                          e.preventDefault();
+                          openResult(r.url, r.title || '*title*', e.ctrlKey || e.metaKey);
+                        }}
+                      >
+                        {r.title || '*title*'}
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="text-text-brand-muted hover:text-text-brand shrink-0 cursor-pointer"
+                        onclick={() => {
+                          showActionsForResult =
+                            showActionsForResult === 'history:' + r.url ? null : 'history:' + r.url;
+                        }}
+                      >
+                        <MoreVertical class="size-4" />
+                      </Button>
+                    </div>
                     <div class="flex items-center gap-2">
                       <span
                         class="font-fira text-hister-teal truncate overflow-hidden text-ellipsis whitespace-nowrap"
@@ -966,17 +979,6 @@
                       </Button>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="text-text-brand-muted hover:text-text-brand shrink-0 cursor-pointer"
-                    onclick={() => {
-                      showActionsForResult =
-                        showActionsForResult === 'history:' + r.url ? null : 'history:' + r.url;
-                    }}
-                  >
-                    <MoreVertical class="size-4" />
-                  </Button>
                 </article>
                 {#if showActionsForResult === 'history:' + r.url}
                   {(actionsMessage = '')}
@@ -1046,18 +1048,31 @@
                     {/if}
                   </div>
                   <div class="w-0 min-w-0 flex-1 space-y-0.5">
-                    <a
-                      data-result-link
-                      href={r.url}
-                      class="font-outfit text-md block w-full font-semibold hover:underline md:text-xl"
-                      style="color: var(--{color});"
-                      onclick={(e) => {
-                        e.preventDefault();
-                        openResult(r.url, r.title || '*title*', e.ctrlKey || e.metaKey);
-                      }}
-                    >
-                      {r.title || '*title*'}
-                    </a>
+                    <div class="flex items-center gap-1">
+                      <a
+                        data-result-link
+                        href={r.url}
+                        class="font-outfit text-md min-w-0 flex-1 font-semibold hover:underline md:text-xl"
+                        style="color: var(--{color});"
+                        onclick={(e) => {
+                          e.preventDefault();
+                          openResult(r.url, r.title || '*title*', e.ctrlKey || e.metaKey);
+                        }}
+                      >
+                        {r.title || '*title*'}
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="text-text-brand-muted hover:text-text-brand shrink-0 cursor-pointer"
+                        onclick={() => {
+                          showActionsForResult =
+                            showActionsForResult === 'doc:' + r.url ? null : 'doc:' + r.url;
+                        }}
+                      >
+                        <MoreVertical class="size-4" />
+                      </Button>
+                    </div>
                     <div
                       class="items-left flex flex-col gap-0 md:flex-row md:items-center md:gap-2"
                     >
@@ -1092,17 +1107,6 @@
                       </p>
                     {/if}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="text-text-brand-muted hover:text-text-brand shrink-0 cursor-pointer"
-                    onclick={() => {
-                      showActionsForResult =
-                        showActionsForResult === 'doc:' + r.url ? null : 'doc:' + r.url;
-                    }}
-                  >
-                    <MoreVertical class="size-4" />
-                  </Button>
                 </article>
                 {#if showActionsForResult === 'doc:' + r.url}
                   {(actionsMessage = '')}
