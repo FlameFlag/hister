@@ -86,7 +86,9 @@
     return result;
   });
 
-  function groupByDate(sourceItems: HistoryItem[]): { key: string; label: string; items: HistoryItem[] }[] {
+  function groupByDate(
+    sourceItems: HistoryItem[],
+  ): { key: string; label: string; items: HistoryItem[] }[] {
     const g: { key: string; label: string; items: HistoryItem[] }[] = [];
     const seen = new Map<string, number>();
     for (const item of sourceItems) {
