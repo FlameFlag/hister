@@ -268,6 +268,7 @@ var indexCmd = &cobra.Command{
 			clientOpts = append(clientOpts, client.WithTargetUserID(targetUserID))
 		}
 
+		force, _ := cmd.Flags().GetBool("force")
 		recursive, _ := cmd.Flags().GetBool("recursive")
 		if recursive {
 			maxDepth, _ := cmd.Flags().GetInt("max-depth")
@@ -303,12 +304,22 @@ var indexCmd = &cobra.Command{
 			}()
 
 			for _, u := range args {
-				if err := crawlAndIndex(u, cr, validator, clientOpts...); err != nil {
+				if err := crawlAndIndex(u, cr, validator, force, clientOpts...); err != nil {
 					exit(1, "Crawl failed: "+err.Error())
 				}
 			}
 		} else {
+			c := newClient(clientOpts...)
 			for _, u := range args {
+				if !force {
+					exists, err := c.DocumentExists(u)
+					if err != nil {
+						log.Warn().Err(err).Str("URL", u).Msg("Failed to check if URL is already indexed")
+					} else if exists {
+						log.Info().Str("URL", u).Msg("URL already indexed, skipping (use --force to reindex)")
+						continue
+					}
+				}
 				if err := indexURL(u, clientOpts...); err != nil {
 					log.Warn().Err(err).Str("URL", u).Msg("Failed to index URL")
 				}
@@ -318,6 +329,7 @@ var indexCmd = &cobra.Command{
 }
 
 func init() {
+	indexCmd.Flags().Bool("force", false, "Reindex URLs even if they are already in the index. Already indexed URLs are skipped otherwise")
 	indexCmd.Flags().BoolP("recursive", "r", false, "Recursively crawl linked pages")
 	indexCmd.Flags().Int("max-depth", 0, "Maximum crawl depth (0 = unlimited)")
 	indexCmd.Flags().Int("max-links", 0, "Maximum number of pages to visit (0 = unlimited)")
@@ -912,13 +924,22 @@ func indexURL(u string, clientOpts ...client.Option) error {
 	return nil
 }
 
-func crawlAndIndex(startURL string, cr crawler.Crawler, v *crawler.Validator, clientOpts ...client.Option) error {
+func crawlAndIndex(startURL string, cr crawler.Crawler, v *crawler.Validator, force bool, clientOpts ...client.Option) error {
 	ch, err := cr.Crawl(context.Background(), startURL, v)
 	if err != nil {
 		return err
 	}
 	c := newClient(clientOpts...)
 	for doc := range ch {
+		if !force {
+			exists, err := c.DocumentExists(doc.URL)
+			if err != nil {
+				log.Warn().Err(err).Str("url", doc.URL).Msg("failed to check if URL is already indexed")
+			} else if exists {
+				log.Info().Str("url", doc.URL).Msg("URL already indexed, skipping (use --force to reindex)")
+				continue
+			}
+		}
 		if err := doc.Process(nil); err != nil {
 			log.Warn().Err(err).Str("url", doc.URL).Msg("failed to process crawled document")
 			continue
