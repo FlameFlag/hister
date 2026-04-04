@@ -310,7 +310,7 @@ var indexCmd = &cobra.Command{
 		} else {
 			for _, u := range args {
 				if err := indexURL(u, clientOpts...); err != nil {
-					exit(1, "Failed to index URL: "+err.Error())
+					log.Warn().Err(err).Str("URL", u).Msg("Failed to index URL")
 				}
 			}
 		}
@@ -879,7 +879,7 @@ func indexURL(u string, clientOpts ...client.Option) error {
 			log.Warn().Err(cerr).Msg("failed to close response body")
 		}
 	}()
-	if r.StatusCode != http.StatusOK {
+	if r.StatusCode < 200 || r.StatusCode >= 300 {
 		return fmt.Errorf("invalid response code: %d", r.StatusCode)
 	}
 	contentType := r.Header.Get("Content-type")
