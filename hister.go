@@ -290,9 +290,7 @@ var indexCmd = &cobra.Command{
 			if err != nil {
 				exit(1, "Invalid crawler rules: "+err.Error())
 			}
-			if cfg.Crawler.UserAgent == "" {
-				cfg.Crawler.UserAgent = UserAgent
-			}
+			cfg.Crawler.UserAgent = UserAgent
 			cr, err := crawler.New(&cfg.Crawler)
 			if err != nil {
 				exit(1, "Failed to initialize crawler: "+err.Error())
@@ -650,6 +648,9 @@ func init() {
 
 func initialize() {
 	initConfig()
+	if cfg.Crawler.UserAgent != "" {
+		UserAgent = cfg.Crawler.UserAgent
+	}
 	initLog()
 	log.Debug().Str("filename", cfg.Filename()).Msg("Config initialization complete")
 	log.Debug().Msg("Logging initialization complete")
@@ -877,11 +878,12 @@ func indexURL(u string, clientOpts ...client.Option) error {
 		log.Warn().Msg("URL must not be empty")
 		return nil
 	}
+	ua := UserAgent
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return errors.New(`failed to download file: ` + err.Error())
 	}
-	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("User-Agent", ua)
 	r, err := httpClient.Do(req)
 	if err != nil {
 		return errors.New(`failed to download file: ` + err.Error())
