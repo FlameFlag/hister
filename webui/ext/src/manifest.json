@@ -28,7 +28,7 @@
       "extension_ids": []
     }
   ],
-  "permissions": ["tabs", "storage", "webRequest", "cookies"],
+  "permissions": ["tabs", "storage", "cookies"],
   "host_permissions": ["*://*/*"],
   "chrome_settings_overrides": {
     "search_provider": {
