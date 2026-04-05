@@ -17,10 +17,25 @@ import (
 
 // Extractor extracts content from a Document.
 type Extractor interface {
+	// Name returns a human-readable identifier for the extractor.
 	Name() string
+
+	// Match reports whether this extractor is applicable to the given document.
+	// Extract and Preview will only be called when Match returns true.
 	Match(*document.Document) bool
-	Extract(*document.Document) error
-	Preview(*document.Document) (string, error)
+
+	// Extract rewrites documents before the documents are added to the index.
+	// The returned bool signals whether the caller should continue trying
+	// subsequent extractors: true means this attempt was inconclusive and the
+	// next matching extractor should be tried
+	Extract(*document.Document) (bool, error)
+
+	// Preview returns a rendered representation of the document suitable for
+	// display (e.g. readable HTML or plain text).
+	// The returned bool signals whether the caller should continue trying
+	// subsequent extractors: true means this attempt was inconclusive and the
+	// next matching extractor should be tried
+	Preview(*document.Document) (string, bool, error)
 }
 
 // ErrNoExtractor is returned when no extractor can handle the document.
@@ -36,9 +51,10 @@ var extractors = []Extractor{
 func Extract(d *document.Document) error {
 	for _, e := range extractors {
 		if e.Match(d) {
-			if err := e.Extract(d); err != nil {
+			cont, err := e.Extract(d)
+			if err != nil {
 				log.Warn().Err(err).Str("URL", d.URL).Str("Extractor", e.Name()).Msg("Failed to extract content")
-			} else {
+			} else if !cont {
 				return nil
 			}
 		}
@@ -51,10 +67,10 @@ func Extract(d *document.Document) error {
 func Preview(d *document.Document) (string, error) {
 	for _, e := range extractors {
 		if e.Match(d) {
-			content, err := e.Preview(d)
+			content, cont, err := e.Preview(d)
 			if err != nil {
 				log.Warn().Err(err).Str("URL", d.URL).Str("Extractor", e.Name()).Msg("Failed to preview content")
-			} else {
+			} else if !cont {
 				return content, nil
 			}
 		}
@@ -74,7 +90,7 @@ func (e *defaultExtractor) Match(_ *document.Document) bool {
 	return true
 }
 
-func (e *defaultExtractor) Extract(d *document.Document) error {
+func (e *defaultExtractor) Extract(d *document.Document) (bool, error) {
 	d.Title = ""
 	r := bytes.NewReader([]byte(d.HTML))
 	doc := html.NewTokenizer(r)
@@ -91,7 +107,7 @@ out:
 			if errors.Is(err, io.EOF) {
 				break out
 			}
-			return errors.New("failed to parse html: " + err.Error())
+			return false, errors.New("failed to parse html: " + err.Error())
 		case html.SelfClosingTagToken, html.StartTagToken:
 			tn, _ := doc.TagName()
 			currentTag = string(tn)
@@ -120,13 +136,13 @@ out:
 	}
 	d.Text = strings.TrimSpace(text.String())
 	if d.Text == "" && d.Title == "" {
-		return errors.New("no content found")
+		return false, errors.New("no content found")
 	}
-	return nil
+	return false, nil
 }
 
-func (e *defaultExtractor) Preview(d *document.Document) (string, error) {
-	return d.Text, nil
+func (e *defaultExtractor) Preview(d *document.Document) (string, bool, error) {
+	return d.Text, false, nil
 }
 
 func (e *readabilityExtractor) Name() string {
@@ -137,40 +153,40 @@ func (e *readabilityExtractor) Match(_ *document.Document) bool {
 	return true
 }
 
-func (e *readabilityExtractor) Extract(d *document.Document) error {
+func (e *readabilityExtractor) Extract(d *document.Document) (bool, error) {
 	r := bytes.NewReader([]byte(d.HTML))
 
 	u, err := url.Parse(d.URL)
 	if err != nil {
-		return err
+		return false, err
 	}
 	a, err := readability.FromReader(r, u)
 	if err != nil {
-		return err
+		return true, err
 	}
 	buf := bytes.NewBuffer(nil)
 	if err := a.RenderText(buf); err != nil {
-		return err
+		return true, err
 	}
 	d.Text = buf.String()
 	d.Title = a.Title()
 	d.SetFaviconURL(a.Favicon())
-	return nil
+	return false, nil
 }
 
-func (e *readabilityExtractor) Preview(d *document.Document) (string, error) {
+func (e *readabilityExtractor) Preview(d *document.Document) (string, bool, error) {
 	r := bytes.NewReader([]byte(d.HTML))
 	u, err := url.Parse(d.URL)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	a, err := readability.FromReader(r, u)
 	if err != nil {
-		return "", err
+		return "", true, err
 	}
 	var htmlContent strings.Builder
 	if err := a.RenderHTML(&htmlContent); err != nil {
-		return "", err
+		return "", true, err
 	}
-	return htmlContent.String(), nil
+	return htmlContent.String(), false, nil
 }
