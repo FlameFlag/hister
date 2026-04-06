@@ -127,6 +127,16 @@ Users can view and edit their rules and aliases through the **Rules** tab in the
 
 In single-user mode (user handling disabled), rules and aliases continue to be read from and written to the configuration file on disk.
 
+## Regexp
+
+Skip rules apply upon the **full** URL (from protocol to the query-string parameters) and limited
+
+- Anchoring must include the protocol: Eg `^https://foo.com` or `^https?://(login|mail)\.` but no `^foo.com`
+- `/login$` would **not** match `https://foo.com/login?auth=1`
+- URL hash is removed (`https://foo.com/#active-tab` -> `https://foo.com/`)
+- Query-string parameters are **not reordered** and barely stripped (only `utm_*` [at the moment](https://github.com/asciimoo/hister/blob/master/server/document/document.go#L137))
+- [Go regular expression](https://pkg.go.dev/regexp/syntax) does not support look-ahead/look-behind regexp.
+
 ## Admin Users
 
 Admin users have access to privileged operations. Currently, the following endpoints require admin privileges:
