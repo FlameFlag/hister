@@ -918,7 +918,7 @@ func indexURL(u string, clientOpts ...client.Option) error {
 	if d.Favicon == "" {
 		err := d.DownloadFavicon(UserAgent)
 		if err != nil {
-			log.Warn().Err(err).Str("URL", d.URL).Msg("failed to download favicon")
+			log.Debug().Err(err).Str("URL", d.URL).Msg("failed to download favicon")
 		}
 	}
 	c := newClient(clientOpts...)
