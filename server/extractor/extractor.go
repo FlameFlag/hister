@@ -4,7 +4,9 @@ package extractor
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"strings"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/html"
 
+	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/server/document"
 	"github.com/asciimoo/hister/server/extractor/extractors/godoc"
 	"github.com/asciimoo/hister/server/extractor/extractors/stackoverflow"
@@ -39,6 +42,14 @@ type Extractor interface {
 	// subsequent extractors: true means this attempt was inconclusive and the
 	// next matching extractor should be tried
 	Preview(*document.Document) (types.PreviewResponse, bool, error)
+
+	// GetConfig returns the extractor's current configuration. Before
+	// SetConfig is called, implementations must return their default config.
+	GetConfig() *config.Extractor
+
+	// SetConfig applies cfg to the extractor, overwriting defaults.
+	// Implementations should return an error for unrecognised option keys.
+	SetConfig(*config.Extractor) error
 }
 
 // ErrNoExtractor is returned when no extractor can handle the document.
@@ -51,10 +62,35 @@ var extractors = []Extractor{
 	&defaultExtractor{},
 }
 
+// Init applies user-supplied extractor configurations on top of each
+// extractor's defaults. It must be called before Extract or Preview.
+// cfgs is keyed by lowercased extractor name (as Viper lowercases YAML keys).
+func Init(cfgs map[string]*config.Extractor) error {
+	for _, e := range extractors {
+		def := e.GetConfig()
+		merged := &config.Extractor{
+			Enable:  def.Enable,
+			Options: make(map[string]any, len(def.Options)),
+		}
+		maps.Copy(merged.Options, def.Options)
+		if user, ok := cfgs[strings.ToLower(e.Name())]; ok && user != nil {
+			merged.Enable = user.Enable
+			maps.Copy(merged.Options, user.Options)
+		}
+		if err := e.SetConfig(merged); err != nil {
+			return fmt.Errorf("extractor %s: %w", e.Name(), err)
+		}
+	}
+	return nil
+}
+
 // Extract tries each registered extractor in order and returns the first
 // successful result. Returns ErrNoExtractor if none succeed.
 func Extract(d *document.Document) error {
 	for _, e := range extractors {
+		if !e.GetConfig().Enable {
+			continue
+		}
 		if e.Match(d) {
 			cont, err := e.Extract(d)
 			log.Debug().Str("URL", d.URL).Str("Extractor", e.Name()).Msg("Extracting data")
@@ -72,6 +108,9 @@ func Extract(d *document.Document) error {
 // extractor. Returns ErrNoExtractor if none match.
 func Preview(d *document.Document) (types.PreviewResponse, error) {
 	for _, e := range extractors {
+		if !e.GetConfig().Enable {
+			continue
+		}
 		if e.Match(d) {
 			log.Debug().Str("URL", d.URL).Str("Extractor", e.Name()).Msg("Creating preview")
 			resp, cont, err := e.Preview(d)
@@ -88,9 +127,43 @@ func Preview(d *document.Document) (types.PreviewResponse, error) {
 	return types.PreviewResponse{}, ErrNoExtractor
 }
 
-type defaultExtractor struct{}
+type defaultExtractor struct {
+	cfg *config.Extractor
+}
 
-type readabilityExtractor struct{}
+type readabilityExtractor struct {
+	cfg *config.Extractor
+}
+
+func (e *defaultExtractor) GetConfig() *config.Extractor {
+	if e.cfg == nil {
+		return &config.Extractor{Enable: true, Options: map[string]any{}}
+	}
+	return e.cfg
+}
+
+func (e *defaultExtractor) SetConfig(c *config.Extractor) error {
+	for k := range c.Options {
+		return fmt.Errorf("unknown option %q", k)
+	}
+	e.cfg = c
+	return nil
+}
+
+func (e *readabilityExtractor) GetConfig() *config.Extractor {
+	if e.cfg == nil {
+		return &config.Extractor{Enable: true, Options: map[string]any{}}
+	}
+	return e.cfg
+}
+
+func (e *readabilityExtractor) SetConfig(c *config.Extractor) error {
+	for k := range c.Options {
+		return fmt.Errorf("unknown option %q", k)
+	}
+	e.cfg = c
+	return nil
+}
 
 func (e *defaultExtractor) Name() string {
 	return "Default"

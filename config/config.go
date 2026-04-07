@@ -30,14 +30,15 @@ import (
 
 type Config struct {
 	fname                    string
-	App                      App               `yaml:"app" mapstructure:"app"`
-	Server                   Server            `yaml:"server" mapstructure:"server"`
-	Indexer                  Indexer           `yaml:"indexer" mapstructure:"indexer"`
-	Crawler                  CrawlerConfig     `yaml:"crawler" mapstructure:"crawler"`
-	Hotkeys                  Hotkeys           `yaml:"hotkeys" mapstructure:"hotkeys"`
-	TUI                      TUI               `yaml:"-" mapstructure:"tui"`
-	SensitiveContentPatterns map[string]string `yaml:"sensitive_content_patterns" mapstructure:"sensitive_content_patterns"`
-	Rules                    *Rules            `yaml:"-" mapstructure:"-"`
+	App                      App                   `yaml:"app" mapstructure:"app"`
+	Server                   Server                `yaml:"server" mapstructure:"server"`
+	Indexer                  Indexer               `yaml:"indexer" mapstructure:"indexer"`
+	Crawler                  CrawlerConfig         `yaml:"crawler" mapstructure:"crawler"`
+	Hotkeys                  Hotkeys               `yaml:"hotkeys" mapstructure:"hotkeys"`
+	TUI                      TUI                   `yaml:"-" mapstructure:"tui"`
+	SensitiveContentPatterns map[string]string     `yaml:"sensitive_content_patterns" mapstructure:"sensitive_content_patterns"`
+	Rules                    *Rules                `yaml:"-" mapstructure:"-"`
+	Extractors               map[string]*Extractor `yaml:"extractors" mapstructure:"extractors"`
 	secretKey                []byte
 	parsedBaseURL            *url.URL
 	usesDefaultBaseURL       bool
@@ -114,6 +115,11 @@ type Rules struct {
 type Rule struct {
 	ReStrs []string
 	re     *regexp.Regexp
+}
+
+type Extractor struct {
+	Enable  bool           `yaml:"enable" mapstructure:"enable"`
+	Options map[string]any `yaml:"options" mapstructure:"options"`
 }
 
 // DBTypedef represents the type of database being used.

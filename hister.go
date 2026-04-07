@@ -728,6 +728,9 @@ func initDB() {
 
 func initIndex() {
 	initDB()
+	if err := extractor.Init(cfg.Extractors); err != nil {
+		exit(1, "Extractor initialization error: "+err.Error())
+	}
 	if err := indexer.Init(cfg); err != nil {
 		exit(1, "Indexer initialization error: "+err.Error())
 	}

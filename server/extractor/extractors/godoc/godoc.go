@@ -4,6 +4,7 @@ package godoc
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	stdhtml "html"
 	"io"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 
 	"golang.org/x/net/html"
 
+	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/server/document"
 	"github.com/asciimoo/hister/server/sanitizer"
 	"github.com/asciimoo/hister/server/types"
@@ -20,11 +22,30 @@ import (
 const pkgGoDevPrefix = "https://pkg.go.dev/"
 
 // GoDocExtractor extracts content from pkg.go.dev documentation pages.
-type GoDocExtractor struct{}
+type GoDocExtractor struct {
+	cfg *config.Extractor
+}
 
 // Name returns the extractor's identifier.
 func (e *GoDocExtractor) Name() string {
 	return "GoDoc"
+}
+
+// GetConfig returns the extractor's current configuration.
+func (e *GoDocExtractor) GetConfig() *config.Extractor {
+	if e.cfg == nil {
+		return &config.Extractor{Enable: true, Options: map[string]any{}}
+	}
+	return e.cfg
+}
+
+// SetConfig applies cfg to the extractor. Returns an error for unknown options.
+func (e *GoDocExtractor) SetConfig(c *config.Extractor) error {
+	for k := range c.Options {
+		return fmt.Errorf("unknown option %q", k)
+	}
+	e.cfg = c
+	return nil
 }
 
 // Match returns true for any pkg.go.dev URL that has a non-empty path beyond

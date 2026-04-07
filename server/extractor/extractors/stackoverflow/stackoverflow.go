@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/server/document"
 	"github.com/asciimoo/hister/server/sanitizer"
 	"github.com/asciimoo/hister/server/types"
@@ -14,10 +15,29 @@ import (
 
 const matchURLPrefix = "https://stackoverflow.com/questions/"
 
-type StackoverflowExtractor struct{}
+type StackoverflowExtractor struct {
+	cfg *config.Extractor
+}
 
 func (e *StackoverflowExtractor) Name() string {
 	return "Stackoverflow"
+}
+
+// GetConfig returns the extractor's current configuration.
+func (e *StackoverflowExtractor) GetConfig() *config.Extractor {
+	if e.cfg == nil {
+		return &config.Extractor{Enable: true, Options: map[string]any{}}
+	}
+	return e.cfg
+}
+
+// SetConfig applies cfg to the extractor. Returns an error for unknown options.
+func (e *StackoverflowExtractor) SetConfig(c *config.Extractor) error {
+	for k := range c.Options {
+		return fmt.Errorf("unknown option %q", k)
+	}
+	e.cfg = c
+	return nil
 }
 
 func (e *StackoverflowExtractor) Match(d *document.Document) bool {
