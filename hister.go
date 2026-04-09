@@ -1029,7 +1029,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 }
 
 func importDB(dbFile string, table string, cmd *cobra.Command) {
-	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?immutable=1", dbFile))
+	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?immutable=1&mode=ro", dbFile))
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to open database")
 	}
