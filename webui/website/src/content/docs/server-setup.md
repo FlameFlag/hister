@@ -174,6 +174,43 @@ In particular, some, like [Caddy] or [Traefik], have built-in support for automa
 
    </details>
 
+## AppArmor Profile
+
+If your Linux system uses AppArmor, you can confine Hister with the following profile.
+Save it to `/etc/apparmor.d/hister`, then load it with `sudo apparmor_parser -r /etc/apparmor.d/hister`.
+
+```
+abi <abi/4.0>,
+
+include <tunables/global>
+
+@{hister_exe} = /usr/{local/,}bin/hister
+
+profile hister @{hister_exe} {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-tmp>
+
+  network inet dgram,
+  network inet stream,
+  network inet6 stream,
+
+  unix (connect, send, receive, create) type=stream,
+
+  @{HOME}/.config/chromium/Default/History r,
+  @{HOME}/.config/hister{,/**} rwlk,
+  @{HOME}/.mozilla/firefox/*.*/places.sqlite r,
+  @{PROC}/sys/net/core/somaxconn r,
+  @{hister_exe} rix,
+  owner /proc/@{pid}/{cgroup,comm,cmdline,smaps,statm,stat,mountinfo,fdinfo/*} r,
+}
+```
+
+**Note**: the paths above assume the default Hister data directory (`~/.config/hister`).
+If you use a custom `app.directory`, add a corresponding `rwlk` rule for that path.
+Browser history paths may also need adjustment depending on which profiles you use.
+
 [`server` configuration]: configuration#server-section
 [reverse proxy]: http://en.wikipedia.org/wiki/Reverse_proxy
 [Caddy]: https://caddyserver.com/
