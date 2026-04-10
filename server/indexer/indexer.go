@@ -569,22 +569,17 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 		req.Highlight = bleve.NewHighlightWithStyle("tui")
 	}
 
-	// SortScore.Value() returns the literal string "_score" for every document,
-	// making score-based cursors unusable with SetSearchAfter. Score sorting is
-	// kept as the default for single-page relevance search, but callers that need
-	// cursor-based pagination must specify an explicit stored-field sort (e.g. "domain").
-
+	sortByScore := false
 	// TODO / question: should we store the length of the URL path and sort by it,
 	// prefering shorter path names for tied score?
 	switch q.Sort {
 	case "domain":
 		req.SortBy([]string{"domain", "_id"})
 	default:
+		sortByScore = true
 		req.SortBy([]string{"-_score", "_id"})
 	}
 
-	// TODO score based search is not compatible with req.SetSearchAfter
-	// - find a workaround
 	if q.PageKey != "" {
 		var after []string
 		if err := json.Unmarshal([]byte(q.PageKey), &after); err == nil {
@@ -606,7 +601,16 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 		Documents: matches,
 	}
 	if len(res.Hits) > 0 {
-		lastSort := res.Hits[len(res.Hits)-1].Sort
+		lastHit := res.Hits[len(res.Hits)-1]
+		lastSort := lastHit.Sort
+		// https://github.com/blevesearch/bleve/issues/2308
+		if sortByScore {
+			for i, k := range lastSort {
+				if k == "_score" {
+					lastSort[i] = fmt.Sprintf("%v", lastHit.Score)
+				}
+			}
+		}
 		if pk, err := json.Marshal(lastSort); err == nil {
 			r.PageKey = string(pk)
 			q.PageKey = r.PageKey
