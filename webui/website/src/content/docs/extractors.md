@@ -195,3 +195,29 @@ func (e *MyExtractor) SetConfig(c *config.Extractor) error {
 Config merging (default → user-supplied) is performed automatically by
 `extractor.Init` before `SetConfig` is called, so `SetConfig` always receives
 the fully resolved configuration.
+
+## Development guidelines
+
+**Avoid additional HTTP requests.** Work with the HTML and metadata already
+available in the `Document` struct wherever possible. Making extra requests
+inside an extractor adds latency, increases network traffic, and can fail
+silently in offline or restricted environments. More importantly, outbound
+requests expose the user's IP address and browsing activity to external servers,
+which is a privacy concern. Additional requests are not forbidden, but they
+should only be made when there is no reasonable alternative.
+
+**Avoid embedding third-party content.** Strip or discard remote images, videos,
+iframes, and other externally hosted media before returning content from
+`Extract` or `Preview` wherever possible. Embedding such content causes the
+browser to contact third-party servers whenever a preview is opened, leaking
+the user's IP address without their knowledge. Third-party content is not
+forbidden, but it should be avoided unless it is essential to the extractor's
+purpose. When multimedia must be surfaced, the preferred approach is to render
+a placeholder button that the user can click to load the video, audio, or embed
+on demand, so external contact only happens with explicit user intent.
+
+**Use custom preview templates when they add value.** If the extracted content
+has a well-defined structure (code documentation, Q&amp;A threads, recipes, and
+so on), return a non-empty `Template` in `PreviewResponse` and build a
+dedicated Svelte template for it. A tailored layout is almost always more
+readable than the generic one.
