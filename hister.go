@@ -155,7 +155,7 @@ var listURLsCmd = &cobra.Command{
 		c := newClient()
 		pageKey := ""
 		for {
-			res, err := c.SearchPage("*", pageKey, "domain")
+			res, err := c.SearchPage("*", pageKey, "domain", false)
 			if err != nil {
 				exit(1, "Failed to fetch URLs: "+err.Error())
 			}
@@ -228,20 +228,16 @@ var searchCmd = &cobra.Command{
 			return
 		}
 		qs := strings.Join(args, " ")
-		c := newClient()
-		res, err := c.Search(qs)
-		if err != nil {
-			exit(1, "Search failed: "+err.Error())
-		}
 		format, _ := cmd.Flags().GetString("format")
 
 		// Parse and validate --fields.
 		var fields []string
+		includeHTML := false
 		if fieldsRaw, _ := cmd.Flags().GetString("fields"); fieldsRaw != "" {
 			validFields := map[string]bool{
 				"id": true, "url": true, "title": true, "domain": true, "score": true,
 				"added": true, "language": true, "type": true, "text": true,
-				"favicon": true, "user_id": true,
+				"favicon": true, "user_id": true, "html": true,
 			}
 			for f := range strings.SplitSeq(fieldsRaw, ",") {
 				f = strings.TrimSpace(f)
@@ -249,10 +245,19 @@ var searchCmd = &cobra.Command{
 					continue
 				}
 				if !validFields[f] {
-					exit(1, "Unknown field: "+f+" (valid fields: id, url, title, domain, score, added, language, type, text, favicon, user_id)")
+					exit(1, "Unknown field: "+f+" (valid fields: id, url, title, domain, score, added, language, type, text, favicon, user_id, html)")
 				}
 				fields = append(fields, f)
+				if f == "html" {
+					includeHTML = true
+				}
 			}
+		}
+
+		c := newClient()
+		res, err := c.SearchPage(qs, "", "", includeHTML)
+		if err != nil {
+			exit(1, "Search failed: "+err.Error())
 		}
 
 		// docToMap converts a document to a map of all fields.
@@ -269,6 +274,7 @@ var searchCmd = &cobra.Command{
 				"text":     d.Text,
 				"favicon":  d.Favicon,
 				"user_id":  d.UserID,
+				"html":     d.HTML,
 			}
 		}
 
@@ -463,7 +469,7 @@ Non-admin users are restricted to their own documents by the server.`,
 				total   uint64
 			)
 			for {
-				res, err := c.SearchPage(args[0], pageKey, "domain")
+				res, err := c.SearchPage(args[0], pageKey, "domain", false)
 				if err != nil {
 					exit(1, "Failed to search: "+err.Error())
 				}
@@ -733,7 +739,7 @@ func init() {
 	reindexCmd.Flags().BoolP("exclude-sensitive", "x", false, "don't add documents that contain sensitive content matched by config.SensitiveContentPatterns")
 
 	searchCmd.Flags().StringP("format", "f", "text", "output format: text, json, csv")
-	searchCmd.Flags().StringP("fields", "F", "", "comma-separated list of document fields to display (id, url, title, domain, score, added, language, type, text, favicon, user_id)")
+	searchCmd.Flags().StringP("fields", "F", "", "comma-separated list of document fields to display (id, url, title, domain, score, added, language, type, text, favicon, user_id, html)")
 
 	cobra.OnInitialize(initialize)
 
