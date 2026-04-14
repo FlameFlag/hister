@@ -492,7 +492,7 @@ func (c *Config) LoadTUIConfig() {
 		tuiPath := filepath.Join(filepath.Dir(c.fname), "tui.yaml")
 		if _, err := os.Stat(tuiPath); os.IsNotExist(err) {
 			if err := c.SaveTUIConfig(); err != nil {
-				log.Warn().Err(err).Msg("Failed to create tui.yaml")
+				log.Debug().Err(err).Msg("Failed to create tui.yaml")
 			}
 		}
 		return
