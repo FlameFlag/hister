@@ -215,6 +215,36 @@ Leave BROWSER_TYPE and DB_PATH empty for auto detection
 	Run:  importHistory,
 }
 
+// searchDocToMap converts a document to a flat map of all available fields.
+func searchDocToMap(d *document.Document) map[string]any {
+	return map[string]any{
+		"id":       d.ID(),
+		"url":      d.URL,
+		"title":    d.Title,
+		"domain":   d.Domain,
+		"score":    d.Score,
+		"added":    d.Added,
+		"language": d.Language,
+		"type":     d.Type,
+		"text":     d.Text,
+		"favicon":  d.Favicon,
+		"user_id":  d.UserID,
+		"html":     d.HTML,
+	}
+}
+
+// searchFilterMap returns only the requested keys; returns the full map when fields is empty.
+func searchFilterMap(m map[string]any, fields []string) map[string]any {
+	if len(fields) == 0 {
+		return m
+	}
+	out := make(map[string]any, len(fields))
+	for _, f := range fields {
+		out[f] = m[f]
+	}
+	return out
+}
+
 var searchCmd = &cobra.Command{
 	Use:   "search [search terms]",
 	Short: "Command line search interface",
@@ -229,6 +259,7 @@ var searchCmd = &cobra.Command{
 		}
 		qs := strings.Join(args, " ")
 		format, _ := cmd.Flags().GetString("format")
+		limit, _ := cmd.Flags().GetInt("limit")
 
 		// Parse and validate --fields.
 		var fields []string
@@ -254,96 +285,35 @@ var searchCmd = &cobra.Command{
 			}
 		}
 
-		c := newClient()
-		res, err := c.Search(&indexer.Query{Text: qs, IncludeHTML: includeHTML})
-		if err != nil {
-			exit(1, "Search failed: "+err.Error())
+		// CSV column order: use --fields if given, else a sensible default.
+		csvFields := fields
+		if format == "csv" && len(csvFields) == 0 {
+			csvFields = []string{"title", "url", "domain", "score", "added", "language", "text"}
 		}
 
-		limit, _ := cmd.Flags().GetInt("limit")
-		if limit > 0 && len(res.Documents) > limit {
-			res.Documents = res.Documents[:limit]
-		}
-
-		// docToMap converts a document to a map of all fields.
-		docToMap := func(d *document.Document) map[string]any {
-			return map[string]any{
-				"id":       d.ID(),
-				"url":      d.URL,
-				"title":    d.Title,
-				"domain":   d.Domain,
-				"score":    d.Score,
-				"added":    d.Added,
-				"language": d.Language,
-				"type":     d.Type,
-				"text":     d.Text,
-				"favicon":  d.Favicon,
-				"user_id":  d.UserID,
-				"html":     d.HTML,
-			}
-		}
-
-		// filterMap keeps only the requested keys; returns full map when fields is empty.
-		filterMap := func(m map[string]any) map[string]any {
-			if len(fields) == 0 {
-				return m
-			}
-			out := make(map[string]any, len(fields))
-			for _, f := range fields {
-				out[f] = m[f]
-			}
-			return out
-		}
-
-		switch format {
-		case "json":
-			if len(fields) == 0 {
-				enc := json.NewEncoder(os.Stdout)
-				enc.SetIndent("", "  ")
-				if err := enc.Encode(res); err != nil {
+		// printDoc emits a single document in the requested format.
+		var csvWriter *csv.Writer
+		printDoc := func(d *document.Document) {
+			m := searchFilterMap(searchDocToMap(d), fields)
+			switch format {
+			case "json":
+				b, err := json.Marshal(m)
+				if err != nil {
 					exit(1, "Failed to encode JSON: "+err.Error())
 				}
-			} else {
-				filtered := make([]map[string]any, 0, len(res.Documents))
-				for _, d := range res.Documents {
-					filtered = append(filtered, filterMap(docToMap(d)))
-				}
-				enc := json.NewEncoder(os.Stdout)
-				enc.SetIndent("", "  ")
-				if err := enc.Encode(filtered); err != nil {
-					exit(1, "Failed to encode JSON: "+err.Error())
-				}
-			}
-		case "csv":
-			// Default column order when no --fields given.
-			csvFields := fields
-			if len(csvFields) == 0 {
-				csvFields = []string{"title", "url", "domain", "score", "added", "language", "text"}
-			}
-			w := csv.NewWriter(os.Stdout)
-			if err := w.Write(csvFields); err != nil {
-				exit(1, "Failed to write CSV header: "+err.Error())
-			}
-			for _, d := range res.Documents {
-				m := docToMap(d)
+				fmt.Printf("%s,\n", b)
+			case "csv":
 				row := make([]string, 0, len(csvFields))
 				for _, f := range csvFields {
 					row = append(row, fmt.Sprintf("%v", m[f]))
 				}
-				if err := w.Write(row); err != nil {
+				if err := csvWriter.Write(row); err != nil {
 					exit(1, "Failed to write CSV row: "+err.Error())
 				}
-			}
-			w.Flush()
-			if err := w.Error(); err != nil {
-				exit(1, "Failed to write CSV: "+err.Error())
-			}
-		default:
-			for _, d := range res.Documents {
+			default:
 				if len(fields) == 0 {
 					fmt.Printf("%s\n%s\n\n", d.Title, d.URL)
 				} else {
-					m := docToMap(d)
 					parts := make([]string, 0, len(fields))
 					for _, f := range fields {
 						parts = append(parts, fmt.Sprintf("%v", m[f]))
@@ -353,6 +323,54 @@ var searchCmd = &cobra.Command{
 						fmt.Println()
 					}
 				}
+			}
+		}
+
+		// Format-specific initialisation.
+		switch format {
+		case "json":
+			fmt.Println("[")
+		case "csv":
+			csvWriter = csv.NewWriter(os.Stdout)
+			if err := csvWriter.Write(csvFields); err != nil {
+				exit(1, "Failed to write CSV header: "+err.Error())
+			}
+		}
+
+		// Page through all results, streaming output directly.
+		c := newClient()
+		var (
+			pageKey string
+			total   int
+			done    bool
+		)
+		for !done {
+			res, err := c.Search(&indexer.Query{Text: qs, IncludeHTML: includeHTML, PageKey: pageKey})
+			if err != nil {
+				exit(1, "Search failed: "+err.Error())
+			}
+			for _, d := range res.Documents {
+				printDoc(d)
+				total++
+				if limit > 0 && total >= limit {
+					done = true
+					break
+				}
+			}
+			if res.PageKey == "" || len(res.Documents) == 0 {
+				done = true
+			}
+			pageKey = res.PageKey
+		}
+
+		// Format-specific teardown.
+		switch format {
+		case "json":
+			fmt.Println("]")
+		case "csv":
+			csvWriter.Flush()
+			if err := csvWriter.Error(); err != nil {
+				exit(1, "Failed to write CSV: "+err.Error())
 			}
 		}
 	},
