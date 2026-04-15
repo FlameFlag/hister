@@ -102,12 +102,25 @@ services.hister = {
                                   # Home-Manager Recommend: "~/.local/share/hister"
                                   # Darwin Recommend: "~/Library/Application Support/hister"
 
+  # Optional (NixOS only): open `port` in the system firewall.
+  # Setting `port` alone no longer mutates the firewall.
+  # openFirewall = true;
+
   # Optional: Use existing YAML config file
   # configPath = /path/to/config.yml;
 
-  # Optional: Inline configuration (converted to YAML)
-  # Note: Only one of configPath or config can be used
-  config = {
+  # Optional: Inject secrets (e.g. HISTER__APP__ACCESS_TOKEN) via a
+  # systemd EnvironmentFile instead of placing them in the world-readable
+  # Nix store. Honored by the NixOS module and the Linux home-manager
+  # user service; ignored on launchd (Darwin).
+  # environmentFile = "/run/secrets/hister.env";
+
+  # Optional: Inline configuration (rendered to YAML and passed via HISTER_CONFIG)
+  # Note: Only one of configPath or settings can be used.
+  # Accepts any key the server accepts — see the upstream `app`, `server`,
+  # `indexer`, `crawler`, `hotkeys`, `extractors`, and
+  # `sensitive_content_patterns` blocks.
+  settings = {
     app = {
       search_url = "https://google.com/search?q={query}";
       log_level = "info";
@@ -132,6 +145,10 @@ services.hister = {
 
 - The `port` and `dataDir` options override corresponding values in your config file
 - To manage settings through the config file only, leave `port` and `dataDir` unset
+- `services.hister.config` was renamed to `services.hister.settings` to align with the nixpkgs `services.*.settings` convention. The old name still works via `mkRenamedOptionModule` but emits a deprecation warning.
+- On NixOS the systemd unit ships with a hardened `serviceConfig` (`ProtectSystem=strict`, `NoNewPrivileges`, private `/tmp` and `/dev`, an `AF_INET{,6}`/`AF_UNIX` address-family filter, `@system-service` syscall filter, `MemoryDenyWriteExecute`, etc.). Binding a privileged port (`< 1024`) automatically adds `CAP_NET_BIND_SERVICE`.
+- On macOS (both `darwinModules` and `homeModules`) the launchd agent uses `KeepAlive = { Crashed = true; SuccessfulExit = false; }` so fatal config errors that exit 0 are not hidden, plus `ProcessType = "Background"` and `RunAtLoad = true`.
+- The home-manager module now gates the systemd user unit on Linux and the launchd agent on Darwin, so a single `homeModules.hister` import works on either host.
 
 ### Add to Packages (Without Service)
 
