@@ -56,6 +56,18 @@ in
       description = "Path to an existing configuration file.";
     };
 
+    environmentFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      example = "/run/secrets/hister.env";
+      description = ''
+        Path to an environment file (read at service start) used to inject
+        secrets such as `HISTER__APP__ACCESS_TOKEN` without placing them in
+        the world-readable Nix store. Only honored by the systemd-based
+        services (NixOS and Linux home-manager); ignored on launchd.
+      '';
+    };
+
     config = lib.mkOption {
       type = with lib.types; nullOr attrs;
       default = null;

@@ -52,7 +52,10 @@ buildGoModule (finalAttrs: {
   vendorHash = "sha256-OTULmojRKW0wQmelJNqLHOnldoGENyaECS09WV4E5pk=";
   proxyVendor = true;
 
-  nativeBuildInputs = [ pkg-config makeBinaryWrapper ];
+  nativeBuildInputs = [
+    pkg-config
+    makeBinaryWrapper
+  ];
   buildInputs = [ sqlite ];
 
   tags = [ "libsqlite3" ];

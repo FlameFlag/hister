@@ -26,6 +26,10 @@
         Environment = lib.mapAttrsToList (name: value: "${name}=${value}") (
           histerEnv config.services.hister
         );
+
+        EnvironmentFile = lib.mkIf (
+          config.services.hister.environmentFile != null
+        ) config.services.hister.environmentFile;
       };
 
       Install = {

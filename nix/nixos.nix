@@ -51,6 +51,9 @@
         User = config.services.hister.user;
         Group = config.services.hister.group;
         StateDirectory = "hister";
+        EnvironmentFile = lib.mkIf (
+          config.services.hister.environmentFile != null
+        ) config.services.hister.environmentFile;
       };
     };
 
