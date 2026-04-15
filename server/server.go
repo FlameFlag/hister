@@ -213,6 +213,7 @@ func registerEndpoints(cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /static/", createHandler(cfg, serveStatic))
 	mux.HandleFunc("GET /favicon.ico", createHandler(cfg, serveFavicon))
 	mux.HandleFunc("GET /opensearch.xml", createHandler(cfg, serveOpensearch))
+	mux.HandleFunc("GET /suggest", createHandler(cfg, serveSuggest))
 	mux.HandleFunc("/", createHandler(cfg, serveSPA))
 	// If base_url contains a non-root path prefix (e.g. https://x.com/subfolder),
 	// accept requests both with and without that prefix.
@@ -1088,10 +1089,41 @@ func serveOpensearch(c *webContext) {
   <ShortName>Hister</ShortName>
   <Description>Search your history with Hister</Description>
   <Url type="text/html" template="%s/?q={searchTerms}"/>
-</OpenSearchDescription>`, baseURL)
+  <Url type="application/x-suggestions+json" template="%s/suggest?q={searchTerms}"/>
+</OpenSearchDescription>`, baseURL, baseURL)
 	c.Response.Header().Set("Content-Type", "application/xml")
 	if _, err := c.Response.Write([]byte(xml)); err != nil {
 		log.Warn().Err(err).Msg("failed to write opensearch response")
+	}
+}
+
+const suggestLimit = 10
+
+func serveSuggest(c *webContext) {
+	q := c.Request.URL.Query().Get("q")
+	suggestions := []string{}
+	if q != "" {
+		res, err := indexer.Search(c.Config, &indexer.Query{
+			Text:   c.effectiveRules().ResolveAliases(q),
+			UserID: c.UserID,
+			Limit:  suggestLimit,
+		})
+		if err != nil {
+			log.Warn().Err(err).Msg("suggest search failed")
+		}
+		if res != nil {
+			for _, d := range res.Documents {
+				title := strings.TrimSpace(d.Title)
+				if title == "" {
+					title = d.URL
+				}
+				suggestions = append(suggestions, title)
+			}
+		}
+	}
+	c.Response.Header().Set("Content-Type", "application/x-suggestions+json")
+	if err := json.NewEncoder(c.Response).Encode([]any{q, suggestions}); err != nil {
+		log.Warn().Err(err).Msg("failed to write suggest response")
 	}
 }
 
