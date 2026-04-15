@@ -356,7 +356,7 @@ func CreateDefaultConfig() *Config {
 			},
 		},
 		SensitiveContentPatterns: map[string]string{
-			"aws_access_key":      `AKIA[0-9A-Z]{16}`,
+			"aws_access_key":      `(^|[\s"'])AKIA[0-9A-Z]{16}([\s"']|$)`,
 			"aws_secret_key":      `(?i)aws(.{0,20})?(secret)?(.{0,20})?['"][0-9a-zA-Z\/+]{40}['"]`,
 			"generic_private_key": `-----BEGIN ((RSA|EC|DSA) )?PRIVATE KEY-----`,
 			"github_token":        `(ghp|gho|ghu|ghs|ghr)_[a-zA-Z0-9]{36}`,

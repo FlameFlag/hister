@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"regexp"
+	"testing"
+)
 
 func TestBasePathPrefix(t *testing.T) {
 	tests := []struct {
@@ -21,6 +24,38 @@ func TestBasePathPrefix(t *testing.T) {
 			cfg := &Config{Server: Server{BaseURL: tt.base}}
 			if got := cfg.BasePathPrefix(); got != tt.prefix {
 				t.Fatalf("BasePathPrefix()=%q, want %q", got, tt.prefix)
+			}
+		})
+	}
+}
+
+func TestSensitiveContentPatterns(t *testing.T) {
+	patterns := CreateDefaultConfig().SensitiveContentPatterns
+	tests := []struct {
+		name    string
+		pattern string
+		input   string
+		match   bool
+	}{
+		{name: "aws_access_key/quoted", pattern: "aws_access_key", input: `key: "AKIAIOSFODNN7EXAMPLE"`, match: true},
+		{name: "aws_access_key/whitespace", pattern: "aws_access_key", input: "token AKIAIOSFODNN7EXAMPLE end", match: true},
+		{name: "aws_access_key/single-quoted", pattern: "aws_access_key", input: `'AKIAIOSFODNN7EXAMPLE'`, match: true},
+		{name: "aws_access_key/start-of-string", pattern: "aws_access_key", input: "AKIAIOSFODNN7EXAMPLE ", match: true},
+		{name: "aws_access_key/end-of-string", pattern: "aws_access_key", input: " AKIAIOSFODNN7EXAMPLE", match: true},
+		{name: "aws_access_key/base64-blob", pattern: "aws_access_key", input: "d09GMgABAAAAAKIAIOSFODNN7EXAMPLEXYZABCDEF", match: false},
+		{name: "aws_access_key/css-font", pattern: "aws_access_key", input: "url(data:font/woff2;base64,d09GMgABAAAAAKIA1234567890ABCDEF)", match: false},
+		{name: "github_token/valid", pattern: "github_token", input: "ghp_abcdefghijklmnopqrstuvwxyzABCDEFGHIJ", match: true},
+		{name: "generic_private_key", pattern: "generic_private_key", input: "-----BEGIN RSA PRIVATE KEY-----", match: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw, ok := patterns[tt.pattern]
+			if !ok {
+				t.Fatalf("pattern %q not in defaults", tt.pattern)
+			}
+			re := regexp.MustCompile(raw)
+			if got := re.MatchString(tt.input); got != tt.match {
+				t.Fatalf("MatchString(%q) = %v, want %v", tt.input, got, tt.match)
 			}
 		})
 	}

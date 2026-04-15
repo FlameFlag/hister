@@ -57,7 +57,7 @@ hotkeys:
     '?': 'show_hotkeys'
 
 sensitive_content_patterns:
-  aws_access_key: 'AKIA[0-9A-Z]{16}'
+  aws_access_key: '(^|[\s"''])AKIA[0-9A-Z]{16}([\s"'']|$)'
   github_token: '(ghp|gho|ghu|ghs|ghr)_[a-zA-Z0-9]{36}'
 ```
 
