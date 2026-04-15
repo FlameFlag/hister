@@ -1,0 +1,73 @@
+name: PR Typecheck
+
+on:
+  pull_request:
+
+concurrency:
+  group: typecheck-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  svelte-check:
+    name: svelte-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Check for frontend changes
+        id: changes
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD" -- 'webui/**' 'package.json' 'package-lock.json' 'tsconfig*.json')
+          if [ -z "$FILES" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node
+        if: steps.changes.outputs.skip != 'true'
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.changes.outputs.skip != 'true'
+        run: npm ci
+
+      # Generate SvelteKit type files (.svelte-kit/tsconfig.json, $types, etc.)
+      # for each SvelteKit workspace before svelte-check runs. @hister/ext and
+      # @hister/components are not SvelteKit, so no sync is needed there.
+      - name: Sync SvelteKit types for @hister/app
+        if: steps.changes.outputs.skip != 'true'
+        run: npx -w @hister/app svelte-kit sync
+
+      - name: Sync SvelteKit types for @hister/website
+        if: steps.changes.outputs.skip != 'true'
+        run: npx -w @hister/website svelte-kit sync
+
+      # TODO: svelte-check is not a declared devDependency in any workspace. Using
+      # `npx --yes svelte-check@4` fetches it on demand, pinned to the current
+      # major. Preferred long-term fix: `npm i -D svelte-check` in each workspace
+      # and wire up an `npm run check` script.
+      - name: svelte-check @hister/app
+        if: steps.changes.outputs.skip != 'true'
+        run: npx --yes svelte-check@4 --workspace webui/app
+
+      - name: svelte-check @hister/website
+        if: steps.changes.outputs.skip != 'true'
+        run: npx --yes svelte-check@4 --workspace webui/website
+
+      - name: svelte-check @hister/ext
+        if: steps.changes.outputs.skip != 'true'
+        run: npx --yes svelte-check@4 --workspace webui/ext
+
+      # TODO: re-enable svelte-check for @hister/components once the workspace
+      # has a proper svelte.config.js and a tsconfig.json with an `include` set.
+      # Running it today produces noise because of the minimal config.
