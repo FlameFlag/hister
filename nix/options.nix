@@ -5,6 +5,8 @@
   ...
 }:
 let
+  yamlFormat = pkgs.formats.yaml { };
+  cfg = config.services.hister;
   mkHisterEnv =
     cfg:
     lib.optionalAttrs (cfg.dataDir != null) {
@@ -16,11 +18,15 @@ let
     // lib.optionalAttrs (cfg.configPath != null) {
       HISTER_CONFIG = builtins.toString cfg.configPath;
     }
-    // lib.optionalAttrs (cfg.config != null) {
-      HISTER_CONFIG = "${(pkgs.formats.yaml { }).generate "hister-config.yml" cfg.config}";
+    // lib.optionalAttrs (cfg.settings != { }) {
+      HISTER_CONFIG = "${yamlFormat.generate "hister-config.yml" cfg.settings}";
     };
 in
 {
+  imports = [
+    (lib.mkRenamedOptionModule [ "services" "hister" "config" ] [ "services" "hister" "settings" ])
+  ];
+
   options.services.hister = {
     enable = lib.mkEnableOption "Hister web history service";
 
@@ -56,36 +62,51 @@ in
       description = "Path to an existing configuration file.";
     };
 
-    config = lib.mkOption {
-      type = with lib.types; nullOr attrs;
+    environmentFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
       default = null;
-      description = "Configuration as a Nix attribute set. This will be converted to a YAML file.";
-      example = {
-        app = {
-          search_url = "https://google.com/search?q={query}";
-          log_level = "info";
-        };
-        server = {
-          address = "127.0.0.1:4433";
-          database = "db.sqlite3";
-        };
-        hotkeys = {
-          "/" = "focus_search_input";
-          "enter" = "open_result";
-          "alt+enter" = "open_result_in_new_tab";
-          "alt+j" = "select_next_result";
-          "alt+k" = "select_previous_result";
-          "alt+o" = "open_query_in_search_engine";
-        };
-      };
+      example = "/run/secrets/hister.env";
+      description = ''
+        Path to an environment file (read at service start) used to inject
+        secrets such as `HISTER__APP__ACCESS_TOKEN` without placing them in
+        the world-readable Nix store. Only honored by the systemd-based
+        services (NixOS and Linux home-manager); ignored on launchd.
+      '';
+    };
+
+    settings = lib.mkOption {
+      type = yamlFormat.type;
+      default = { };
+      description = ''
+        Hister configuration rendered to YAML and passed via HISTER_CONFIG.
+        Accepts any structure the server accepts — see the `app`, `server`,
+        `indexer`, `crawler`, `hotkeys`, `extractors`, and
+        `sensitive_content_patterns` blocks documented upstream.
+      '';
+      example = lib.literalExpression ''
+        {
+          app = {
+            search_url = "https://google.com/search?q={query}";
+            log_level = "info";
+          };
+          server = {
+            address = "127.0.0.1:4433";
+            database = "db.sqlite3";
+          };
+          hotkeys.web = {
+            "/" = "focus_search_input";
+            "enter" = "open_result";
+          };
+        }
+      '';
     };
   };
 
   config = {
     assertions = [
       {
-        assertion = !(config.services.hister.configPath != null && config.services.hister.config != null);
-        message = "Only one of services.hister.configPath and services.hister.config can be set";
+        assertion = !(cfg.configPath != null && cfg.settings != { });
+        message = "Only one of services.hister.configPath and services.hister.settings can be set";
       }
     ];
     _module.args.histerEnv = mkHisterEnv;
