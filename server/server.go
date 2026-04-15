@@ -1099,6 +1099,15 @@ func serveOpensearch(c *webContext) {
 const suggestLimit = 10
 
 func serveSuggest(c *webContext) {
+	// Sec-Fetch-Site is set by browsers and forbidden to JS, so a cross-site
+	// fetch() can't spoof it. Browser address-bar flows either omit the header
+	// (Firefox) or send "none" (Chrome); reject anything explicitly cross-site.
+	switch c.Request.Header.Get("Sec-Fetch-Site") {
+	case "", "none", "same-origin", "same-site":
+	default:
+		c.Response.WriteHeader(http.StatusForbidden)
+		return
+	}
 	q := c.Request.URL.Query().Get("q")
 	suggestions := []string{}
 	if q != "" {
