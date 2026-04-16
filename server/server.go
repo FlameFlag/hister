@@ -198,7 +198,7 @@ func registerEndpoints(cfg *config.Config) http.Handler {
 		if e.CSRFRequired {
 			h = withCSRF(h)
 		}
-		if tokenAuth && !userHandling {
+		if tokenAuth && !userHandling && !e.NoAuth {
 			h = withTokenAuth(h)
 		} else if userHandling && !e.NoAuth {
 			if e.AdminOnly {
