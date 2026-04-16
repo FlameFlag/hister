@@ -101,54 +101,59 @@
   </main>
 
   <footer
-    class="bg-brutal-bg border-brutal-border flex h-12 items-center justify-center gap-6 border-t-[3px] px-6 text-sm"
+    class="bg-brutal-bg border-brutal-border grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-t-[3px] px-6 text-sm"
   >
-    <a
-      href="help"
-      class="font-space text-text-brand-secondary hover:text-hister-indigo text-[13px] tracking-[1px] uppercase no-underline hover:underline"
-      >Help</a
-    >
-    <a
-      href="extractors"
-      class="font-space text-text-brand-secondary hover:text-hister-indigo text-[13px] tracking-[1px] uppercase no-underline hover:underline"
-      >Extractors</a
-    >
-    <a
-      href="about"
-      class="font-space text-text-brand-secondary hover:text-hister-indigo text-[13px] tracking-[1px] uppercase no-underline hover:underline"
-      >About</a
-    >
-    <a
-      href="api-docs"
-      class="font-space text-text-brand-secondary hover:text-hister-indigo text-[11px] tracking-[1px] uppercase no-underline hover:underline md:text-[13px]"
-      >API</a
-    >
-    <a
-      href="https://github.com/asciimoo/hister/"
-      class="font-space text-text-brand-secondary hover:text-hister-indigo text-[13px] tracking-[1px] uppercase no-underline hover:underline"
-      target="_blank"
-      rel="noopener">GitHub</a
-    >
-    <Button
-      variant="ghost"
-      size="icon"
-      class="text-text-brand-muted hover:text-hister-indigo size-8 shrink-0 transition-all hover:scale-110"
-      title="Toggle theme"
-      onclick={toggleMode}
-    >
-      {#if mode.current === 'dark'}<Sun class="size-5" />{:else}<Moon class="size-5" />{/if}
-    </Button>
-    {#if $page.url.pathname === '/'}
+    <span></span>
+    <div class="flex items-center gap-4 md:gap-6">
+      <a
+        href="help"
+        class="font-space text-text-brand-secondary hover:text-hister-indigo text-[11px] tracking-[1px] uppercase no-underline hover:underline md:text-[13px]"
+        >Help</a
+      >
+      <a
+        href="extractors"
+        class="font-space text-text-brand-secondary hover:text-hister-indigo text-[11px] tracking-[1px] uppercase no-underline hover:underline md:text-[13px]"
+        >Extractors</a
+      >
+      <a
+        href="about"
+        class="font-space text-text-brand-secondary hover:text-hister-indigo text-[11px] tracking-[1px] uppercase no-underline hover:underline md:text-[13px]"
+        >About</a
+      >
+      <a
+        href="api-docs"
+        class="font-space text-text-brand-secondary hover:text-hister-indigo text-[11px] tracking-[1px] uppercase no-underline hover:underline md:text-[13px]"
+        >API</a
+      >
+      <a
+        href="https://github.com/asciimoo/hister/"
+        class="font-space text-text-brand-secondary hover:text-hister-indigo text-[11px] tracking-[1px] uppercase no-underline hover:underline md:text-[13px]"
+        target="_blank"
+        rel="noopener">GitHub</a
+      >
+    </div>
+    <div class="flex items-center justify-end gap-1">
       <Button
         variant="ghost"
         size="icon"
         class="text-text-brand-muted hover:text-hister-indigo size-8 shrink-0 transition-all hover:scale-110"
-        title="Keyboard shortcuts (?)"
-        aria-label="Show keyboard shortcuts"
-        onclick={() => ($showHelp = !$showHelp)}
+        title="Toggle theme"
+        onclick={toggleMode}
       >
-        <Keyboard class="size-5" />
+        {#if mode.current === 'dark'}<Sun class="size-5" />{:else}<Moon class="size-5" />{/if}
       </Button>
-    {/if}
+      {#if $page.url.pathname === '/'}
+        <Button
+          variant="ghost"
+          size="icon"
+          class="text-text-brand-muted hover:text-hister-indigo size-8 shrink-0 transition-all hover:scale-110"
+          title="Keyboard shortcuts (?)"
+          aria-label="Show keyboard shortcuts"
+          onclick={() => ($showHelp = !$showHelp)}
+        >
+          <Keyboard class="size-5" />
+        </Button>
+      {/if}
+    </div>
   </footer>
 </div>
