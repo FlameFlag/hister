@@ -5,6 +5,9 @@ let d: PageData;
 const defaultSleepTime = 10 * 1000;
 let sleepTime = defaultSleepTime;
 const sleepIncrementRatio = 2;
+// URL that was rejected by the server with a 406 (skip rule match).
+// Cleared when the page navigates to a different URL.
+let skippedUrl: string | null = null;
 
 // @ts-ignore
 var isFirefox = typeof InstallTrigger !== 'undefined';
@@ -61,6 +64,9 @@ function extract(sendResponse, actionType, force) {
     if (!resp || resp.error || resp.status_code != 201) {
       console.log('failed to submit page data', resp);
     }
+    if (resp?.status_code === 406) {
+      skippedUrl = d.url;
+    }
     // Always start polling for URL/content changes, even if the initial
     // submission failed (e.g. skip rule). The page may navigate to a
     // non-skipped URL later (SPA).
@@ -82,7 +88,17 @@ function update() {
   if (d2.html != d.html || d2.url != d.url) {
     sleepTime = defaultSleepTime;
     d = d2;
-    chrome.runtime.sendMessage({ pageData: d }, (resp) => {});
+    if (d2.url === skippedUrl) {
+      // URL is still server-side skipped; don't resubmit.
+      setTimeout(update, sleepTime);
+      return;
+    }
+    skippedUrl = null;
+    chrome.runtime.sendMessage({ pageData: d }, (resp) => {
+      if (resp?.status_code === 406) {
+        skippedUrl = d.url;
+      }
+    });
   } else {
     sleepTime *= sleepIncrementRatio;
   }
