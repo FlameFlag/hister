@@ -1130,10 +1130,55 @@ func serveOpensearch(c *webContext) {
   <ShortName>Hister</ShortName>
   <Description>Search your history with Hister</Description>
   <Url type="text/html" template="%s/?q={searchTerms}"/>
-</OpenSearchDescription>`, baseURL)
+  <Url type="application/x-suggestions+json" template="%s/suggest?q={searchTerms}"/>
+</OpenSearchDescription>`, baseURL, baseURL)
 	c.Response.Header().Set("Content-Type", "application/xml")
 	if _, err := c.Response.Write([]byte(xml)); err != nil {
 		log.Warn().Err(err).Msg("failed to write opensearch response")
+	}
+}
+
+const suggestLimit = 10
+
+func serveSuggest(c *webContext) {
+	// Sec-Fetch-Site is set by browsers and forbidden to JS, so a cross-site
+	// fetch() can't spoof it. Browser address-bar flows either omit the header
+	// (Firefox) or send "none" (Chrome); reject anything explicitly cross-site.
+	switch c.Request.Header.Get("Sec-Fetch-Site") {
+	case "", "none", "same-origin", "same-site":
+	default:
+		c.Response.WriteHeader(http.StatusForbidden)
+		return
+	}
+	q := c.Request.URL.Query().Get("q")
+	suggestions := []string{}
+	if q != "" {
+		res, err := indexer.Search(c.Config, &indexer.Query{
+			Text:   c.effectiveRules().ResolveAliases(q),
+			UserID: c.UserID,
+			Limit:  suggestLimit,
+		})
+		if err != nil {
+			log.Warn().Err(err).Msg("suggest search failed")
+		}
+		if res != nil {
+			for _, d := range res.Documents {
+				title := strings.TrimSpace(d.Title)
+				if title == "" {
+					title = d.URL
+				}
+				suggestions = append(suggestions, title)
+			}
+		}
+	}
+	jr, err := json.Marshal([]any{q, suggestions})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to marshal suggest response")
+		return
+	}
+	c.Response.Header().Set("Content-Type", "application/x-suggestions+json")
+	if _, err := c.Response.Write(jr); err != nil {
+		log.Warn().Err(err).Msg("failed to write suggest response")
 	}
 }
 
