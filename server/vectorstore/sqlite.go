@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/asciimoo/hister/config"
-
 	"github.com/asciimoo/hister/server/vectorstore/sqlitevec"
+
 	"github.com/rs/zerolog/log"
 )
 
