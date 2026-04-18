@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/asciimoo/hister/config"
@@ -48,6 +49,7 @@ type indexer struct {
 	reindexInProgress bool
 	embedder          *vectorstore.Embedder
 	vectorStore       vectorstore.VectorStore
+	embedWg           sync.WaitGroup // tracks in-flight async embeddings
 }
 
 const (
@@ -375,6 +377,7 @@ func SemanticSearchEnabled() bool {
 // and stores the resulting chunk vectors. Errors are logged but not propagated
 // so that Bleve indexing can still proceed.
 func embedDocumentChunks(idx *indexer, d *document.Document) {
+	start := time.Now()
 	text := d.Title + " " + d.Text
 	chunks, err := idx.embedder.ChunkAndEmbed(text)
 	if err != nil {
@@ -387,6 +390,7 @@ func embedDocumentChunks(idx *indexer, d *document.Document) {
 	if err := idx.vectorStore.PutChunks(d.ID(), d.UserID, chunks); err != nil {
 		log.Warn().Err(err).Str("url", d.URL).Msg("vector store write failed")
 	}
+	log.Debug().Str("url", d.URL).Int("chunks", len(chunks)).Dur("duration", time.Since(start)).Msg("embedded document chunks")
 }
 
 func Add(d *document.Document) error {
@@ -424,7 +428,9 @@ func (i *indexer) AddDocument(d *document.Document) error {
 		}
 	}
 	if i.embedder != nil && i.vectorStore != nil {
-		embedDocumentChunks(i, d)
+		i.embedWg.Go(func() {
+			embedDocumentChunks(i, d)
+		})
 	}
 	return i.getOrCreate(d.Language).Index(d.ID(), d)
 }
@@ -507,6 +513,8 @@ func (i *indexer) addIndexer(name, lang string) error {
 }
 
 func (i *indexer) Close() {
+	// Wait for any in-flight async embeddings before closing the vector store.
+	i.embedWg.Wait()
 	if i.vectorStore != nil {
 		if err := i.vectorStore.Close(); err != nil {
 			log.Warn().Err(err).Msg("failed to close vector store")
