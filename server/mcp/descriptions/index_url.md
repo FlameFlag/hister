@@ -1,0 +1,1 @@
+Save a page to the index. If `text` (and optionally `title`) is provided, those are used verbatim; otherwise the page is fetched over HTTP and its content extracted. Returns `status` of `indexed` (new), `already_indexed` (already present, no change), or `updated` (re-indexed because `force:true`).

@@ -1,0 +1,1 @@
+Fetch a single document by exact URL. Returns `{found:true, doc:{...}}` on hit or `{found:false}` on miss (it never errors on a missing URL, so this doubles as a "have I seen this URL?" check). Set `include_html` only if you need the raw HTML.
