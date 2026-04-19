@@ -73,6 +73,7 @@ func build(scope *toolScope, opts Options) *mcpsdk.Server {
 			// of the stdlib default logger. The "source" tag lets us
 			// grep SDK-origin lines out of our own log output.
 			Logger:                  slog.New(zerolog.NewSlogHandler(log.Logger.With().Str("source", "mcp-sdk").Logger())),
+			CompletionHandler:       completionHandler(scope),
 			InitializedHandler:      initializedHandler(scope),
 			RootsListChangedHandler: rootsListChangedHandler,
 		},
@@ -84,6 +85,7 @@ func build(scope *toolScope, opts Options) *mcpsdk.Server {
 	registerSearchTool(srv, scope)
 	registerFetchDocumentTool(srv, scope)
 	registerDocResourceTemplate(srv, scope)
+	registerPrompts(srv)
 	return srv
 }
 
