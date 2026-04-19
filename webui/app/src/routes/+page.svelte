@@ -1371,24 +1371,6 @@
                       >
                         {r.title || '*title*'}
                       </a>
-                      {#if isSemOnly}
-                        <Tooltip.Provider delayDuration={0}>
-                          <Tooltip.Root>
-                            <Tooltip.Trigger>
-                              <Badge
-                                variant="secondary"
-                                class="bg-hister-indigo/10 text-hister-indigo shrink-0 border-0 px-1.5 py-0 font-mono text-[10px]"
-                                >~{r.semanticScore?.toFixed(2)}</Badge
-                              >
-                            </Tooltip.Trigger>
-                            <Tooltip.Portal>
-                              <Tooltip.Content>
-                                Conceptual match · similarity {r.semanticScore?.toFixed(2)}
-                              </Tooltip.Content>
-                            </Tooltip.Portal>
-                          </Tooltip.Root>
-                        </Tooltip.Provider>
-                      {/if}
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -1424,6 +1406,24 @@
                       >
                         <Eye class="size-3" /><span>view</span>
                       </Button>
+                      {#if r.finalScore && config.semanticEnabled && semanticOn}
+                        <Tooltip.Provider delayDuration={0}>
+                          <Tooltip.Root>
+                            <Tooltip.Trigger>
+                              <Badge
+                                variant="secondary"
+                                class="bg-hister-indigo/10 text-hister-indigo shrink-0 border-0 px-1.5 py-0 align-middle font-mono text-[10px]"
+                                >{r.finalScore?.toFixed(2)}</Badge
+                              >
+                            </Tooltip.Trigger>
+                            <Tooltip.Portal>
+                              <Tooltip.Content>
+                                Result score: {r.finalScore?.toFixed(2)}
+                              </Tooltip.Content>
+                            </Tooltip.Portal>
+                          </Tooltip.Root>
+                        </Tooltip.Provider>
+                      {/if}
                     </div>
                     {#if r.text}
                       <p
