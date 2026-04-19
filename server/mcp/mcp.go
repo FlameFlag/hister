@@ -74,6 +74,8 @@ func build(scope *toolScope, opts Options) *mcpsdk.Server {
 			// grep SDK-origin lines out of our own log output.
 			Logger:                  slog.New(zerolog.NewSlogHandler(log.Logger.With().Str("source", "mcp-sdk").Logger())),
 			CompletionHandler:       completionHandler(scope),
+			SubscribeHandler:        subscribeHandler(scope),
+			UnsubscribeHandler:      unsubscribeHandler,
 			InitializedHandler:      initializedHandler(scope),
 			RootsListChangedHandler: rootsListChangedHandler,
 		},
