@@ -6,9 +6,7 @@
 // sqlite-vec source: https://github.com/asg017/sqlite-vec (v0.1.6)
 // sqlite3.h source:  mattn/go-sqlite3 v1.14.42 (sqlite 3.51.3)
 //
-// To update bundled files run:
-//
-//go:generate sh update.sh
+// To update bundled files run: update.sh
 package sqlitevec
 
 // #cgo CFLAGS: -DSQLITE_CORE
