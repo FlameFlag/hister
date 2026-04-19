@@ -121,6 +121,12 @@ func Test_build_whitespace_only(t *testing.T) {
 	}
 }
 
+func Test_build_star_returns_match_all(t *testing.T) {
+	if _, ok := Build(" * ").(*query.MatchAllQuery); !ok {
+		t.Fatalf("expected *query.MatchAllQuery, got %T", Build(" * "))
+	}
+}
+
 func Test_build_simple_word_returns_boolean_query(t *testing.T) {
 	bq := buildBoolQ(t, "golang")
 	clauses := mustClauses(t, bq)

@@ -76,6 +76,9 @@ func build(scope *toolScope, opts Options) *mcpsdk.Server {
 		},
 	)
 
+	registerSearchTool(srv, scope)
+	registerFetchDocumentTool(srv, scope)
+	registerDocResourceTemplate(srv, scope)
 	return srv
 }
 

@@ -21,8 +21,12 @@ var weights = map[string]float64{
 }
 
 func Build(s string) query.Query {
-	if strings.TrimSpace(s) == "" {
+	s = strings.TrimSpace(s)
+	if s == "" {
 		return query.NewMatchNoneQuery()
+	}
+	if s == "*" {
+		return query.NewMatchAllQuery()
 	}
 
 	qt, err := Tokenize(s)
