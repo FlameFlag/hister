@@ -464,6 +464,9 @@ func (c *Config) init() error {
 	if err := c.Hotkeys.Validate(); err != nil {
 		return err
 	}
+	if err := c.SemanticSearch.Validate(); err != nil {
+		return err
+	}
 	sPath := c.FullPath(secretKeyFilename)
 	b, err := os.ReadFile(sPath)
 	if err != nil {
@@ -869,6 +872,25 @@ func (r *Rules) ResolveAliases(s string) string {
 		return s
 	}
 	return strings.Join(sp, " ")
+}
+
+func (s SemanticSearch) Validate() error {
+	if !s.Enable {
+		return nil
+	}
+	if s.EmbeddingEndpoint == "" {
+		return errors.New("semantic_search.embedding_endpoint must not be empty when semantic search is enabled")
+	}
+	if s.EmbeddingModel == "" {
+		return errors.New("semantic_search.embedding_model must not be empty when semantic search is enabled")
+	}
+	if s.Dimensions <= 0 {
+		return fmt.Errorf("semantic_search.dimensions must be a positive integer, got %d", s.Dimensions)
+	}
+	if s.MaxContextLength <= 0 {
+		return fmt.Errorf("semantic_search.max_context_length must be a positive integer, got %d", s.MaxContextLength)
+	}
+	return nil
 }
 
 func (h Hotkeys) Validate() error {
