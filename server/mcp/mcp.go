@@ -72,9 +72,14 @@ func build(scope *toolScope, opts Options) *mcpsdk.Server {
 			// unhandled method errors) into our zerolog stream instead
 			// of the stdlib default logger. The "source" tag lets us
 			// grep SDK-origin lines out of our own log output.
-			Logger: slog.New(zerolog.NewSlogHandler(log.Logger.With().Str("source", "mcp-sdk").Logger())),
+			Logger:                  slog.New(zerolog.NewSlogHandler(log.Logger.With().Str("source", "mcp-sdk").Logger())),
+			InitializedHandler:      initializedHandler(scope),
+			RootsListChangedHandler: rootsListChangedHandler,
 		},
 	)
+
+	srv.AddReceivingMiddleware(loggingMiddleware)
+	srv.AddSendingMiddleware(sendingMiddleware)
 
 	registerSearchTool(srv, scope)
 	registerFetchDocumentTool(srv, scope)
