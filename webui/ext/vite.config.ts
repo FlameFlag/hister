@@ -17,7 +17,6 @@ function extensionPlugin() {
       const chrome = structuredClone(base);
       chrome.version = pkg.version;
       chrome.background.service_worker = 'background.js';
-      delete chrome.chrome_settings_overrides;
       writeFileSync(resolve(distDir, 'manifest.json'), JSON.stringify(chrome));
 
       // Firefox manifest
