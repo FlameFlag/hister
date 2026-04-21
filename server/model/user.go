@@ -27,6 +27,7 @@ type User struct {
 	Token     string `json:"-"`
 	IsAdmin   bool   `json:"is_admin"`
 	RulesJSON string `gorm:"column:rules_json;default:'{}'" json:"-"`
+	OAuthID   string `gorm:"index" json:"-"`
 }
 
 func (u *User) ParseRules() (*config.Rules, error) {
@@ -159,6 +160,23 @@ func UpdateUsername(username, newUsername string) error {
 		return ErrUserNotFound
 	}
 	return nil
+}
+
+func GetUserByOAuthID(oauthID string) (*User, error) {
+	var u User
+	if err := DB.Where("o_auth_id = ?", oauthID).First(&u).Error; err != nil {
+		return nil, ErrUserNotFound
+	}
+	return &u, nil
+}
+
+func CreateOAuthUser(username, oauthID string) (*User, error) {
+	var existing User
+	if err := DB.Where("username = ?", username).First(&existing).Error; err == nil {
+		return nil, ErrUserAlreadyExists
+	}
+	u := &User{Username: username, Token: rand.Text(), OAuthID: oauthID}
+	return u, DB.Create(u).Error
 }
 
 func ToggleAdmin(username string) (bool, error) {

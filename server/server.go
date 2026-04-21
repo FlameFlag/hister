@@ -603,6 +603,7 @@ func serveConfig(c *webContext) {
 		SemanticEnabled     bool              `json:"semanticEnabled"`
 		SemanticWeight      float64           `json:"semanticWeight,omitempty"`
 		SimilarityThreshold float64           `json:"similarityThreshold,omitempty"`
+		OAuthProviders      []string          `json:"oauthProviders,omitempty"`
 	}
 	authMode := "none"
 	authenticated := true
@@ -628,6 +629,10 @@ func serveConfig(c *webContext) {
 	if hotkeys == nil {
 		hotkeys = make(map[string]string)
 	}
+	oauthProviders := make([]string, 0, len(c.Config.Server.OAuth))
+	for name := range c.Config.Server.OAuth {
+		oauthProviders = append(oauthProviders, name)
+	}
 	c.JSON(configResponse{
 		BaseURL:             c.Config.BaseURL(""),
 		BasePath:            c.Config.BasePathPrefix(),
@@ -642,6 +647,7 @@ func serveConfig(c *webContext) {
 		SemanticEnabled:     indexer.SemanticSearchEnabled(),
 		SemanticWeight:      c.Config.SemanticSearch.SemanticWeight,
 		SimilarityThreshold: c.Config.SemanticSearch.SimilarityThreshold,
+		OAuthProviders:      oauthProviders,
 	})
 }
 

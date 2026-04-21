@@ -289,5 +289,29 @@ func init() {
 			Handler:     serveMCP,
 			Description: "Model Context Protocol endpoint. Exposes the search tool to AI assistants",
 		},
+		{
+			Name:        "OAuthRedirect",
+			Path:        "/api/oauth",
+			Method:      GET,
+			NoAuth:      true,
+			Handler:     serveOAuthRedirect,
+			Description: "Start OAuth authentication flow for a given provider",
+			Args: []*EndpointArg{
+				{Name: "provider", Type: "string", Required: true, Description: "OAuth provider name (github, google, oidc)"},
+			},
+		},
+		{
+			Name:        "OAuthCallback",
+			Path:        "/api/oauth/callback",
+			Method:      GET,
+			NoAuth:      true,
+			Handler:     serveOAuthCallback,
+			Description: "OAuth provider callback handler",
+			Args: []*EndpointArg{
+				{Name: "provider", Type: "string", Required: true, Description: "OAuth provider name"},
+				{Name: "code", Type: "string", Required: true, Description: "Authorization code from provider"},
+				{Name: "state", Type: "string", Required: true, Description: "CSRF state token"},
+			},
+		},
 	}
 }

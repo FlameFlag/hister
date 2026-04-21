@@ -11,6 +11,8 @@
   let password = $state('');
   let error = $state('');
   let loading = $state(false);
+  let oauthProviders = $state<string[]>([]);
+  let basePath = $state('');
 
   // Detect auth mode from config endpoint (no credentials required)
   $effect(() => {
@@ -18,6 +20,8 @@
       .then((r) => r.json())
       .then((cfg) => {
         authMode = cfg.authMode ?? 'token';
+        oauthProviders = cfg.oauthProviders ?? [];
+        basePath = cfg.basePath ?? '';
         if (authMode === 'none' || cfg.authenticated) {
           window.location.href = '/';
         }
@@ -53,6 +57,16 @@
       }
     }
   }
+
+  function oauthLogin(provider: string) {
+    window.location.href = basePath + '/api/oauth?provider=' + provider;
+  }
+
+  const providerLabels: Record<string, string> = {
+    github: 'GitHub',
+    google: 'Google',
+    oidc: 'SSO'
+  };
 </script>
 
 <svelte:head>
@@ -132,6 +146,24 @@
         >
           {loading ? 'Signing in…' : 'Sign In'}
         </Button>
+        {#if oauthProviders.length > 0}
+          <div class="relative flex items-center py-2">
+            <div class="border-border-brand-muted flex-grow border-t"></div>
+            <span class="text-text-brand-muted font-inter mx-3 flex-shrink text-xs uppercase">or</span>
+            <div class="border-border-brand-muted flex-grow border-t"></div>
+          </div>
+          <div class="space-y-2">
+            {#each oauthProviders as provider}
+              <Button
+                onclick={() => oauthLogin(provider)}
+                variant="outline"
+                class="border-brutal-border font-space h-11 w-full rounded-none border-[3px] font-bold tracking-wider uppercase shadow-[4px_4px_0px_var(--brutal-shadow)] transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0px_var(--brutal-shadow)] active:translate-x-1 active:translate-y-1 active:shadow-none"
+              >
+                Sign in with {providerLabels[provider] ?? provider}
+              </Button>
+            {/each}
+          </div>
+        {/if}
       {:else}
         <div class="space-y-2">
           <label

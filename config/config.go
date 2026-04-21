@@ -65,9 +65,20 @@ type TUI struct {
 }
 
 type Server struct {
-	Address  string `yaml:"address" mapstructure:"address"`
-	BaseURL  string `yaml:"base_url" mapstructure:"base_url"`
-	Database string `yaml:"database" mapstructure:"database"`
+	Address  string                 `yaml:"address"   mapstructure:"address"`
+	BaseURL  string                 `yaml:"base_url"  mapstructure:"base_url"`
+	Database string                 `yaml:"database"  mapstructure:"database"`
+	OAuth    map[string]*OAuthEntry `yaml:"oauth"     mapstructure:"oauth"`
+}
+
+// OAuthEntry holds configuration for a single OAuth 2.0 / OIDC provider.
+type OAuthEntry struct {
+	ClientID         string   `yaml:"client_id"         mapstructure:"client_id"`
+	ClientSecret     string   `yaml:"client_secret"     mapstructure:"client_secret"`
+	ConfigurationURL string   `yaml:"configuration_url" mapstructure:"configuration_url"`
+	AuthURL          string   `yaml:"auth_url"          mapstructure:"auth_url"`
+	TokenURL         string   `yaml:"token_url"         mapstructure:"token_url"`
+	Scopes           []string `yaml:"scopes"            mapstructure:"scopes"`
 }
 
 type Directory struct {
@@ -473,6 +484,9 @@ func (c *Config) init() error {
 	if err := c.SemanticSearch.Validate(); err != nil {
 		return err
 	}
+	if err := c.validateOAuth(); err != nil {
+		return err
+	}
 	sPath := c.FullPath(secretKeyFilename)
 	b, err := os.ReadFile(sPath)
 	if err != nil {
@@ -485,6 +499,26 @@ func (c *Config) init() error {
 	}
 	c.LoadTUIConfig()
 	return c.LoadRules()
+}
+
+var validOAuthProviders = map[string]bool{"github": true, "google": true, "oidc": true}
+
+func (c *Config) validateOAuth() error {
+	for name, entry := range c.Server.OAuth {
+		if !validOAuthProviders[name] {
+			return fmt.Errorf("unknown oauth provider %q: valid providers are github, google, oidc", name)
+		}
+		if entry.ClientID == "" {
+			return fmt.Errorf("oauth provider %q: client_id is required", name)
+		}
+		if entry.ClientSecret == "" {
+			return fmt.Errorf("oauth provider %q: client_secret is required", name)
+		}
+		if name == "oidc" && entry.ConfigurationURL == "" && entry.AuthURL == "" {
+			return fmt.Errorf("oauth provider oidc: configuration_url or auth_url is required")
+		}
+	}
+	return nil
 }
 
 func (c *Config) UpdateListenAddress(a string) error {
