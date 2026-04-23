@@ -17,4 +17,4 @@ jobs:
         with:
           identifier: asciimoo.hister
           installers-regex: '\.exe$'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GORELEASER_TOKEN }}
