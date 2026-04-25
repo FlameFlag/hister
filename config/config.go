@@ -55,6 +55,11 @@ type App struct {
 	OpenResultsOnNewTab    bool   `yaml:"open_results_on_new_tab" mapstructure:"open_results_on_new_tab"`
 	RedirectOnNoResults    bool   `yaml:"redirect_on_no_results" mapstructure:"redirect_on_no_results"`
 	DisplayExtractorConfig bool   `yaml:"display_extractor_config" mapstructure:"display_extractor_config"`
+	// EnableMCPWrites exposes the MCP write tools (index_url, forget) on the
+	// /mcp endpoint. Default off: an authenticated client (LLM agent or
+	// otherwise) shouldn't be able to mutate the index unless the operator
+	// explicitly opts in.
+	EnableMCPWrites bool `yaml:"enable_mcp_writes" mapstructure:"enable_mcp_writes"`
 }
 
 type TUI struct {

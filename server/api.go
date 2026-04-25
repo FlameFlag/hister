@@ -15,6 +15,8 @@ const (
 	PATCH string = "PATCH"
 	// HEAD is HTTP HEAD request type
 	HEAD string = "HEAD"
+	// DELETE is HTTP DELETE request type
+	DELETE string = "DELETE"
 )
 
 type endpointHandler func(*webContext)
@@ -283,11 +285,25 @@ func init() {
 			Description:  "Generate a new access token for the current user",
 		},
 		{
-			Name:        "MCP",
+			Name:        "MCPPost",
 			Path:        "/mcp",
 			Method:      POST,
 			Handler:     serveMCP,
-			Description: "Model Context Protocol endpoint. Exposes the search tool to AI assistants",
+			Description: "Model Context Protocol endpoint (streamable HTTP transport, JSON-RPC requests)",
+		},
+		{
+			Name:        "MCPGet",
+			Path:        "/mcp",
+			Method:      GET,
+			Handler:     serveMCP,
+			Description: "Model Context Protocol endpoint (streamable HTTP transport, server-initiated SSE stream)",
+		},
+		{
+			Name:        "MCPDelete",
+			Path:        "/mcp",
+			Method:      DELETE,
+			Handler:     serveMCP,
+			Description: "Model Context Protocol endpoint (streamable HTTP transport, session termination)",
 		},
 		{
 			Name:        "OAuthRedirect",

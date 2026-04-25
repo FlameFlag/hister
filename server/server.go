@@ -80,6 +80,15 @@ func (lrw *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) 
 	return hj.Hijack()
 }
 
+// Flush proxies to the wrapped writer so that streaming responses
+// (SSE on /mcp, in particular) reach the client incrementally instead
+// of being buffered until the handler returns.
+func (lrw *loggingResponseWriter) Flush() {
+	if f, ok := lrw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 var ws = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
